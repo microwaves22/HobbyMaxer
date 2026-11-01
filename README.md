@@ -12,3 +12,13 @@ docker compose up --build
 ```
 
 API docs: http://127.0.0.1:8000/docs
+
+## Frontend
+
+See [homesync-frontend/README.md](homesync-frontend/README.md) for full docs.
+
+```powershell
+cd homesync-frontend
+flutter pub get
+flutter run
+```

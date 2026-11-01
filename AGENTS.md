@@ -6,6 +6,7 @@ Muse Code reads this file as project rules when it runs in this directory.
 
 - Name: HomeSync
 - Backend: `homesync-backend/` (FastAPI + SQLAlchemy 2.0 + SQLite)
+- Frontend: `homesync-frontend/` (Flutter; theme + onboarding scaffold)
 
 ## Common Commands
 

@@ -6,3 +6,11 @@ __pycache__/
 *.db-journal
 uploads/*
 !uploads/.gitkeep
+# Flutter
+.dart_tool/
+.packages
+build/
+ios/Pods/
+.android/
+.flutter-plugins
+.flutter-plugins-dependencies
