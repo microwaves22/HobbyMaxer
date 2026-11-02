@@ -1,13 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'family_setup_screen.dart';
-
-const List<String> kFocusAreas = [
-  'Calendar coordination',
-  'Chore distribution',
-  'Task rewards',
-  'Homework tracking',
-];
+import '../../core/state/focus_areas.dart';
+import 'profile_setup_screen.dart';
 
 /// Multi-select interest picker. At least one tag is required to continue.
 class FocusAreasScreen extends StatefulWidget {
@@ -55,7 +49,7 @@ class _FocusAreasScreenState extends State<FocusAreasScreen> {
                 spacing: 12,
                 runSpacing: 12,
                 children: [
-                  for (final area in kFocusAreas)
+                  for (final area in FocusAreas.all)
                     FilterChip(
                       label: Text(area),
                       selected: _selected.contains(area),
@@ -70,7 +64,7 @@ class _FocusAreasScreenState extends State<FocusAreasScreen> {
                     ? null
                     : () => Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => FamilySetupScreen(
+                            builder: (_) => ProfileSetupScreen(
                               focusAreas: _selected.toList(),
                             ),
                           ),
