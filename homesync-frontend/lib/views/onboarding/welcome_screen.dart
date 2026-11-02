@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/widgets/liquid_glass_card.dart';
+import '../auth/login_screen.dart';
 import 'focus_areas_screen.dart';
 import 'widgets/homesync_logo.dart';
 
@@ -48,6 +49,15 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              OutlinedButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const LoginScreen(),
+                  ),
+                ),
+                child: const Text('Login'),
+              ),
+              const SizedBox(height: 12),
               ElevatedButton(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(

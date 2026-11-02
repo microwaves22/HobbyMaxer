@@ -1,4 +1,9 @@
-/// A family member added during onboarding.
+import 'user_profile.dart';
+
+/// A family member managed from settings.
+///
+/// (Kept for the upcoming settings-menu family management; onboarding now
+/// only creates the signed-in user's own [UserProfile].)
 class FamilyMember {
   FamilyMember({
     required this.name,
@@ -9,13 +14,4 @@ class FamilyMember {
   final String name;
   final int age;
   final FamilyRole role;
-}
-
-enum FamilyRole { parent, child }
-
-extension FamilyRoleLabel on FamilyRole {
-  String get label => switch (this) {
-        FamilyRole.parent => 'Parent',
-        FamilyRole.child => 'Child',
-      };
 }
