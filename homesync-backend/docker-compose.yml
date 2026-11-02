@@ -1,0 +1,17 @@
+services:
+  api:
+    build: .
+    container_name: homesync-api
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: sqlite:////data/homesync.db
+      UPLOADS_DIR: /app/uploads
+      SECRET_KEY: ${SECRET_KEY:-dev-only-secret-change-me}
+      PHOTO_RETENTION_DAYS: ${PHOTO_RETENTION_DAYS:-30}
+    volumes:
+      - sqlite-data:/data
+      - ./uploads:/app/uploads
+
+volumes:
+  sqlite-data:

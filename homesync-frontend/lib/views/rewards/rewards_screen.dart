@@ -1,0 +1,314 @@
+import 'package:flutter/material.dart';
+
+import '../../core/widgets/liquid_glass_card.dart';
+import '../onboarding/models/user_profile.dart';
+import 'models/reward_item.dart';
+import 'rewards_controller.dart';
+
+/// Reward store with Digital Rewards and Parent Perks tabs.
+///
+/// Children redeem with their points balance (shown live at the top);
+/// parents can add new real-world perks from the Perks tab.
+class RewardsScreen extends StatelessWidget {
+  const RewardsScreen({
+    super.key,
+    required this.controller,
+    required this.profile,
+  });
+
+  final RewardsController controller;
+  final UserProfile profile;
+
+  void _redeem(BuildContext context, RewardItem reward) {
+    final result = controller.redeem(profile.name, reward.id);
+    final message = switch (result) {
+      RedeemResult.success => 'Redeemed ${reward.title}!',
+      RedeemResult.insufficient =>
+        'Not enough points for ${reward.title}.',
+      RedeemResult.notFound => 'That reward is no longer available.',
+    };
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _addPerk(BuildContext context) async {
+    final draft = await showDialog<_PerkDraft>(
+      context: context,
+      builder: (_) => const _AddPerkDialog(),
+    );
+    if (draft == null || !context.mounted) return;
+    controller.addPerk(
+      title: draft.title,
+      description: draft.description,
+      cost: draft.cost,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Added perk: ${draft.title}.')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Reward Store'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Digital Rewards'),
+              Tab(text: 'Parent Perks'),
+            ],
+          ),
+        ),
+        body: AnimatedBuilder(
+          animation: Listenable.merge([controller, controller.tasks]),
+          builder: (context, _) {
+            final text = Theme.of(context).textTheme;
+            final balance = controller.balanceFor(profile.name);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                  child: LiquidGlassCard(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            "${profile.name}'s balance",
+                            style: text.titleLarge,
+                          ),
+                        ),
+                        Text(
+                          '$balance pts',
+                          key: const ValueKey('balance-pts'),
+                          style: text.headlineMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _RewardList(
+                        rewards: controller.rewardsOf(RewardKind.digital),
+                        balance: balance,
+                        redeemLabel: true,
+                        onRedeem: profile.isParent
+                            ? null
+                            : (reward) => _redeem(context, reward),
+                      ),
+                      _RewardList(
+                        rewards:
+                            controller.rewardsOf(RewardKind.parentPerk),
+                        balance: balance,
+                        redeemLabel: true,
+                        onRedeem: profile.isParent
+                            ? null
+                            : (reward) => _redeem(context, reward),
+                        header: profile.isParent
+                            ? Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _addPerk(context),
+                                  icon: const Icon(Icons.add_rounded),
+                                  label: const Text('Add perk'),
+                                ),
+                              )
+                            : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _RewardList extends StatelessWidget {
+  const _RewardList({
+    required this.rewards,
+    required this.balance,
+    required this.redeemLabel,
+    this.onRedeem,
+    this.header,
+  });
+
+  final List<RewardItem> rewards;
+  final int balance;
+  final bool redeemLabel;
+  final ValueChanged<RewardItem>? onRedeem;
+  final Widget? header;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    if (rewards.isEmpty && header == null) {
+      return Center(
+        child: Text('Nothing here yet.', style: text.bodyMedium),
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        if (header != null) header!,
+        for (final reward in rewards) ...[
+          LiquidGlassCard(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(child: Icon(reward.icon)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(reward.title, style: text.titleLarge),
+                          const SizedBox(height: 4),
+                          Text(
+                            reward.description,
+                            style: text.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Chip(label: Text('${reward.cost} pts')),
+                    const Spacer(),
+                    if (onRedeem != null)
+                      ElevatedButton(
+                        onPressed: balance >= reward.cost
+                            ? () => onRedeem!(reward)
+                            : null,
+                        child: Text(
+                          redeemLabel && balance < reward.cost
+                              ? 'Need ${reward.cost - balance} more'
+                              : 'Redeem',
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ],
+    );
+  }
+}
+
+class _PerkDraft {
+  const _PerkDraft({
+    required this.title,
+    required this.description,
+    required this.cost,
+  });
+
+  final String title;
+  final String description;
+  final int cost;
+}
+
+class _AddPerkDialog extends StatefulWidget {
+  const _AddPerkDialog();
+
+  @override
+  State<_AddPerkDialog> createState() => _AddPerkDialogState();
+}
+
+class _AddPerkDialogState extends State<_AddPerkDialog> {
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _costController = TextEditingController();
+  String? _titleError;
+  String? _costError;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _costController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final title = _titleController.text.trim();
+    final cost = int.tryParse(_costController.text.trim());
+    setState(() {
+      _titleError = title.isEmpty ? 'Enter a perk name.' : null;
+      _costError =
+          cost == null || cost <= 0 ? 'Enter a points cost.' : null;
+    });
+    if (title.isEmpty || cost == null || cost <= 0) return;
+    Navigator.of(context).pop(
+      _PerkDraft(
+        title: title,
+        description: _descriptionController.text.trim(),
+        cost: cost,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add parent perk'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _titleController,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(
+              hintText: 'Perk name',
+              errorText: _titleError,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _descriptionController,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              hintText: 'Description (optional)',
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _costController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              hintText: 'Cost in points',
+              errorText: _costError,
+            ),
+            onSubmitted: (_) => _submit(),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _submit,
+          child: const Text('Add'),
+        ),
+      ],
+    );
+  }
+}

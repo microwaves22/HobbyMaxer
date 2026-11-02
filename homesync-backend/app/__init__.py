@@ -1,0 +1,1 @@
+"""HomeSync backend application package."""

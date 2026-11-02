@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+*.db
+*.db-journal
+uploads/*
+!uploads/.gitkeep
+# Flutter
+.dart_tool/
+.packages
+build/
+ios/Pods/
+.android/
+.flutter-plugins
+.flutter-plugins-dependencies
