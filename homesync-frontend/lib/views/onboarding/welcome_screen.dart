@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../core/state/focus_areas.dart';
 import '../../core/widgets/liquid_glass_card.dart';
 import '../auth/login_screen.dart';
-import 'focus_areas_screen.dart';
+import 'profile_setup_screen.dart';
 import 'widgets/homesync_logo.dart';
 
 /// Greeting view with the brand, tagline, and a [Get Started] button.
@@ -61,7 +62,10 @@ class WelcomeScreen extends StatelessWidget {
               ElevatedButton(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const FocusAreasScreen(),
+                    // Focus picker shelved: enable all areas by default.
+                    builder: (_) => ProfileSetupScreen(
+                      focusAreas: FocusAreas.all,
+                    ),
                   ),
                 ),
                 child: const Text('Get Started'),

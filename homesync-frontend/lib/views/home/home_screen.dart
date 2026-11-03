@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/auth_session.dart';
 import '../../core/state/focus_areas.dart';
+import '../../core/widgets/home_title.dart';
 import '../../core/widgets/liquid_glass_card.dart';
 import '../../core/widgets/profile_avatar_dropdown.dart';
 import '../onboarding/models/user_profile.dart';
@@ -13,6 +14,7 @@ import '../rewards/rewards_screen.dart';
 import '../rewards/widgets/perk_requests_section.dart';
 import '../tasks/tasks_api.dart';
 import '../tasks/tasks_controller.dart';
+import '../tasks/widgets/parent_todo_section.dart';
 import '../tasks/tasks_screen.dart';
 import '../tasks/widgets/review_queue_section.dart';
 
@@ -139,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final areas = FocusAreasScope.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('HomeSync'),
+        title: const HomeTitle(label: 'HomeSync'),
         actions: [
           ProfileAvatarDropdown(
             active: _active,
@@ -174,6 +176,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ReviewQueueSection(controller: _tasks),
                 const SizedBox(height: 20),
                 PerkRequestsSection(controller: _rewards),
+                const SizedBox(height: 20),
+                ParentTodoSection(controller: _tasks),
                 const SizedBox(height: 20),
               ],
               for (final feature in _features)

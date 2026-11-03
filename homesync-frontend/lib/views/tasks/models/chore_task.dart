@@ -11,6 +11,7 @@ class ChoreTask {
     this.photoPath,
     this.serverId,
     this.remotePhoto,
+    this.isParentTodo = false,
   });
 
   final String id;
@@ -31,19 +32,25 @@ class ChoreTask {
   /// serves no photo downloads, so this renders as a placeholder.
   final String? remotePhoto;
 
+  /// True for parent-owned to-dos, managed in the Parent To-Do section
+  /// instead of the child chore / review flow.
+  final bool isParentTodo;
+
   /// A task is "simple" when it needs no photo evidence, so a parent can
   /// batch-approve it without reviewing a photo.
   bool get isSimple => !requiresPhoto;
 
   ChoreTask copyWith({
+    String? title,
+    String? details,
     TaskState? state,
     String? photoPath,
     String? remotePhoto,
   }) {
     return ChoreTask(
       id: id,
-      title: title,
-      details: details,
+      title: title ?? this.title,
+      details: details ?? this.details,
       childName: childName,
       points: points,
       requiresPhoto: requiresPhoto,
@@ -51,6 +58,7 @@ class ChoreTask {
       photoPath: photoPath ?? this.photoPath,
       serverId: serverId,
       remotePhoto: remotePhoto ?? this.remotePhoto,
+      isParentTodo: isParentTodo,
     );
   }
 }
