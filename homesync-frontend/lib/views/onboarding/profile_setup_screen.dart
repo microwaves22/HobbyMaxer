@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../../core/network/auth_session.dart';
 import '../../core/state/focus_areas.dart';
 import '../../core/widgets/liquid_glass_card.dart';
 import '../home/home_screen.dart';
@@ -20,15 +22,18 @@ class ProfileSetupScreen extends StatefulWidget {
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _nameController = TextEditingController();
   final _birthdayController = TextEditingController();
+  final _pinController = TextEditingController();
   FamilyRole _role = FamilyRole.parent;
   FamilyMode _mode = FamilyMode.kids;
   String? _nameError;
   String? _birthdayError;
+  String? _pinError;
 
   @override
   void dispose() {
     _nameController.dispose();
     _birthdayController.dispose();
+    _pinController.dispose();
     super.dispose();
   }
 
@@ -49,14 +54,29 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
   }
 
-  void _continue() {
+  Future<void> _continue() async {
     final name = _nameController.text.trim();
     final birthdayError = validateBirthday(_birthdayController.text);
+    final pin = _pinController.text.trim();
+    final pinError =
+        _role == FamilyRole.parent && !RegExp(r'^\d{4}$').hasMatch(pin)
+            ? 'Set a 4-digit Parent PIN.'
+            : null;
     setState(() {
       _nameError = name.isEmpty ? 'Enter your name.' : null;
       _birthdayError = birthdayError;
+      _pinError = pinError;
     });
-    if (name.isEmpty || birthdayError != null) return;
+    if (name.isEmpty || birthdayError != null || pinError != null) return;
+    final session = AuthScope.maybeOf(context);
+    String parentPin;
+    if (_role == FamilyRole.parent) {
+      parentPin = pin;
+      await session?.setParentPin(pin);
+    } else {
+      parentPin = await session?.getParentPin() ?? '1234';
+    }
+    if (!mounted) return;
     final profile = UserProfile(
       name: name,
       birthday: tryParseBirthday(_birthdayController.text)!,
@@ -67,7 +87,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       MaterialPageRoute(
         builder: (_) => FocusAreasScope(
           controller: FocusAreasController(widget.focusAreas),
-          child: HomeScreen(profile: profile),
+          child: HomeScreen(profile: profile, parentPin: parentPin),
         ),
       ),
       (_) => false,
@@ -138,8 +158,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         ),
                       ],
                       selected: {_role},
-                      onSelectionChanged: (selected) =>
-                          setState(() => _role = selected.first),
+                      onSelectionChanged: (selected) => setState(() {
+                        _role = selected.first;
+                        _pinError = null;
+                      }),
                     ),
                     const SizedBox(height: 16),
                     Text('Mode', style: text.labelSmall),
@@ -163,6 +185,28 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       onSelectionChanged: (selected) =>
                           setState(() => _mode = selected.first),
                     ),
+                    if (_role == FamilyRole.parent) ...[
+                      const SizedBox(height: 16),
+                      Text('Parent PIN', style: text.labelSmall),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _pinController,
+                        obscureText: true,
+                        keyboardType: TextInputType.number,
+                        maxLength: 4,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        decoration: InputDecoration(
+                          hintText: '4-digit PIN',
+                          errorText: _pinError,
+                          counterText: '',
+                        ),
+                        onChanged: (_) =>
+                            setState(() => _pinError = null),
+                        onSubmitted: (_) => _continue(),
+                      ),
+                    ],
                   ],
                 ),
               ),

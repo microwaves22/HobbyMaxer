@@ -160,5 +160,14 @@ void main() {
       expect(session.isAuthenticated, isFalse);
       expect(await store.readToken(), isNull);
     });
+
+    test('parent PIN round-trips through the store', () async {
+      final mock = MockClient((_) async => http.Response('{}', 200));
+      final session = _session(mock, InMemoryTokenStore());
+
+      expect(await session.getParentPin(), isNull);
+      await session.setParentPin('4321');
+      expect(await session.getParentPin(), '4321');
+    });
   });
 }

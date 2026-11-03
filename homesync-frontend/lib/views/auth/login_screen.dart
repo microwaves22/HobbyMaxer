@@ -5,11 +5,11 @@ import '../../core/network/auth_session.dart';
 import '../../core/state/focus_areas.dart';
 import '../../core/widgets/liquid_glass_card.dart';
 import '../home/home_screen.dart';
-import '../onboarding/focus_areas_screen.dart';
+import '../onboarding/profile_setup_screen.dart';
 
 /// Backend sign-in (`POST /auth/login` + `GET /auth/me`). On success the
 /// JWT is stored securely, the dashboard syncs tasks, and balances come
-/// from the server ledger.
+/// from the server ledger matching the HomeSync Figma design.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -57,12 +57,18 @@ class _LoginScreenState extends State<LoginScreen> {
       });
       return;
     }
+    String parentPin = '1234';
+    try {
+      parentPin = await session.getParentPin() ?? '1234';
+    } catch (_) {
+      // Keychain unavailable: fall back to the demo PIN gate.
+    }
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (_) => FocusAreasScope(
           controller: FocusAreasController(FocusAreas.all),
-          child: HomeScreen(profile: session.toProfile()),
+          child: HomeScreen(profile: session.toProfile(), parentPin: parentPin),
         ),
       ),
       (_) => false,
@@ -71,75 +77,182 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final text = theme.textTheme;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Log in')),
+      backgroundColor:
+          const Color(0xFFF5EBE0), // Warm beige background matching Figma theme
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Color(0xFF2C3E35)),
+      ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Welcome back', style: text.headlineMedium),
-              const SizedBox(height: 8),
-              Text(
-                'Log in to your family dashboard.',
-                style: text.bodyMedium,
-              ),
-              const SizedBox(height: 20),
-              LiquidGlassCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        hintText: 'Email',
-                        errorText: _emailError,
-                      ),
-                      onChanged: (_) => setState(() => _emailError = null),
-                      onSubmitted: (_) => _login(),
+        child: Center(
+          child: SingleChildScrollView(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Branded Icon Container with contrast
+                Center(
+                  child: Container(
+                    height: 64,
+                    width: 64,
+                    decoration: BoxDecoration(
+                      color:
+                          const Color(0xFFE3DAC9), // Deeper contrast sage/beige
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        hintText: 'Password',
-                        errorText: _passwordError,
-                      ),
-                      onChanged: (_) =>
-                          setState(() => _passwordError = null),
-                      onSubmitted: (_) => _login(),
+                    child: const Icon(
+                      Icons.home_rounded,
+                      size: 32,
+                      color: Color(0xFF2C5E3B), // Primary HomeSync green
                     ),
-                    if (_formError != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        _formError!,
-                        style: text.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _busy ? null : _login,
-                child: Text(_busy ? 'Logging in…' : 'Login'),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const FocusAreasScreen(),
                   ),
                 ),
-                child: const Text('Create an account instead'),
-              ),
-            ],
+                const SizedBox(height: 24),
+                Text(
+                  'Welcome back',
+                  style: text.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF2C3E35), // High contrast dark text
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Log in to your family dashboard.',
+                  style: text.bodyMedium?.copyWith(
+                    color: const Color(0xFF5A6B60), // Readable muted dark tone
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+
+                // Form Card Container with solid warm beige background for visibility
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color:
+                        const Color(0xFFFAF6F0), // Clean opaque warm card base
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        style: const TextStyle(color: Color(0xFF2C3E35)),
+                        decoration: InputDecoration(
+                          hintText: 'Email address',
+                          hintStyle: TextStyle(color: Colors.grey[500]),
+                          errorText: _emailError,
+                          filled: true,
+                          fillColor:
+                              Colors.white, // Crisp white fields for clarity
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          prefixIcon: const Icon(Icons.email_outlined,
+                              color: Color(0xFF2C5E3B)),
+                        ),
+                        onChanged: (_) => setState(() => _emailError = null),
+                        onSubmitted: (_) => _login(),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        style: const TextStyle(color: Color(0xFF2C3E35)),
+                        decoration: InputDecoration(
+                          hintText: 'Password',
+                          hintStyle: TextStyle(color: Colors.grey[500]),
+                          errorText: _passwordError,
+                          filled: true,
+                          fillColor:
+                              Colors.white, // Crisp white fields for clarity
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          prefixIcon: const Icon(Icons.lock_outline,
+                              color: Color(0xFF2C5E3B)),
+                        ),
+                        onChanged: (_) => setState(() => _passwordError = null),
+                        onSubmitted: (_) => _login(),
+                      ),
+                      if (_formError != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          _formError!,
+                          style: text.bodySmall?.copyWith(
+                            color: theme.colorScheme.error,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // Primary Pill Action Button
+                ElevatedButton(
+                  onPressed: _busy ? null : _login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(
+                        0xFF2C5E3B), // Primary deep green for strong contrast
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    _busy ? 'Logging in…' : 'Log In',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Switch to registration link
+                TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      // Focus picker shelved: enable all areas by default.
+                    builder: (_) => ProfileSetupScreen(
+                      focusAreas: FocusAreas.all,
+                    ),
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF2C5E3B),
+                  ),
+                  child: const Text(
+                    'Create an account instead',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

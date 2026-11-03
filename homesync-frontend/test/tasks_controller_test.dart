@@ -113,7 +113,7 @@ void main() {
     test('forProfile seeds household tasks for a parent', () {
       final controller = TasksController.forProfile(_profile(parent: true));
 
-      expect(controller.tasks.length, 4);
+      expect(controller.tasks.length, 6);
       expect(controller.pendingReview.length, 2);
       expect(controller.balanceFor('Maya'), 120);
     });
@@ -127,6 +127,56 @@ void main() {
       );
       expect(controller.tasksFor('Alex').length, 3);
       expect(controller.balanceFor('Alex'), 30);
+    });
+
+    test('parent can add, edit, complete, and remove to-dos', () {
+      final controller = TasksController.test();
+
+      controller.addParentTodo(title: 'Mow lawn', details: 'Front yard');
+      expect(controller.parentTodos.length, 1);
+      final id = controller.parentTodos.first.id;
+
+      controller.updateParentTodo(id, title: 'Mow lawns', details: 'Both');
+      expect(controller.byId(id)!.title, 'Mow lawns');
+
+      controller.toggleParentTodo(id);
+      expect(controller.byId(id)!.state, TaskState.approved);
+      controller.toggleParentTodo(id);
+      expect(controller.byId(id)!.state, TaskState.pending);
+
+      controller.removeParentTodo(id);
+      expect(controller.parentTodos, isEmpty);
+    });
+
+    test('parent to-dos reorder without touching chores', () {
+      ChoreTask todo(String id) => ChoreTask(
+            id: id,
+            title: 'Title $id',
+            details: '',
+            childName: 'You',
+            points: 0,
+            isParentTodo: true,
+          );
+      final controller = TasksController.test(
+        tasks: [_task(id: 'chore'), todo('a'), todo('b')],
+      );
+
+      controller.moveParentTodo(0, 1);
+
+      expect(controller.parentTodos.map((t) => t.id), ['b', 'a']);
+      expect(controller.byId('chore'), isNotNull);
+    });
+
+    test('todo actions ignore child chores', () {
+      final controller = TasksController.test(tasks: [_task(id: 'chore')]);
+
+      controller.toggleParentTodo('chore');
+      controller.updateParentTodo('chore', title: 'X', details: '');
+      controller.removeParentTodo('chore');
+
+      expect(controller.byId('chore')!.state, TaskState.pending);
+      expect(controller.byId('chore')!.title, 'Title chore');
+      expect(controller.tasks.length, 1);
     });
   });
 }

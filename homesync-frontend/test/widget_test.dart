@@ -22,23 +22,15 @@ void main() {
     expect(find.widgetWithText(OutlinedButton, 'Login'), findsOneWidget);
   });
 
-  testWidgets('Get Started leads to the focus areas picker', (tester) async {
+  testWidgets('Get Started leads straight to profile setup', (tester) async {
     await _pumpToWelcome(tester);
 
     await tester.tap(find.text('Get Started'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('What would you like to use HomeSync for?'),
-      findsOneWidget,
-    );
-
-    // Next stays disabled until at least one tag is picked.
-    final next = find.widgetWithText(ElevatedButton, 'Next');
-    expect(tester.widget<ElevatedButton>(next).onPressed, isNull);
-    await tester.tap(find.text('Task rewards'));
-    await tester.pump();
-    expect(tester.widget<ElevatedButton>(next).onPressed, isNotNull);
+    // Focus-area picker is shelved: signup starts at the profile form.
+    expect(find.text('Tell us about yourself'), findsOneWidget);
+    expect(find.text('I am a…'), findsOneWidget);
   });
 
   testWidgets('Login button opens the login screen', (tester) async {
@@ -51,17 +43,27 @@ void main() {
     expect(find.widgetWithText(ElevatedButton, 'Login'), findsOneWidget);
   });
 
-  testWidgets('Focus areas Next opens single-profile setup', (tester) async {
+  testWidgets('Signup enables all features by default', (tester) async {
     await _pumpToWelcome(tester);
     await tester.tap(find.text('Get Started'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Chore distribution'));
-    await tester.pump();
 
-    await tester.tap(find.text('Next'));
+    await tester.enterText(find.byType(TextField).at(0), 'Mom');
+    await tester.enterText(find.byType(TextField).at(1), '1990-01-01');
+    await tester.enterText(find.byType(TextField).at(2), '4321');
+    final cont = find.text('Continue');
+    await tester.ensureVisible(cont);
+    await tester.tap(cont);
     await tester.pumpAndSettle();
 
-    expect(find.text('Tell us about yourself'), findsOneWidget);
-    expect(find.text('I am a…'), findsOneWidget);
+    expect(find.text('Hello, Mom!'), findsOneWidget);
+    for (final area in [
+      'Calendar coordination',
+      'Chore distribution',
+      'Task rewards',
+      'Homework tracking',
+    ]) {
+      expect(find.text(area), findsOneWidget);
+    }
   });
 }
