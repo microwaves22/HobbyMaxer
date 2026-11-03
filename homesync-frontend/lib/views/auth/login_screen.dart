@@ -6,6 +6,10 @@ import '../../core/state/focus_areas.dart';
 import '../home/home_screen.dart';
 import '../onboarding/profile_setup_screen.dart';
 
+
+
+
+
 /// Backend sign-in (`POST /auth/login` + `GET /auth/me`). On success the
 /// JWT is stored securely, the dashboard syncs tasks, and balances come
 /// from the server ledger matching the HomeSync Figma design.

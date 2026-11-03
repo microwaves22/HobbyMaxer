@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:homesync/views/onboarding/family_setup_screen.dart';
 import 'package:homesync/views/onboarding/focus_areas_screen.dart';
+import 'package:homesync/views/onboarding/profile_setup_screen.dart';
 
 Future<void> _pumpFamilySetup(WidgetTester tester) async {
   await tester.pumpWidget(const MaterialApp(home: FamilySetupScreen()));
@@ -212,10 +213,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(FamilySetupScreen), findsOneWidget);
 
-    // Done / Later continues to the existing focus areas flow.
+    // Done / Later goes straight to profile setup (focus picker shelved).
     await tester.ensureVisible(find.text('Done / Later'));
     await tester.tap(find.text('Done / Later'));
     await tester.pumpAndSettle();
-    expect(find.byType(FocusAreasScreen), findsOneWidget);
+    expect(find.byType(ProfileSetupScreen), findsOneWidget);
+    expect(find.byType(FocusAreasScreen), findsNothing);
   });
 }

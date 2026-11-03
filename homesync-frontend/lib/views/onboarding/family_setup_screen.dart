@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'focus_areas_screen.dart';
+import '../../core/state/focus_areas.dart';
+
+import 'profile_setup_screen.dart';
+
+
 
 /// Figma "03 Set Up Family" (node 3:63): member list plus add-member form.
 ///
@@ -138,8 +142,13 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
   }
 
   void _onDoneLater() {
+    // Focus picker shelved: straight to profile setup, all areas on.
+
+
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const FocusAreasScreen()),
+      MaterialPageRoute(
+        builder: (_) => ProfileSetupScreen(focusAreas: FocusAreas.all),
+      ),
     );
   }
 
