@@ -92,19 +92,21 @@ class ProfileAvatarDropdown extends StatelessWidget {
             children: [
               _Avatar(option: active, radius: 18),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    active.name,
-                    style: Theme.of(pageContext).textTheme.titleLarge,
-                  ),
-                  Text(
-                    active.roleLabel,
-                    style: Theme.of(pageContext).textTheme.bodySmall,
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      active.name,
+                      style: Theme.of(pageContext).textTheme.titleLarge,
+                    ),
+                    Text(
+                      active.roleLabel,
+                      style: Theme.of(pageContext).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

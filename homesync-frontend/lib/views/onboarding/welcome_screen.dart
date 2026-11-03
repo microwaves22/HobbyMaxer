@@ -62,7 +62,7 @@ class WelcomeScreen extends StatelessWidget {
               ElevatedButton(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    // Focus picker shelved: enable all areas by default.
+                    // Skip the focus picker: enable all areas by default.
                     builder: (_) => ProfileSetupScreen(
                       focusAreas: FocusAreas.all,
                     ),

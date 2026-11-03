@@ -221,7 +221,15 @@ class _ChooseModeScreenState extends State<ChooseModeScreen> {
                           fontSize: 16,
                         ),
                       ),
-                      child: const Text('Continue'),
+                      child: const Text(
+                        'Continue',
+                        style: TextStyle(
+                          fontFamily: 'Nunito',
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                          color: _white,
+                        ),
+                      ),
                     ),
                   ),
                 ],

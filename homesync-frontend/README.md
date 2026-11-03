@@ -31,8 +31,8 @@ homesync-frontend/
                             # home_title (tap-to-home AppBar title)
     core/state/               # focus_areas provider (dashboard visibility)
     views/auth/               # backend login (POST /auth/login + /auth/me)
-    views/onboarding/         # splash, welcome, profile setup
-                            # (focus_areas_screen shelved, see file header)
+    views/onboarding/         # splash, welcome, profile setup,
+                            # choose mode, family setup, focus areas
     views/home/               # dashboard (feature cards, parent review queue)
     views/tasks/              # task list, submission sheet, review queue
     views/rewards/            # reward store, redemption, perk requests
@@ -41,13 +41,14 @@ homesync-frontend/
 ## Flow
 
 Splash → Welcome ([Get Started] / [Login]) →
-Profile Setup (name, birthday, role, Kids/Teen/Parent mode, Parent PIN) →
+Profile Setup (name, birthday, role, Kids/Teen/Parent mode) →
 Home.
 
-The focus-area picker is shelved (`focus_areas_screen.dart` is commented
-out); signup enables all areas by default via `FocusAreasScope`. Switching
-to a parent profile asks for the Parent PIN set at signup (wire to
-`POST /auth/switch-profile` later).
+The focus-area picker lives in the family-setup flow (`choose_mode_screen`
+→ `family_setup_screen` → `focus_areas_screen`); Welcome [Get Started] and
+login skip it and enable all areas by default via `FocusAreasScope`.
+Switching to a parent profile asks for the Parent PIN (demo default `1234`;
+wire to `POST /auth/switch-profile` later).
 
 ## Tasks & photo evidence
 
@@ -93,9 +94,8 @@ cards show an "Evidence stored on server" placeholder.
 ## Navigation, Parent PIN & parent to-dos
 
 - Tapping any AppBar title (`HomeTitle`) pops back to the dashboard root.
-- Parent onboarding requires a 4-digit PIN, stored in secure storage via
-  `AuthSession` and enforced by the profile switcher when moving from a
-  child/teen profile to a parent one.
+- The profile switcher PIN-gates moves from a child/teen profile to a
+  parent one (demo PIN `1234`, storable via `AuthSession.setParentPin`).
 - Parents get a "Parent To-Do" dashboard section (add, edit, complete,
   delete, reorder) backed by `ChoreTask.isParentTodo`. To-dos are
   local-only for now; syncing them to the backend is a future step
