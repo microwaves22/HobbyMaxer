@@ -38,6 +38,13 @@ abstract final class FigmaColors {
   static const Color frostedFill = Color.fromRGBO(255, 255, 255, 0.79);
   static const Color frostedStrong = Color.fromRGBO(255, 255, 255, 0.91);
 
+  /// Sarah Task Review (node 62:6347) fills: `rgba(255,255,255,0.72)`
+  /// for the main card, the inactive queue tab, the instructions panel,
+  /// and the secondary button; `rgba(255,255,255,0.8)` for the bottom
+  /// nav container.
+  static const Color frostedReview = Color.fromRGBO(255, 255, 255, 0.72);
+  static const Color frostedNavReview = Color.fromRGBO(255, 255, 255, 0.8);
+
   /// Rotation for task tiles when Figma gives no per-task color.
   /// TODO(figma 100:4622): replace round-robin with the exact tile
   /// color + glyph mapping from the re-pulled node.
