@@ -13,6 +13,7 @@ import '../onboarding/link_kids_screen.dart';
 import '../onboarding/models/user_profile.dart';
 import '../rewards/kids_reward_store_screen.dart';
 import '../rewards/rewards_controller.dart';
+import '../rewards/rewards_routes.dart';
 import '../rewards/rewards_screen.dart';
 import '../rewards/widgets/perk_requests_section.dart';
 import '../tasks/tasks_api.dart';
@@ -151,10 +152,17 @@ class _HomeScreenState extends State<HomeScreen> {
           // fixed mock balance. Back/Home return to the dashboard.
           builder: (_) => KidsRewardStoreScreen(
             onBack: () => Navigator.of(context).pop(),
+            onRequestCustomReward: () =>
+                RewardsRoutes.openRequestCustomReward(context),
             onNavigateHome: () => Navigator.of(context).pop(),
           ),
         ),
       );
+      return;
+    }
+    if (!widget.profile.isParent &&
+        widget.profile.mode == FamilyMode.teen) {
+      RewardsRoutes.openTeenStore(context);
       return;
     }
     Navigator.of(context).push(
@@ -217,6 +225,41 @@ class _HomeScreenState extends State<HomeScreen> {
                 PerkRequestsSection(controller: _rewards),
                 const SizedBox(height: 20),
                 ParentTodoSection(controller: _tasks),
+                const SizedBox(height: 20),
+                LiquidGlassCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Rewards (new screens)',
+                        style: text.titleLarge,
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: () =>
+                            RewardsRoutes.openReviewQueue(context),
+                        icon: const Icon(Icons.mark_email_read_rounded),
+                        label: const Text('Review reward requests'),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: () =>
+                            RewardsRoutes.openManagement(context),
+                        icon: const Icon(Icons.storefront_rounded),
+                        label: const Text('Manage store perks'),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: () =>
+                            RewardsRoutes.openStoreShell(context),
+                        icon: const Icon(Icons.preview_rounded),
+                        label: const Text(
+                          'Rewards store shell (placeholder preview)',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 20),
               ],
               for (final feature in _features)
