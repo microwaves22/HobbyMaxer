@@ -27,10 +27,12 @@ homesync-frontend/
     main.dart                 # app entrypoint (light + Teen Mode dark theme)
     core/theme/               # app_colors, app_typography, app_theme
     core/network/             # api_client, auth_session, token_store
-    core/widgets/             # liquid_glass_card, profile_avatar_dropdown
+    core/widgets/             # liquid_glass_card, profile_avatar_dropdown,
+                            # home_title (tap-to-home AppBar title)
     core/state/               # focus_areas provider (dashboard visibility)
-    views/auth/               # login (stub; wire to POST /auth/login)
-    views/onboarding/         # splash, welcome, focus areas, profile setup
+    views/auth/               # backend login (POST /auth/login + /auth/me)
+    views/onboarding/         # splash, welcome, profile setup
+                            # (focus_areas_screen shelved, see file header)
     views/home/               # dashboard (feature cards, parent review queue)
     views/tasks/              # task list, submission sheet, review queue
     views/rewards/            # reward store, redemption, perk requests
@@ -38,12 +40,14 @@ homesync-frontend/
 
 ## Flow
 
-Splash → Welcome ([Get Started] / [Login]) → Focus Areas ([Next], ≥1 tag) →
-Profile Setup (name, birthday, role, Kids/Teen mode) → Home.
+Splash → Welcome ([Get Started] / [Login]) →
+Profile Setup (name, birthday, role, Kids/Teen/Parent mode, Parent PIN) →
+Home.
 
-Focus-area picks flow into `FocusAreasScope`, so the dashboard only shows
-the selected features. Switching to a parent profile asks for the Parent
-PIN (demo default `1234`; wire to `POST /auth/switch-profile` later).
+The focus-area picker is shelved (`focus_areas_screen.dart` is commented
+out); signup enables all areas by default via `FocusAreasScope`. Switching
+to a parent profile asks for the Parent PIN set at signup (wire to
+`POST /auth/switch-profile` later).
 
 ## Tasks & photo evidence
 
@@ -85,6 +89,17 @@ login the app runs fully local on demo seeds. Android emulators must use
 `http://10.0.2.2:8000` (see `kDefaultBaseUrl`). Server evidence photos
 are not downloadable (the API serves no photo route), so synced review
 cards show an "Evidence stored on server" placeholder.
+
+## Navigation, Parent PIN & parent to-dos
+
+- Tapping any AppBar title (`HomeTitle`) pops back to the dashboard root.
+- Parent onboarding requires a 4-digit PIN, stored in secure storage via
+  `AuthSession` and enforced by the profile switcher when moving from a
+  child/teen profile to a parent one.
+- Parents get a "Parent To-Do" dashboard section (add, edit, complete,
+  delete, reorder) backed by `ChoreTask.isParentTodo`. To-dos are
+  local-only for now; syncing them to the backend is a future step
+  (like rewards redemption, which still uses the local ledger).
 
 The backend lives in `../homesync-backend/` (FastAPI). API wiring
 (login/register, family sync) is the next step after this UI scaffold.

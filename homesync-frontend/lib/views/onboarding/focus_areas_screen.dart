@@ -1,3 +1,11 @@
+// SHELVED: FocusAreasScreen is out of the onboarding flow for now, but
+// kept here in case we bring the picker back. Get Started / Create
+// account currently route straight to ProfileSetupScreen with all focus
+// areas enabled.
+// To restore: delete this note and the block-comment markers, then point
+// welcome_screen.dart and login_screen.dart back at FocusAreasScreen.
+
+/*
 import 'package:flutter/material.dart';
 
 import '../../core/state/focus_areas.dart';
@@ -78,3 +86,4 @@ class _FocusAreasScreenState extends State<FocusAreasScreen> {
     );
   }
 }
+*/

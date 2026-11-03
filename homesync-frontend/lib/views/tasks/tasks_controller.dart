@@ -49,6 +49,23 @@ class TasksController extends ChangeNotifier {
           childName: 'Leo',
           points: 6,
         ),
+        ChoreTask(
+          id: 'pt-seed-1',
+          title: 'Pay electricity bill',
+          details: 'Due Friday.',
+          childName: 'You',
+          points: 0,
+          isParentTodo: true,
+        ),
+        ChoreTask(
+          id: 'pt-seed-2',
+          title: 'Book dentist appointments',
+          details: 'Maya + Leo, next month.',
+          childName: 'You',
+          points: 0,
+          state: TaskState.approved,
+          isParentTodo: true,
+        ),
       ];
       _balances = {'Maya': 120, 'Leo': 45};
     } else {
@@ -93,6 +110,7 @@ class TasksController extends ChangeNotifier {
   List<ChoreTask> _tasks = [];
   Map<String, int> _balances = {};
   TasksApi? _backend;
+  int _todoSeq = 0;
 
   List<ChoreTask> get tasks => List.unmodifiable(_tasks);
 
@@ -218,6 +236,66 @@ class TasksController extends ChangeNotifier {
       return;
     }
     _replace(task.copyWith(state: TaskState.changesRequested));
+  }
+
+  /// Parent's personal to-dos, kept separate from child-assigned
+  /// chores. Local-only for now (no backend endpoint yet).
+  List<ChoreTask> get parentTodos =>
+      _tasks.where((t) => t.isParentTodo).toList();
+
+  void addParentTodo({required String title, String details = ''}) {
+    _tasks.add(
+      ChoreTask(
+        id: 'pt${_todoSeq++}',
+        title: title,
+        details: details,
+        childName: 'You',
+        points: 0,
+        isParentTodo: true,
+      ),
+    );
+    notifyListeners();
+  }
+
+  void updateParentTodo(
+    String id, {
+    required String title,
+    required String details,
+  }) {
+    final todo = byId(id);
+    if (todo == null || !todo.isParentTodo) return;
+    _replace(todo.copyWith(title: title, details: details));
+  }
+
+  /// Toggles a parent to-do between open and done.
+  void toggleParentTodo(String id) {
+    final todo = byId(id);
+    if (todo == null || !todo.isParentTodo) return;
+    _replace(
+      todo.copyWith(
+        state: todo.state == TaskState.approved
+            ? TaskState.pending
+            : TaskState.approved,
+      ),
+    );
+  }
+
+  void removeParentTodo(String id) {
+    _tasks.removeWhere((t) => t.id == id && t.isParentTodo);
+    notifyListeners();
+  }
+
+  /// Reorders parent to-dos. [newIndex] is the post-removal insertion
+  /// index, as delivered by `ReorderableListView.onReorderItem`. Child
+  /// chores keep their relative order.
+  void moveParentTodo(int oldIndex, int newIndex) {
+    final todos = parentTodos;
+    if (oldIndex < 0 || oldIndex >= todos.length) return;
+    if (newIndex < 0 || newIndex >= todos.length) return;
+    final item = todos.removeAt(oldIndex);
+    todos.insert(newIndex, item);
+    _tasks = [..._tasks.where((t) => !t.isParentTodo), ...todos];
+    notifyListeners();
   }
 
   /// Approves every pending simple (no-photo) task. Returns how many

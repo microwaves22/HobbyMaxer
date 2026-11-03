@@ -110,6 +110,14 @@ class AuthSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Persists the family Parent PIN (set during parent onboarding).
+  /// Survives logout: the PIN belongs to the household device, not the
+  /// login session.
+  Future<void> setParentPin(String pin) => _store.writeParentPin(pin);
+
+  /// Reads the stored Parent PIN, if any.
+  Future<String?> getParentPin() => _store.readParentPin();
+
   Future<void> _loadUser() async {
     final body = await _client.get('/auth/me') as Map<String, dynamic>;
     _user = RemoteUser.fromJson(body);
