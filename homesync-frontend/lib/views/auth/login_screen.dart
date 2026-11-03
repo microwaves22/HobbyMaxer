@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/auth_session.dart';
 import '../../core/state/focus_areas.dart';
-import '../../core/widgets/liquid_glass_card.dart';
 import '../home/home_screen.dart';
 import '../onboarding/profile_setup_screen.dart';
 
@@ -142,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha: 0.04),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),
@@ -224,7 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     elevation: 0,
                   ),
                   child: Text(
-                    _busy ? 'Logging in…' : 'Log In',
+                    _busy ? 'Logging in…' : 'Login',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -237,10 +236,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextButton(
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      // Focus picker shelved: enable all areas by default.
-                    builder: (_) => ProfileSetupScreen(
-                      focusAreas: FocusAreas.all,
-                    ),
+                      // Skip the focus picker: enable all areas by default.
+                      builder: (_) => ProfileSetupScreen(
+                        focusAreas: FocusAreas.all,
+                      ),
                     ),
                   ),
                   style: TextButton.styleFrom(

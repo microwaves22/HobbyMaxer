@@ -120,6 +120,7 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
   void _onAddMember() {
     final name = _nameController.text.trim();
     final age = _ageController.text.trim();
+    _nameController.clear();
     setState(() {
       _members.add(
         _FamilyMember(

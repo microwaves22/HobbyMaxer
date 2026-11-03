@@ -29,7 +29,7 @@ void main() {
   testWidgets('Manage family opens the link kids screen', (tester) async {
     await _pumpHome(tester);
 
-    await tester.tap(find.byType(CircleAvatar).first);
+    await tester.tap(find.byTooltip('Profile'));
     await tester.pumpAndSettle();
     expect(find.text('Manage family'), findsOneWidget);
 

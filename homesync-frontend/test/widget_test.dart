@@ -50,7 +50,6 @@ void main() {
 
     await tester.enterText(find.byType(TextField).at(0), 'Mom');
     await tester.enterText(find.byType(TextField).at(1), '1990-01-01');
-    await tester.enterText(find.byType(TextField).at(2), '4321');
     final cont = find.text('Continue');
     await tester.ensureVisible(cont);
     await tester.tap(cont);

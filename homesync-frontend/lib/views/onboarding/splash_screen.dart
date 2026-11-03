@@ -132,7 +132,15 @@ class SplashScreen extends StatelessWidget {
                             fontSize: 16,
                           ),
                         ),
-                        child: const Text('Get Started'),
+                        child: const Text(
+                          'Get Started',
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                            color: _white,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
