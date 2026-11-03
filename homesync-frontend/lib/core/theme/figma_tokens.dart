@@ -28,6 +28,23 @@ abstract final class FigmaColors {
   static const Color pastelPink = Color(0xFFF4C9C9);
   static const Color pastelYellow = Color(0xFFFDF0C8);
 
+  /// Kids My To-Do List (node 100:4739) aliases. Same values as the
+  /// pastels above, named as the screen spec names them.
+  static const Color pink = pastelPink;
+  static const Color yellowLight = pastelYellow;
+
+  /// Frosted-card fills: `rgba(255,255,255,0.79)` for cards and
+  /// `rgba(255,255,255,0.91)` for inputs and the bottom nav.
+  static const Color frostedFill = Color.fromRGBO(255, 255, 255, 0.79);
+  static const Color frostedStrong = Color.fromRGBO(255, 255, 255, 0.91);
+
+  /// Sarah Task Review (node 62:6347) fills: `rgba(255,255,255,0.72)`
+  /// for the main card, the inactive queue tab, the instructions panel,
+  /// and the secondary button; `rgba(255,255,255,0.8)` for the bottom
+  /// nav container.
+  static const Color frostedReview = Color.fromRGBO(255, 255, 255, 0.72);
+  static const Color frostedNavReview = Color.fromRGBO(255, 255, 255, 0.8);
+
   /// Rotation for task tiles when Figma gives no per-task color.
   /// TODO(figma 100:4622): replace round-robin with the exact tile
   /// color + glyph mapping from the re-pulled node.
