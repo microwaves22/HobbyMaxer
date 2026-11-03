@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/home_title.dart';
 import '../../../core/widgets/liquid_glass_card.dart';
 import '../onboarding/models/user_profile.dart';
 import 'models/chore_task.dart';
@@ -33,11 +34,12 @@ class TasksScreen extends StatelessWidget {
       animation: controller,
       builder: (context, _) {
         final text = Theme.of(context).textTheme;
+        // Parent to-dos live in their own dashboard section, not here.
         final tasks = profile.isParent
-            ? controller.tasks
+            ? controller.tasks.where((t) => !t.isParentTodo).toList()
             : controller.tasksFor(profile.name);
         return Scaffold(
-          appBar: AppBar(title: const Text('Tasks')),
+          appBar: AppBar(title: const HomeTitle(label: 'Tasks')),
           body: tasks.isEmpty
               ? Center(
                   child: Text('No tasks yet.', style: text.bodyMedium),

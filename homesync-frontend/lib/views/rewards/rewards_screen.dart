@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/widgets/home_title.dart';
 import '../../core/widgets/liquid_glass_card.dart';
 import '../onboarding/models/user_profile.dart';
 import 'models/reward_item.dart';
@@ -54,7 +55,7 @@ class RewardsScreen extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Reward Store'),
+          title: const HomeTitle(label: 'Reward Store'),
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Digital Rewards'),
