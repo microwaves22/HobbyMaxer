@@ -18,6 +18,7 @@ import '../tasks/tasks_api.dart';
 import '../tasks/tasks_controller.dart';
 import '../tasks/widgets/parent_todo_section.dart';
 import '../tasks/tasks_screen.dart';
+import '../tasks/teen_todo_list_screen.dart';
 import '../tasks/widgets/review_queue_section.dart';
 
 /// Dashboard landing after onboarding or login.
@@ -110,12 +111,21 @@ class _HomeScreenState extends State<HomeScreen> {
       ];
 
   void _openTasks() {
+    // Teen profiles get the Figma 03 Teen My To-Do List skeleton; parents
+    // and kids keep the generic task list.
+    final isTeen =
+        !widget.profile.isParent && widget.profile.mode == FamilyMode.teen;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => TasksScreen(
-          controller: _tasks,
-          profile: widget.profile,
-        ),
+        builder: (_) => isTeen
+            ? TeenTodoListScreen(
+                controller: _tasks,
+                profile: widget.profile,
+              )
+            : TasksScreen(
+                controller: _tasks,
+                profile: widget.profile,
+              ),
       ),
     );
   }
@@ -163,8 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
             active: _active,
             profiles: _options(),
             parentPin: widget.parentPin,
-            onSwitchProfile: (profile) =>
-                setState(() => _active = profile),
+            onSwitchProfile: (profile) => setState(() => _active = profile),
             onAccountSettings: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
