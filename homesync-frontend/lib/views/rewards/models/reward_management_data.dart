@@ -3,11 +3,8 @@ import 'package:flutter/material.dart';
 /// Sarah reward management (Figma node 62:6235) data layer.
 ///
 /// STRUCTURE below is exact from Figma (section order, sizes, positions,
-/// icon names). TEXT, COLORS, and FONTS were NOT retrievable
-/// (Figma rate limit), so EVERY string here is a TODO placeholder —
-/// clearly labelled, in this ONE data block only, never hard-coded in
-/// the screen. Fill every TODO from Figma node 62:6235 before calling
-/// a build from this prompt final.
+/// icon names). STRINGS are the retrieved Figma copy — fill-ins are
+/// marked INFERRED below.
 ///
 /// Icon mapping (Figma icon name → project Material icon; the Figma
 /// names are retrieved facts):
@@ -34,11 +31,14 @@ class ManagedPerk {
   final IconData icon;
   final String name;
   final String detail;
+
+  /// Cost text as rendered ("★ 80" style) — the star-prefix format is
+  /// INFERRED from the spec's "existing rows" note; confirm against the
+  /// frame if the rows render differently.
   final String costLabel;
 }
 
-/// Form state for the creation card. ALL display strings are TODO
-/// placeholders from [kRewardManagementData].
+/// Form state for the creation card.
 class PerkFormState {
   const PerkFormState({
     required this.field1,
@@ -57,8 +57,8 @@ class PerkFormState {
   final String category;
 }
 
-/// ONE data block for the whole screen. Every string is
-/// [TEXT NOT RETRIEVED] unless noted otherwise.
+/// ONE data block for the whole screen. Strings are Figma copy unless
+/// marked INFERRED.
 class RewardManagementData {
   const RewardManagementData({
     required this.title,
@@ -78,12 +78,12 @@ class RewardManagementData {
     required this.eligibilityValue,
     required this.field2Label,
     required this.field2Value,
+    required this.field2Placeholder,
     required this.helperText,
     required this.field3Label,
     required this.field3Value,
     required this.primaryActionLabel,
     required this.existingHeading,
-    required this.statusPillLabel,
     required this.perks,
     required this.editLabel,
     required this.navLabels,
@@ -92,14 +92,17 @@ class RewardManagementData {
 
   final String title;
 
-  /// 42px avatar identity mark (initial or asset name).
+  /// 42px avatar identity mark. INFERRED: the spec pins 42px peach but
+  /// not the content, so Sarah's initial is kept.
   final String avatarLabel;
   final String description;
+
+  /// INFERRED: the spec names only the selected segment ("Real-world").
+  /// "Digital" mirrors the sibling stores' digital/real-world split.
   final String categoryA;
   final String categoryB;
 
-  /// 'a' or 'b'. The SECOND segment is selected in Figma (structural
-  /// fact); the category it represents is NOT retrieved.
+  /// 'a' or 'b'. The SECOND segment ("Real-world") is selected in Figma.
   final String selectedCategoryId;
   final String bannerTitle;
   final String bannerBody;
@@ -111,127 +114,91 @@ class RewardManagementData {
   final String eligibilityLabel;
   final String eligibilityValue;
   final String field2Label;
+
+  /// EMPTY in the design — the field renders [field2Placeholder] instead.
   final String field2Value;
+  final String field2Placeholder;
   final String helperText;
   final String field3Label;
   final String field3Value;
   final String primaryActionLabel;
   final String existingHeading;
-  final String statusPillLabel;
+
+  /// The status pill ("4 perks") is computed from this array's length,
+  /// not stored.
   final List<ManagedPerk> perks;
 
-  /// Same on all rows. Design zone is 19px wide (pattern: "Edit").
+  /// Same on all rows. Text action, not a toggle.
   final String editLabel;
   final List<String> navLabels;
 
-  /// No color data was retrieved, so the active item is a TODO guess.
+  /// Active bottom-nav item id. FAMILY is active in the design.
   final String activeNavId;
 }
 
-// TODO(figma 62:6235): fill EVERY string below from the Figma frame.
-// Nothing here is design copy.
+/// Figma copy for node 62:6235. See INFERRED notes on the class for the
+/// values the spec did not pin.
 const RewardManagementData kRewardManagementData = RewardManagementData(
-  // TODO(figma 62:6235): screen title.
-  title: 'TODO(62:6235): screen title',
-  // TODO(figma 62:6235): 42px avatar identity mark (Sarah's initial or
-  // avatar asset). 'S' is a placeholder.
+  title: 'Reward Management',
   avatarLabel: 'S',
-  // TODO(figma 62:6235): one-line description under the title.
-  description: 'TODO(62:6235): description line',
-  // TODO(figma 62:6235): both category names AND which grouping they
-  // represent. Do NOT assume.
-  categoryA: 'TODO(62:6235): category A',
-  categoryB: 'TODO(62:6235): category B',
-  // Structural fact: the SECOND segment is selected.
+  description: "Your family's rewards, on your terms.",
+  categoryA: 'Digital',
+  categoryB: 'Real-world',
   selectedCategoryId: 'b',
-  // TODO(figma 62:6235): banner title (bold title-line shape).
-  bannerTitle: 'TODO(62:6235): banner title',
-  // TODO(figma 62:6235): banner body (~2-line explanation shape). Do NOT
-  // copy a sibling banner's wording here.
-  bannerBody: 'TODO(62:6235): banner body explaining the parent-control rule.',
-  // TODO(figma 62:6235): creation heading ("create a perk" shape).
-  creationHeading: 'TODO(62:6235): creation heading',
-  // TODO(figma 62:6235): field 1 label + value (pattern: perk NAME).
-  field1Label: 'TODO(62:6235): field 1 label',
-  field1Value: 'TODO(62:6235): field 1 value',
-  // TODO(figma 62:6235): cost label + value (pattern: COST points value).
-  costLabel: 'TODO(62:6235): cost label',
-  costValue: 'TODO(62:6235): cost value',
-  // TODO(figma 62:6235): eligibility label + value (pattern:
-  // ELIGIBILITY — which child/mode; chevron-down = select).
-  eligibilityLabel: 'TODO(62:6235): eligibility label',
-  eligibilityValue: 'TODO(62:6235): eligibility value',
-  // TODO(figma 62:6235): field 2 label + value (do NOT assume which
-  // field this is).
-  field2Label: 'TODO(62:6235): field 2 label',
-  field2Value: 'TODO(62:6235): field 2 value',
-  // TODO(figma 62:6235): standalone helper text (11px mute shape).
-  helperText: 'TODO(62:6235): standalone helper text.',
-  // TODO(figma 62:6235): field 3 label + value.
-  field3Label: 'TODO(62:6235): field 3 label',
-  field3Value: 'TODO(62:6235): field 3 value',
-  // TODO(figma 62:6235): primary action label (create/add verb shape).
-  primaryActionLabel: 'TODO(62:6235): primary action',
-  // TODO(figma 62:6235): existing-perks heading.
-  existingHeading: 'TODO(62:6235): existing perks',
-  // TODO(figma 62:6235): 59×25 status pill label (count/state shape).
-  // Bg/text colors are pattern-only (sageLight/sageDark).
-  statusPillLabel: 'TODO',
+  bannerTitle: 'Managed by Sarah · Parent approval',
+  bannerBody:
+      'You set the cost, who can redeem, and any conditions. All requests come to you.',
+  creationHeading: 'Create a custom perk',
+  field1Label: 'Privilege / title',
+  field1Value: 'Contribution toward a personal purchase',
+  costLabel: 'Point cost',
+  costValue: '200 points',
+  eligibilityLabel: 'Eligible child',
+  eligibilityValue: 'Noah · 14',
+  field2Label: 'Contribution amount',
+  field2Value: '',
+  field2Placeholder: 'Enter an amount',
+  helperText: 'Parent-defined amount. No payment or commitment is created here.',
+  field3Label: 'Conditions · optional',
+  field3Value: 'Agree on the item together before redeeming.',
+  primaryActionLabel: 'Add Perk',
+  existingHeading: 'Your real-world perks',
   perks: [
     ManagedPerk(
       id: 'managed-perk-1',
       // EXACT icon from Figma: moon-star.
       icon: Icons.bedtime_rounded,
-      // TODO(figma 62:6235): perk name.
-      name: 'TODO(62:6235): perk 1 name',
-      // TODO(figma 62:6235): perk detail line.
-      detail: 'TODO(62:6235): perk 1 detail',
-      // TODO(figma 62:6235): cost ("<n> pts" shape only).
-      costLabel: 'TODO pts',
+      name: 'Extended weekend curfew',
+      detail: '+30 mins · Noah',
+      costLabel: '★ 80',
     ),
     ManagedPerk(
       id: 'managed-perk-2',
       // EXACT icon from Figma: utensils.
       icon: Icons.restaurant_rounded,
-      // TODO(figma 62:6235): perk name.
-      name: 'TODO(62:6235): perk 2 name',
-      // TODO(figma 62:6235): perk detail line.
-      detail: 'TODO(62:6235): perk 2 detail',
-      // TODO(figma 62:6235): cost ("<n> pts" shape only).
-      costLabel: 'TODO pts',
+      name: 'Choose Friday night dinner / takeout',
+      detail: 'Ava & Noah',
+      costLabel: '★ 120',
     ),
     ManagedPerk(
       id: 'managed-perk-3',
       // EXACT icon from Figma: clapperboard.
       icon: Icons.movie_rounded,
-      // TODO(figma 62:6235): perk name.
-      name: 'TODO(62:6235): perk 3 name',
-      // TODO(figma 62:6235): perk detail line.
-      detail: 'TODO(62:6235): perk 3 detail',
-      // TODO(figma 62:6235): cost ("<n> pts" shape only).
-      costLabel: 'TODO pts',
+      name: 'Pick the family movie',
+      detail: 'Ava & Noah',
+      costLabel: '★ 150',
     ),
     ManagedPerk(
       id: 'managed-perk-4',
       // EXACT icon from Figma: shopping-bag. This is the taller row:
       // the name below is long so it wraps to 2 lines like the design.
       icon: Icons.shopping_bag_rounded,
-      // TODO(figma 62:6235): perk name (long — wraps to 2 lines).
-      name: 'TODO(62:6235): long perk 4 name that wraps to two lines',
-      // TODO(figma 62:6235): perk detail line.
-      detail: 'TODO(62:6235): perk 4 detail',
-      // TODO(figma 62:6235): cost ("<n> pts" shape only).
-      costLabel: 'TODO pts',
+      name: 'Personal purchase contribution',
+      detail: 'Amount defined by parent · Noah',
+      costLabel: '★ 200',
     ),
   ],
-  // TODO(figma 62:6235): per-row edit action label. The design zone is
-  // 19px wide (pattern: the word "Edit" at ~11px).
   editLabel: 'Edit',
-  // TODO(figma 62:6235): nav labels (pattern: Home/Calendar/Tasks/Family
-  // to match the icons, which ARE exact).
   navLabels: ['Home', 'Calendar', 'Tasks', 'Family'],
-  // TODO(figma 62:6235): NO color data was retrieved — do NOT treat this
-  // as the design's active item. 'tasks' is a placeholder guess mirroring
-  // the sibling parent screen (Parent Review Queue highlights Tasks).
-  activeNavId: 'tasks',
+  activeNavId: 'family',
 );

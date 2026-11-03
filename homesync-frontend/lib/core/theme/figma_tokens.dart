@@ -21,12 +21,26 @@ abstract final class FigmaColors {
   static const Color white = Color(0xFFFFFFFF);
   static const Color cream = Color(0xFFFBF7EF);
 
+  /// Teen My To-Do List canvas (node 100:4622). This screen's variable
+  /// set has no cream in it at all — do not substitute [cream] here.
+  static const Color teenCanvas = Color(0xFFF4F3EF);
+
   // Pastels for task tiles / accents.
   static const Color pastelBlue = Color(0xFFCFE0EE);
   static const Color pastelLavender = Color(0xFFDDD5EE);
   static const Color pastelPeach = Color(0xFFF6D9C4);
   static const Color pastelPink = Color(0xFFF4C9C9);
   static const Color pastelYellow = Color(0xFFFDF0C8);
+
+  // 10 Customization background tiles (node 5:248), top -> bottom.
+  static const Color skyTop = Color(0xFFCFE3F5);
+  static const Color skyBottom = Color(0xFFF5E8D0);
+  static const Color meadowTop = Color(0xFFCDE5C0);
+  static const Color meadowBottom = Color(0xFFF2F0CC);
+  static const Color sunsetTop = Color(0xFFF8D3B8);
+  static const Color sunsetBottom = Color(0xFFF2B7C8);
+  static const Color nightTop = Color(0xFF3C4572);
+  static const Color nightBottom = Color(0xFF8E86C0);
 
   /// Rotation for task tiles when Figma gives no per-task color.
   /// TODO(figma 100:4622): replace round-robin with the exact tile
@@ -46,6 +60,16 @@ abstract final class FigmaShadows {
   /// Alpha is a range in Figma; 0.08 is the midpoint.
   static const BoxShadow card = BoxShadow(
     color: Color.fromRGBO(59, 77, 56, 0.08),
+    offset: Offset(0, 5),
+    blurRadius: 16,
+    spreadRadius: -4,
+  );
+
+  /// Card at the top of the Figma alpha range:
+  /// `0px 5px 16px -4px rgba(59,77,56,0.09)`, pinned by 10 Customization
+  /// (node 5:248). Differs from [card] only in alpha.
+  static const BoxShadow cardDeep = BoxShadow(
+    color: Color.fromRGBO(59, 77, 56, 0.09),
     offset: Offset(0, 5),
     blurRadius: 16,
     spreadRadius: -4,

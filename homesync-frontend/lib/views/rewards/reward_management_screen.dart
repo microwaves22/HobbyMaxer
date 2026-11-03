@@ -5,16 +5,13 @@ import 'package:flutter/material.dart';
 import 'models/reward_management_data.dart';
 
 /// Figma "Sarah reward management" (node 62:6235): the parent screen for
-/// creating and managing store perks. STRUCTURE-EXACT SHELL — text,
-/// colors, and fonts are TODO placeholders, not design content.
+/// creating and managing store perks.
 ///
-/// Figma returned this screen's complete layer structure (375 × 1202
-/// frame, every section's size/position, the icon in each row) but NONE
-/// of the text, colors, or font styles (Figma rate limit). So:
-/// - Section order, sizes, positions, and icon names below are EXACT.
-/// - Every string lives in [kRewardManagementData] (one TODO data block).
-/// - Every style is the verified HomeSync pattern (sibling screens),
-///   flagged [STYLE NOT RETRIEVED] where it mattered.
+/// Section order, sizes, positions, and icon names are EXACT from Figma;
+/// strings and the corrected styles are the retrieved Figma values.
+/// Every string lives in [kRewardManagementData] (one data block).
+/// Styles the spec did not pin keep the verified HomeSync pattern
+/// (sibling screens), flagged [STYLE NOT RETRIEVED] where it mattered.
 ///
 /// Spacing is reproduced from the design y-offsets (header y12 / desc
 /// y70 / categories y104 / banner y164 / card y255 / heading y725 / list
@@ -50,14 +47,8 @@ class RewardManagementScreen extends StatefulWidget {
   static const Color _white = Color(0xFFFFFFFF);
   static const Color _peach = Color(0xFFF6D9C4);
 
-  /// Pastel tile rotation (pattern guess for the perk symbol blocks —
-  /// their background color was NOT retrieved).
-  static const List<Color> _tileRotation = [
-    Color(0xFFCFE0EE),
-    Color(0xFFDDD5EE),
-    Color(0xFFF6D9C4),
-    Color(0xFFF4C9C9),
-  ];
+  /// Segmented-control track (same control as the teen store).
+  static const Color _segmentTrack = Color(0xFFE9EAE3);
 
   static const String _font = 'Nunito';
 
@@ -80,7 +71,7 @@ class RewardManagementScreen extends StatefulWidget {
     ),
   ];
 
-  /// The ONE TODO data block for this screen.
+  /// The ONE data block for this screen.
   final RewardManagementData data;
 
   /// Called with the category id ('a' or 'b'). Placeholder.
@@ -216,7 +207,7 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
           alignment: Alignment.center,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            // [STYLE NOT RETRIEVED] — peach/white pattern guess.
+            // Peach fill is Figma; the white border is sibling pattern.
             color: RewardManagementScreen._peach,
             border: Border.all(
               color: RewardManagementScreen._white,
@@ -244,7 +235,7 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
       style: const TextStyle(
         fontFamily: RewardManagementScreen._font,
         fontWeight: FontWeight.w500,
-        fontSize: 12,
+        fontSize: 13,
         color: RewardManagementScreen._mute,
       ),
     );
@@ -252,14 +243,13 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
 
   // 3) REWARD CATEGORIES CONTROL (full width, height 44, padding 4):
   // exactly TWO equal segments (161.5 × 36 at design width), the
-  // SECOND one selected.
+  // SECOND one ("Real-world") selected.
   Widget _buildCategories() {
     return Container(
       height: 44,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        // [STYLE NOT RETRIEVED] — container bg/radius are pattern.
-        color: RewardManagementScreen._white,
+        color: RewardManagementScreen._segmentTrack,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -291,7 +281,7 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected
-              ? RewardManagementScreen._sage
+              ? RewardManagementScreen._white
               : Colors.transparent,
           borderRadius: BorderRadius.circular(14),
         ),
@@ -303,8 +293,10 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
             fontWeight: FontWeight.w800,
             fontSize: 12,
             color: selected
-                ? RewardManagementScreen._white
-                : RewardManagementScreen._sage,
+                ? RewardManagementScreen._sage
+                // INFERRED: unselected label color (the spec pins only
+                // the selected state).
+                : RewardManagementScreen._mute,
           ),
         ),
       ),
@@ -316,10 +308,10 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
   Widget _buildBanner() {
     return Container(
       constraints: const BoxConstraints(minHeight: 75),
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+      padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: RewardManagementScreen._sageLight,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -411,6 +403,7 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
               _buildField(
                 label: widget.data.field2Label,
                 controller: _field2Controller,
+                placeholder: widget.data.field2Placeholder,
               ),
               const SizedBox(height: 10),
               Text(
@@ -470,6 +463,7 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
     required String label,
     required TextEditingController controller,
     TextInputType? keyboardType,
+    String? placeholder,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -479,8 +473,8 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
           style: const TextStyle(
             fontFamily: RewardManagementScreen._font,
             fontWeight: FontWeight.w800,
-            fontSize: 12,
-            color: RewardManagementScreen._ink,
+            fontSize: 11,
+            color: RewardManagementScreen._mute,
           ),
         ),
         const SizedBox(height: 6),
@@ -495,23 +489,30 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
               fontSize: 14,
               color: RewardManagementScreen._ink,
             ),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
+              hintText: placeholder,
+              hintStyle: const TextStyle(
+                fontFamily: RewardManagementScreen._font,
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+                color: RewardManagementScreen._mute,
+              ),
               filled: true,
-              fillColor: Color.fromRGBO(255, 255, 255, 0.91),
-              contentPadding: EdgeInsets.all(12),
-              border: OutlineInputBorder(
+              fillColor: const Color.fromRGBO(255, 255, 255, 0.91),
+              contentPadding: const EdgeInsets.all(12),
+              border: const OutlineInputBorder(
                 borderRadius: BorderRadius.all(Radius.circular(14)),
                 borderSide: BorderSide(
                   color: RewardManagementScreen._line,
                 ),
               ),
-              enabledBorder: OutlineInputBorder(
+              enabledBorder: const OutlineInputBorder(
                 borderRadius: BorderRadius.all(Radius.circular(14)),
                 borderSide: BorderSide(
                   color: RewardManagementScreen._line,
                 ),
               ),
-              focusedBorder: OutlineInputBorder(
+              focusedBorder: const OutlineInputBorder(
                 borderRadius: BorderRadius.all(Radius.circular(14)),
                 borderSide: BorderSide(
                   color: RewardManagementScreen._sage,
@@ -536,8 +537,8 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
           style: const TextStyle(
             fontFamily: RewardManagementScreen._font,
             fontWeight: FontWeight.w800,
-            fontSize: 12,
-            color: RewardManagementScreen._ink,
+            fontSize: 11,
+            color: RewardManagementScreen._mute,
           ),
         ),
         const SizedBox(height: 6),
@@ -599,7 +600,7 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
           style: const TextStyle(
             fontFamily: RewardManagementScreen._font,
             fontWeight: FontWeight.w800,
-            fontSize: 15,
+            fontSize: 14,
             color: RewardManagementScreen._white,
           ),
         ),
@@ -607,7 +608,8 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
     );
   }
 
-  // 6) EXISTING PERKS HEADING + 59×25 status pill.
+  // 6) EXISTING PERKS HEADING + 59×25 count pill (computed from the
+  // perks array, not stored).
   Widget _buildExistingHeading() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -633,7 +635,7 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
-            widget.data.statusPillLabel,
+            '${widget.data.perks.length} perks',
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontFamily: RewardManagementScreen._font,
@@ -656,7 +658,7 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
       children: [
         for (var i = 0; i < perks.length; i++) ...[
           if (i > 0) const SizedBox(height: 9),
-          _buildPerkRow(perks[i], i),
+          _buildPerkRow(perks[i]),
         ],
       ],
     );
@@ -665,7 +667,7 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
   // Row layout (EXACT): symbol block 34×38 at x12, info at x56 (two
   // lines, gap 3), cost + edit controls right-aligned. Only the edit
   // action is interactive.
-  Widget _buildPerkRow(ManagedPerk perk, int index) {
+  Widget _buildPerkRow(ManagedPerk perk) {
     return Container(
       constraints: const BoxConstraints(minHeight: 62),
       padding: const EdgeInsets.all(12),
@@ -685,10 +687,7 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
             height: 38,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              // [STYLE NOT RETRIEVED] — tile bg/radius/icon color are
-              // pattern guesses. The ICON itself is exact from Figma.
-              color: RewardManagementScreen
-                  ._tileRotation[index % 4],
+              color: RewardManagementScreen._sageLight,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -731,13 +730,12 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // [STYLE NOT RETRIEVED] — cost/edit styling is pattern.
               Text(
                 perk.costLabel,
                 style: const TextStyle(
                   fontFamily: RewardManagementScreen._font,
                   fontWeight: FontWeight.w800,
-                  fontSize: 12,
+                  fontSize: 11,
                   color: RewardManagementScreen._sage,
                 ),
               ),
@@ -749,8 +747,8 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
                   style: const TextStyle(
                     fontFamily: RewardManagementScreen._font,
                     fontWeight: FontWeight.w700,
-                    fontSize: 11,
-                    color: RewardManagementScreen._sageDark,
+                    fontSize: 10,
+                    color: RewardManagementScreen._mute,
                   ),
                 ),
               ),
@@ -762,8 +760,8 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
   }
 
   // 8) BOTTOM NAVIGATION (pinned): 4 parent items. Icons EXACT, in
-  // order: house / calendar-days / list-checks / users. Labels + active
-  // item are TODO (no color data was retrieved).
+  // order: house / calendar-days / list-checks / users. Labels and the
+  // FAMILY active item are confirmed; tab styling is sibling pattern.
   Widget _buildBottomNav() {
     const ids = ['home', 'calendar', 'tasks', 'family'];
     const icons = [
@@ -796,7 +794,6 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
                 _buildTab(
                   label: widget.data.navLabels[i],
                   icon: icons[i],
-                  // TODO(figma 62:6235): active item unconfirmed.
                   active: widget.data.activeNavId == ids[i],
                   onTap: _navHandler(handlers[i]),
                 ),
