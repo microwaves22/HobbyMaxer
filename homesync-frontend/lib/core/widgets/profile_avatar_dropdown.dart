@@ -42,6 +42,7 @@ class ProfileAvatarDropdown extends StatelessWidget {
     this.parentPin = '1234',
     this.onSwitchProfile,
     this.onAccountSettings,
+    this.onManageFamily,
   });
 
   final ProfileOption active;
@@ -53,6 +54,7 @@ class ProfileAvatarDropdown extends StatelessWidget {
 
   final ValueChanged<ProfileOption>? onSwitchProfile;
   final VoidCallback? onAccountSettings;
+  final VoidCallback? onManageFamily;
 
   void _requestSwitch(BuildContext context, ProfileOption target) {
     if (active.isParent || !target.isParent) {
@@ -78,9 +80,10 @@ class ProfileAvatarDropdown extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       onSelected: (action) {
-        // Profile taps are handled per-item via onTap; only settings
-        // needs handling here.
+        // Profile taps are handled per-item via onTap; only the
+        // footer actions need handling here.
         if (action == _MenuAction.settings) onAccountSettings?.call();
+        if (action == _MenuAction.family) onManageFamily?.call();
       },
       itemBuilder: (_) => [
         PopupMenuItem<_MenuAction>(
@@ -125,6 +128,16 @@ class ProfileAvatarDropdown extends StatelessWidget {
           ),
         if (others.isNotEmpty) const PopupMenuDivider(),
         const PopupMenuItem<_MenuAction>(
+          value: _MenuAction.family,
+          child: Row(
+            children: [
+              Icon(Icons.group_outlined, size: 18),
+              SizedBox(width: 12),
+              Text('Manage family'),
+            ],
+          ),
+        ),
+        const PopupMenuItem<_MenuAction>(
           value: _MenuAction.settings,
           child: Row(
             children: [
@@ -143,7 +156,7 @@ class ProfileAvatarDropdown extends StatelessWidget {
   }
 }
 
-enum _MenuAction { profile, settings }
+enum _MenuAction { profile, family, settings }
 
 /// PIN challenge shown when switching to a parent profile. Pops `true`
 /// on a correct PIN, `false` when cancelled.

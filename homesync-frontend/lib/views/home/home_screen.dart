@@ -8,6 +8,7 @@ import '../../core/state/focus_areas.dart';
 import '../../core/widgets/home_title.dart';
 import '../../core/widgets/liquid_glass_card.dart';
 import '../../core/widgets/profile_avatar_dropdown.dart';
+import '../onboarding/link_kids_screen.dart';
 import '../onboarding/models/user_profile.dart';
 import '../rewards/rewards_controller.dart';
 import '../rewards/rewards_screen.dart';
@@ -118,6 +119,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openManageFamily() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const LinkKidsScreen()),
+    );
+  }
+
   void _openRewards() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -144,6 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const HomeTitle(label: 'HomeSync'),
         actions: [
           ProfileAvatarDropdown(
+            onManageFamily: _openManageFamily,
             active: _active,
             profiles: _options(),
             parentPin: widget.parentPin,
