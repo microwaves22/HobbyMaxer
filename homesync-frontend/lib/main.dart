@@ -1,42 +1,22 @@
 import 'package:flutter/material.dart';
 
-import 'core/network/auth_session.dart';
-import 'core/theme/app_theme.dart';
-import 'views/onboarding/splash_screen.dart';
+import 'views/onboarding/onboarding_interests_screen.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  final session = AuthSession();
-  try {
-    await session.restore();
-  } catch (_) {
-    // No saved session (or keychain unavailable): start logged out.
-  }
-  runApp(HomeSyncApp(session: session));
+void main() {
+  runApp(const HomeSyncApp());
 }
 
-/// HomeSync root widget.
-///
-/// Light theme by default; Teen Mode picks up the dark theme via the
-/// system brightness until a per-profile toggle is added. The [AuthScope]
-/// above [MaterialApp] shares one authenticated client with every route.
+/// Minimal app entry. Home is the onboarding interests screen (Step 1 of 2)
+/// until onboarding navigation is built out.
 class HomeSyncApp extends StatelessWidget {
-  const HomeSyncApp({super.key, AuthSession? session}) : _session = session;
-
-  final AuthSession? _session;
+  const HomeSyncApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return AuthScope(
-      session: _session ?? AuthSession(),
-      child: MaterialApp(
-        title: 'HomeSync',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        themeMode: ThemeMode.system,
-        home: const SplashScreen(),
-      ),
+    return const MaterialApp(
+      title: 'HomeSync',
+      debugShowCheckedModeBanner: false,
+      home: OnboardingInterestsScreen(),
     );
   }
 }
