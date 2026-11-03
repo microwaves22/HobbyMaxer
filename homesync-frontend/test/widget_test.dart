@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:homesync/views/onboarding/welcome_screen.dart';
+import 'package:homesync/main.dart';
 
-// The 01 Splash screen is static now (no 2s auto-advance), so these
-// Welcome-flow tests pump WelcomeScreen directly. Assertions unchanged.
 Future<void> _pumpToWelcome(WidgetTester tester) async {
-  await tester.pumpWidget(const MaterialApp(home: WelcomeScreen()));
+  await tester.pumpWidget(const HomeSyncApp());
+  await tester.pump(const Duration(seconds: 2));
   await tester.pumpAndSettle();
 }
 
