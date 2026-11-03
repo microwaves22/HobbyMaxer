@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-import 'views/onboarding/onboarding_interests_screen.dart';
+import 'views/onboarding/splash_screen.dart';
 
 void main() {
   runApp(const HomeSyncApp());
 }
 
-/// Minimal app entry. Home is the onboarding interests screen (Step 1 of 2)
-/// until onboarding navigation is built out.
+/// App entry. Home is the Figma 01 Splash screen, which routes to
+/// account setup (Choose Mode) or login.
 class HomeSyncApp extends StatelessWidget {
   const HomeSyncApp({super.key});
 
@@ -16,7 +16,7 @@ class HomeSyncApp extends StatelessWidget {
     return const MaterialApp(
       title: 'HomeSync',
       debugShowCheckedModeBanner: false,
-      home: OnboardingInterestsScreen(),
+      home: SplashScreen(),
     );
   }
 }

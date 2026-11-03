@@ -10,6 +10,7 @@ import '../../core/widgets/liquid_glass_card.dart';
 import '../../core/widgets/profile_avatar_dropdown.dart';
 import '../onboarding/link_kids_screen.dart';
 import '../onboarding/models/user_profile.dart';
+import '../rewards/kids_reward_store_screen.dart';
 import '../rewards/rewards_controller.dart';
 import '../rewards/rewards_screen.dart';
 import '../rewards/widgets/perk_requests_section.dart';
@@ -126,6 +127,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openRewards() {
+    if (widget.profile.mode == FamilyMode.kids) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          // Mock-only storefront (node 100:4854): placeholder handlers,
+          // fixed mock balance. Back/Home return to the dashboard.
+          builder: (_) => KidsRewardStoreScreen(
+            onBack: () => Navigator.of(context).pop(),
+            onNavigateHome: () => Navigator.of(context).pop(),
+          ),
+        ),
+      );
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => RewardsScreen(
