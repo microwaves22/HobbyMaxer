@@ -8,6 +8,7 @@ import '../../core/state/focus_areas.dart';
 import '../../core/widgets/home_title.dart';
 import '../../core/widgets/liquid_glass_card.dart';
 import '../../core/widgets/profile_avatar_dropdown.dart';
+import '../calendar/calendar_screen.dart';
 import '../onboarding/link_kids_screen.dart';
 import '../onboarding/models/user_profile.dart';
 import '../rewards/rewards_controller.dart';
@@ -119,6 +120,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openCalendar() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CalendarScreen()),
+    );
+  }
+
   void _openManageFamily() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const LinkKidsScreen()),
@@ -137,6 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   VoidCallback? _cardAction(String area) => switch (area) {
+        FocusAreas.calendar => _openCalendar,
         FocusAreas.chores => _openTasks,
         FocusAreas.rewards => _openRewards,
         _ => null,
