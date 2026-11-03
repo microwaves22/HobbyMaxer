@@ -10,6 +10,7 @@ const _cream = Color(0xFFFBF7EF);
 const _ink = Color(0xFF2B3A2B);
 const _mute = Color(0xFF7C877A);
 const _sage = Color(0xFF5F7F55);
+const _sageDark = Color(0xFF4A6A41);
 const _line = Color(0xFFE8E4D8);
 const _white = Color(0xFFFFFFFF);
 
@@ -173,7 +174,7 @@ class _HeaderRow extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Nunito',
               fontWeight: FontWeight.w800,
-              fontSize: 28,
+              fontSize: 26,
               height: 1.25,
               color: _ink,
             ),
@@ -186,9 +187,9 @@ class _HeaderRow extends StatelessWidget {
             customBorder: const CircleBorder(),
             onTap: onAddEvent,
             child: const SizedBox(
-              width: 48,
-              height: 48,
-              child: Icon(Icons.add, size: 26, color: _white),
+              width: 38,
+              height: 38,
+              child: Icon(Icons.add, size: 20, color: _white),
             ),
           ),
         ),
@@ -348,7 +349,7 @@ class _WeekCard extends StatelessWidget {
   final ValueChanged<DateTime> onSelectDay;
   final ValueChanged<String>? onEventPress;
 
-  static const double _hourHeight = 30;
+  static const double _hourHeight = 21;
   static const double _gutterWidth = 44;
 
   double get _gridHeight =>
@@ -432,8 +433,8 @@ class _WeekCard extends StatelessWidget {
 }
 
 /// Weekday names over day numbers; tapping a number selects the day.
-/// The design shows no greying of adjacent-month days, so every number
-/// renders the same unless selected (sage fill) or today (sage ring).
+/// The design shows no greying of adjacent-month days and no today
+/// marker, so every number renders the same unless selected (sage fill).
 class _WeekdayHeader extends StatelessWidget {
   const _WeekdayHeader({
     required this.days,
@@ -449,7 +450,6 @@ class _WeekdayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final today = DateTime.now();
     return Row(
       children: [
         SizedBox(width: gutterWidth),
@@ -459,7 +459,6 @@ class _WeekdayHeader extends StatelessWidget {
               name: CalendarData.weekdayNames[i],
               day: days[i],
               selected: CalendarData.isSameDay(days[i], selectedDay),
-              isToday: CalendarData.isSameDay(days[i], today),
               onTap: () => onSelectDay(days[i]),
             ),
           ),
@@ -473,14 +472,12 @@ class _DayCell extends StatelessWidget {
     required this.name,
     required this.day,
     required this.selected,
-    required this.isToday,
     required this.onTap,
   });
 
   final String name;
   final DateTime day;
   final bool selected;
-  final bool isToday;
   final VoidCallback onTap;
 
   @override
@@ -510,9 +507,6 @@ class _DayCell extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: selected ? _sage : Colors.transparent,
-              border: !selected && isToday
-                  ? Border.all(color: _sage, width: 1.5)
-                  : null,
             ),
             child: Text(
               '${day.day}',
@@ -566,8 +560,8 @@ class _TimeGutter extends StatelessWidget {
                     2],
                 style: const TextStyle(
                   fontFamily: 'Nunito',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 9,
                   height: 1.45,
                   color: _mute,
                 ),
@@ -671,16 +665,16 @@ class _SmartPlannerCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 36,
+            height: 36,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
+            decoration: BoxDecoration(
               color: _white,
+              borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
               Icons.auto_awesome,
-              size: 24,
+              size: 20,
               color: _sparkGold,
             ),
           ),
@@ -694,10 +688,10 @@ class _SmartPlannerCard extends StatelessWidget {
                   CalendarData.plannerTitle,
                   style: TextStyle(
                     fontFamily: 'Nunito',
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
                     height: 1.3,
-                    color: _ink,
+                    color: _sageDark,
                   ),
                 ),
                 SizedBox(height: 4),
@@ -706,7 +700,7 @@ class _SmartPlannerCard extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'Nunito',
                     fontWeight: FontWeight.w500,
-                    fontSize: 14,
+                    fontSize: 12,
                     height: 1.4,
                     color: _ink,
                   ),

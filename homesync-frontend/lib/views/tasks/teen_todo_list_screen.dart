@@ -1,252 +1,665 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/figma_tokens.dart';
 import '../onboarding/models/user_profile.dart';
-import 'models/chore_task.dart';
 import 'tasks_controller.dart';
-import 'widgets/submission_sheet.dart';
 
-// TODO(figma 100:4622): this screen is a best-effort skeleton. Node
-// "Teen My To-Do List" returned HTTP 429 and was never re-pulled, so every
-// layout choice below (header copy, progress card, filter labels, tile
-// colors/glyphs, card radius, spacing, type sizes) is a placeholder. Once
-// the node is re-pulled, replace each inline TODO with the exact spec and
-// delete this comment. Do not ship pixel claims as Figma-exact until then.
+/// Teen background (Figma 100:4622): #F4F3EF, NOT cream.
+const _teenBg = Color(0xFFF4F3EF);
 
-/// Teen's personal to-do list, styled with the Figma 03 shared tokens.
+/// Frosted-card shadow, copied exactly from the screen spec:
+/// `0px 5px 16px -4px rgba(59,77,56,0.07)`.
+const _cardShadow = BoxShadow(
+  color: Color.fromRGBO(59, 77, 56, 0.07),
+  offset: Offset(0, 5),
+  blurRadius: 16,
+  spreadRadius: -4,
+);
+
+/// Nunito text in the exact size/weight/color, defaulting to the screen's
+/// 1.35 line height.
+TextStyle _nunito(double size, FontWeight weight, Color color,
+        {double height = 1.35}) =>
+    GoogleFonts.nunito(
+      fontSize: size,
+      fontWeight: weight,
+      height: height,
+      color: color,
+    );
+
+/// A category chip in the add-task form.
+class TeenCategory {
+  const TeenCategory({
+    required this.id,
+    required this.label,
+    this.selected = false,
+  });
+
+  final String id;
+  final String label;
+  final bool selected;
+
+  TeenCategory copyWith({bool? selected}) => TeenCategory(
+        id: id,
+        label: label,
+        selected: selected ?? this.selected,
+      );
+}
+
+/// A teen-created personal task. No points, no parent review.
+class TeenPersonalTask {
+  const TeenPersonalTask({
+    required this.id,
+    required this.title,
+    required this.category,
+    required this.due,
+    required this.meta,
+    this.completed = false,
+  });
+
+  final String id;
+  final String title;
+  final String category;
+  final String due;
+  final String meta;
+  final bool completed;
+
+  TeenPersonalTask copyWith({bool? completed}) => TeenPersonalTask(
+        id: id,
+        title: title,
+        category: category,
+        due: due,
+        meta: meta,
+        completed: completed ?? this.completed,
+      );
+}
+
+/// A parent-assigned chore link.
+class TeenParentChore {
+  const TeenParentChore({
+    required this.id,
+    required this.title,
+    required this.time,
+  });
+
+  final String id;
+  final String title;
+  final String time;
+}
+
+/// Teen Mode "My To-Do List" for Noah, built exactly from Figma node
+/// 100:4622: a long scrolling 375px design on #F4F3EF, frosted cards with
+/// real backdrop blur, and the bottom nav after the content.
 ///
-/// Fluid layout for the 375px-wide design: content centers in a max-width
-/// column on wide screens and never uses fixed-pixel page widths. No
-/// status bar or home indicator is built here (device UI).
+/// No status bar or home indicator is built here (device UI). No backend
+/// or persistence: adding a task and toggling completion only touch
+/// local state. [controller] is retained for API compatibility with the
+/// dashboard entry point; personal tasks are local-only by design.
 class TeenTodoListScreen extends StatefulWidget {
   const TeenTodoListScreen({
     super.key,
     required this.controller,
     required this.profile,
+    this.onBack,
+    this.onSelectCategory,
+    this.onAddTask,
+    this.onToggleTaskComplete,
+    this.onParentChorePress,
+    this.onNavigateHome,
+    this.onNavigateRewards,
+    this.onNavigateCalendar,
   });
 
   final TasksController controller;
   final UserProfile profile;
 
+  final VoidCallback? onBack;
+  final ValueChanged<String>? onSelectCategory;
+  final VoidCallback? onAddTask;
+  final ValueChanged<String>? onToggleTaskComplete;
+  final ValueChanged<String>? onParentChorePress;
+  final VoidCallback? onNavigateHome;
+  final VoidCallback? onNavigateRewards;
+  final VoidCallback? onNavigateCalendar;
+
   @override
   State<TeenTodoListScreen> createState() => _TeenTodoListScreenState();
 }
 
-enum _TodoFilter { all, todo, inReview, done }
-
-extension on _TodoFilter {
-  // TODO(figma 100:4622): confirm filter labels (and whether a filter row
-  // exists at all) from the re-pulled node.
-  String get label => switch (this) {
-        _TodoFilter.all => 'All',
-        _TodoFilter.todo => 'To do',
-        _TodoFilter.inReview => 'In review',
-        _TodoFilter.done => 'Done',
-      };
-
-  bool matches(ChoreTask task) => switch (this) {
-        _TodoFilter.all => true,
-        _TodoFilter.todo => task.state == TaskState.pending ||
-            task.state == TaskState.changesRequested,
-        _TodoFilter.inReview => task.state == TaskState.pendingReview,
-        _TodoFilter.done => task.state == TaskState.approved,
-      };
-}
-
 class _TeenTodoListScreenState extends State<TeenTodoListScreen> {
-  _TodoFilter _filter = _TodoFilter.all;
+  static const parentChores = [
+    TeenParentChore(
+      id: 'math-homework',
+      title: 'Math homework',
+      time: '6:00 PM',
+    ),
+    TeenParentChore(
+      id: 'vacuum-living',
+      title: 'Vacuum living room',
+      time: '7:00 PM',
+    ),
+  ];
 
-  Future<void> _openSubmission(BuildContext context, ChoreTask task) async {
-    final submitted = await showSubmissionSheet(
-      context,
-      task,
-      widget.controller,
+  List<TeenCategory> _categories = const [
+    TeenCategory(id: 'homework', label: 'Homework', selected: true),
+    TeenCategory(id: 'personal-goal', label: 'Personal goal'),
+    TeenCategory(id: 'task', label: 'Task'),
+  ];
+
+  List<TeenPersonalTask> _personalTasks = const [
+    TeenPersonalTask(
+      id: 'history-chapter',
+      title: 'Read history chapter 4',
+      category: 'Homework',
+      due: 'Today, 5:00 PM',
+      meta: 'Homework · Today, 5:00 PM',
+    ),
+    TeenPersonalTask(
+      id: 'run-mile',
+      title: 'Run a mile',
+      category: 'Personal goal',
+      due: 'Sun, Nov 1',
+      meta: 'Personal goal · Sun, Nov 1',
+    ),
+    TeenPersonalTask(
+      id: 'pack-soccer-bag',
+      title: 'Pack soccer bag',
+      category: 'Task',
+      due: 'Today',
+      meta: 'Task · Completed today',
+      completed: true,
+    ),
+  ];
+
+  final _titleController = TextEditingController(
+    text: 'Outline science project',
+  );
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  void _onSelectCategory(String id) {
+    setState(() {
+      _categories = [
+        for (final category in _categories)
+          category.copyWith(selected: category.id == id),
+      ];
+    });
+    widget.onSelectCategory?.call(id);
+  }
+
+  void _onToggleTaskComplete(String taskId) {
+    setState(() {
+      _personalTasks = [
+        for (final task in _personalTasks)
+          if (task.id == taskId)
+            task.copyWith(completed: !task.completed)
+          else
+            task,
+      ];
+    });
+    widget.onToggleTaskComplete?.call(taskId);
+  }
+
+  void _onAddTask() {
+    final category = _categories.firstWhere(
+      (category) => category.selected,
+      orElse: () => _categories.first,
     );
-    if (submitted == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Submitted — pending review.')),
-      );
-    }
+    setState(() {
+      _personalTasks = [
+        ..._personalTasks,
+        TeenPersonalTask(
+          id: 'own-${_personalTasks.length}',
+          title: _titleController.text,
+          category: category.label,
+          due: 'Today, 5:00 PM',
+          meta: '${category.label} · Today, 5:00 PM',
+        ),
+      ];
+    });
+    widget.onAddTask?.call();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: widget.controller,
-      builder: (context, _) {
-        // Parents see household chores here (parent to-dos live in their
-        // own dashboard section); teens see their own tasks only.
-        final all = widget.profile.isParent
-            ? widget.controller.tasks.where((t) => !t.isParentTodo).toList()
-            : widget.controller.tasksFor(widget.profile.name);
-        final visible = all.where(_filter.matches).toList();
-        final doneCount =
-            all.where((t) => t.state == TaskState.approved).length;
-        final balance = widget.controller.balanceFor(widget.profile.name);
-
-        return Scaffold(
-          backgroundColor: FigmaColors.cream,
-          body: SafeArea(
-            child: Center(
-              child: ConstrainedBox(
-                // Fluid cap for tablets/desktop; phones use full width.
-                constraints: const BoxConstraints(maxWidth: 560),
-                child: CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: _Header(
-                        doneCount: doneCount,
-                        totalCount: all.length,
-                        balance: balance,
-                        profileName: widget.profile.name,
-                      ),
-                    ),
-                    SliverToBoxAdapter(
-                      child: _FilterRow(
-                        selected: _filter,
-                        onSelect: (f) => setState(() => _filter = f),
-                      ),
-                    ),
-                    if (visible.isEmpty)
-                      const SliverToBoxAdapter(child: _EmptyState())
-                    else
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                        sliver: SliverList.separated(
-                          itemCount: visible.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final task = visible[index];
-                            return _TodoCard(
-                              task: task,
-                              tileColor: FigmaColors.tileRotation[
-                                  index % FigmaColors.tileRotation.length],
-                              onTap: _isSubmittable(task)
-                                  ? () => _openSubmission(context, task)
-                                  : null,
-                            );
-                          },
+    return Scaffold(
+      backgroundColor: _teenBg,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            // Fluid cap for tablets/desktop; phones use full width.
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _PageHeading(
+                          profile: widget.profile,
+                          onBack: widget.onBack ??
+                              () => Navigator.of(context).maybePop(),
                         ),
-                      ),
-                  ],
-                ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Your plans, your pace. Personal tasks are just '
+                          'for you — no points or parent review.',
+                          style: _nunito(
+                            13,
+                            FontWeight.w500,
+                            FigmaColors.mute,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _AddTaskCard(
+                          titleController: _titleController,
+                          categories: _categories,
+                          onSelectCategory: _onSelectCategory,
+                          onAddTask: _onAddTask,
+                        ),
+                        const SizedBox(height: 16),
+                        _CreatedByMeCard(
+                          tasks: _personalTasks,
+                          onToggleTaskComplete: _onToggleTaskComplete,
+                        ),
+                        const SizedBox(height: 16),
+                        _ParentChoresCard(
+                          chores: parentChores,
+                          onParentChorePress:
+                              widget.onParentChorePress ?? (_) {},
+                        ),
+                      ],
+                    ),
+                  ),
+                  _BottomNav(
+                    onNavigateHome: widget.onNavigateHome ?? () {},
+                    onNavigateRewards: widget.onNavigateRewards ?? () {},
+                    onNavigateCalendar: widget.onNavigateCalendar ?? () {},
+                  ),
+                ],
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
-
-  static bool _isSubmittable(ChoreTask task) =>
-      task.state == TaskState.pending ||
-      task.state == TaskState.changesRequested;
 }
 
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.doneCount,
-    required this.totalCount,
-    required this.balance,
-    required this.profileName,
+/// Frosted card: translucent white, 9px backdrop blur, 1px white border,
+/// 22px radius, and the exact card shadow.
+class _FrostedCard extends StatelessWidget {
+  const _FrostedCard({
+    required this.child,
+    this.fill = FigmaColors.frostedFill,
   });
 
-  final int doneCount;
-  final int totalCount;
-  final int balance;
-  final String profileName;
+  final Widget child;
+  final Color fill;
 
   @override
   Widget build(BuildContext context) {
-    // TODO(figma 100:4622): confirm header copy, alignment, back-button
-    // placement, and whether the points pill lives here.
-    final progress = totalCount == 0 ? 0.0 : doneCount / totalCount;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
+    // Shadow lives on the outer box so the clip below (required for the
+    // blur) cannot cut it off.
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: const [_cardShadow],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 9, sigmaY: 9),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: fill,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: FigmaColors.white, width: 1),
+            ),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Header: back button + avatar row, then the title block.
+class _PageHeading extends StatelessWidget {
+  const _PageHeading({required this.profile, required this.onBack});
+
+  final UserProfile profile;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final initial =
+        profile.name.isEmpty ? '?' : profile.name.characters.first;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            GestureDetector(
+              key: const ValueKey('teen-back'),
+              onTap: onBack,
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(
+                  color: FigmaColors.frostedStrong,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.chevron_left_rounded,
+                  size: 20,
+                  color: FigmaColors.ink,
+                ),
+              ),
+            ),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: FigmaColors.sageLight,
+                shape: BoxShape.circle,
+                border: Border.all(color: FigmaColors.white, width: 1),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                initial,
+                style: _nunito(
+                  16,
+                  FontWeight.w800,
+                  FigmaColors.sageDark,
+                  height: 1,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Text(
+          'My To-Do List',
+          style: _nunito(26, FontWeight.w800, FigmaColors.ink),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${profile.name} · 14 · Teen Mode',
+          style: _nunito(12, FontWeight.w500, FigmaColors.mute),
+        ),
+      ],
+    );
+  }
+}
+
+/// "New personal task" form. The title field is pre-filled with entered
+/// text (not a placeholder); chips render from [categories].
+class _AddTaskCard extends StatelessWidget {
+  const _AddTaskCard({
+    required this.titleController,
+    required this.categories,
+    required this.onSelectCategory,
+    required this.onAddTask,
+  });
+
+  final TextEditingController titleController;
+  final List<TeenCategory> categories;
+  final ValueChanged<String> onSelectCategory;
+  final VoidCallback onAddTask;
+
+  static const _inputBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.all(Radius.circular(14)),
+    borderSide: BorderSide(color: FigmaColors.line, width: 1),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return _FrostedCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              IconButton(
-                // TODO(figma 100:4622): replace with the local
-                // `chevron-left` SVG export. Never hotlink Figma URLs.
-                icon: const Icon(Icons.chevron_left_rounded),
+              const Icon(
+                Icons.add_rounded,
+                size: 20,
                 color: FigmaColors.ink,
-                tooltip: 'Back',
-                onPressed: () => Navigator.of(context).maybePop(),
               ),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  // TODO(figma 100:4622): confirm exact title case/copy.
-                  'My To-Do List',
-                  style: FigmaType.screenTitle(),
+                  'New personal task',
+                  style: _nunito(17, FontWeight.w800, FigmaColors.ink),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Task title',
+                style: _nunito(12, FontWeight.w800, FigmaColors.ink),
+              ),
+              const SizedBox(height: 6),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 46),
+                child: TextField(
+                  key: const ValueKey('teen-task-title'),
+                  controller: titleController,
+                  style: _nunito(14, FontWeight.w600, FigmaColors.ink),
+                  decoration: const InputDecoration(
+                    filled: true,
+                    fillColor: FigmaColors.frostedStrong,
+                    contentPadding: EdgeInsets.all(12),
+                    border: _inputBorder,
+                    enabledBorder: _inputBorder,
+                    focusedBorder: _inputBorder,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Category',
+                style: _nunito(12, FontWeight.w800, FigmaColors.ink),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  for (var i = 0; i < categories.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 6),
+                    GestureDetector(
+                      key: ValueKey('teen-category-${categories[i].id}'),
+                      onTap: () => onSelectCategory(categories[i].id),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 9,
+                          horizontal: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: categories[i].selected
+                              ? FigmaColors.sage
+                              : FigmaColors.frostedStrong,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          categories[i].label,
+                          style: _nunito(
+                            11,
+                            FontWeight.w800,
+                            categories[i].selected
+                                ? FigmaColors.white
+                                : FigmaColors.sage,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            key: const ValueKey('teen-add-task'),
+            onTap: onAddTask,
+            child: Container(
+              height: 54,
+              padding: const EdgeInsets.symmetric(
+                vertical: 16,
+                horizontal: 20,
+              ),
+              decoration: BoxDecoration(
+                color: FigmaColors.sage,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: const [FigmaShadows.primaryButton],
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                'Add Task',
+                style: _nunito(15, FontWeight.w800, FigmaColors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Created by me" personal tasks, rendered from [tasks] with dividers
+/// between rows only. The progress pill is derived from state.
+class _CreatedByMeCard extends StatelessWidget {
+  const _CreatedByMeCard({
+    required this.tasks,
+    required this.onToggleTaskComplete,
+  });
+
+  final List<TeenPersonalTask> tasks;
+  final ValueChanged<String> onToggleTaskComplete;
+
+  @override
+  Widget build(BuildContext context) {
+    final doneCount = tasks.where((task) => task.completed).length;
+    return _FrostedCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  'Created by me',
+                  style: _nunito(17, FontWeight.w800, FigmaColors.ink),
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
+                  vertical: 5,
+                  horizontal: 10,
                 ),
                 decoration: BoxDecoration(
                   color: FigmaColors.sageLight,
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // TODO(figma 100:4622): replace with `icon/star` SVG.
-                    const Icon(
-                      Icons.star_rounded,
-                      size: 16,
-                      color: FigmaColors.sageDark,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      // TODO(figma 100:4622): confirm points format.
-                      '$balance pts',
-                      style: FigmaType.points(),
-                    ),
-                  ],
+                child: Text(
+                  '$doneCount of ${tasks.length} done',
+                  style: _nunito(
+                    11,
+                    FontWeight.w800,
+                    FigmaColors.sageDark,
+                  ),
                 ),
               ),
             ],
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 0, 12),
-            child: Container(
-              decoration: FigmaCards.whiteCard(),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    // TODO(figma 100:4622): confirm progress copy.
-                    totalCount == 0
-                        ? 'Nothing assigned yet.'
-                        : '$doneCount of $totalCount done',
-                    style: FigmaType.cardTitle(),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Hey $profileName — tap a chore to submit it.',
-                    style: FigmaType.body(),
-                  ),
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 8,
-                      backgroundColor: FigmaColors.sageLight,
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        FigmaColors.sage,
-                      ),
-                    ),
-                  ),
-                ],
+          for (var i = 0; i < tasks.length; i++) ...[
+            if (i > 0)
+              const Divider(
+                height: 1,
+                thickness: 1,
+                color: FigmaColors.line,
               ),
+            _taskRow(tasks[i]),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _taskRow(TeenPersonalTask task) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 66),
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          GestureDetector(
+            key: ValueKey('teen-complete-${task.id}'),
+            onTap: () => onToggleTaskComplete(task.id),
+            child: Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                color: task.completed
+                    ? FigmaColors.sage
+                    : FigmaColors.frostedStrong,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: task.completed
+                      ? FigmaColors.sage
+                      : FigmaColors.sageMid,
+                  width: 1,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: task.completed
+                  ? const Icon(
+                      Icons.check_rounded,
+                      size: 14,
+                      color: FigmaColors.white,
+                    )
+                  : null,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.title,
+                  style: _nunito(14, FontWeight.w700, FigmaColors.ink),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  task.meta,
+                  style: _nunito(11, FontWeight.w500, FigmaColors.mute),
+                ),
+              ],
             ),
           ),
         ],
@@ -255,317 +668,181 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _FilterRow extends StatelessWidget {
-  const _FilterRow({required this.selected, required this.onSelect});
-
-  final _TodoFilter selected;
-  final ValueChanged<_TodoFilter> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    // TODO(figma 100:4622): confirm chip labels, selected/unselected
-    // fills, and horizontal padding from the re-pulled node.
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-      child: Row(
-        children: [
-          for (final filter in _TodoFilter.values) ...[
-            if (filter != _TodoFilter.values.first) const SizedBox(width: 8),
-            ChoiceChip(
-              label: Text(filter.label),
-              selected: selected == filter,
-              onSelected: (_) => onSelect(filter),
-              selectedColor: FigmaColors.sage,
-              backgroundColor: FigmaColors.white,
-              labelStyle: FigmaType.label(
-                color: selected == filter ? FigmaColors.white : FigmaColors.ink,
-              ),
-              side: const BorderSide(color: FigmaColors.line),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _TodoCard extends StatelessWidget {
-  const _TodoCard({
-    required this.task,
-    required this.tileColor,
-    this.onTap,
+/// "Assigned by Sarah" on a sageLight frosted card: exactly two rows,
+/// no checkboxes, plus the verbatim footnote.
+class _ParentChoresCard extends StatelessWidget {
+  const _ParentChoresCard({
+    required this.chores,
+    required this.onParentChorePress,
   });
 
-  final ChoreTask task;
-  final Color tileColor;
-  final VoidCallback? onTap;
+  final List<TeenParentChore> chores;
+  final ValueChanged<String> onParentChorePress;
 
   @override
   Widget build(BuildContext context) {
-    final submittable = onTap != null;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: FigmaCards.whiteCard(),
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _TileGlyph(task: task, background: tileColor),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(task.title, style: FigmaType.cardTitle()),
-                  const SizedBox(height: 2),
-                  Text(
-                    task.details,
-                    style: FigmaType.body(),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
+    return _FrostedCard(
+      fill: FigmaColors.sageLight,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.group_outlined,
+                size: 18,
+                color: FigmaColors.ink,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Assigned by Sarah',
+                  style: _nunito(15, FontWeight.w800, FigmaColors.ink),
+                ),
+              ),
+            ],
+          ),
+          for (final chore in chores) ...[
+            const SizedBox(height: 12),
+            GestureDetector(
+              key: ValueKey('teen-parent-chore-${chore.id}'),
+              onTap: () => onParentChorePress(chore.id),
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 44),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // TODO(figma 100:4622): replace with `icon/star`.
-                          const Icon(
-                            Icons.star_rounded,
-                            size: 14,
-                            color: FigmaColors.sage,
-                          ),
-                          const SizedBox(width: 4),
                           Text(
-                            '${task.points} pts',
-                            style: FigmaType.points(),
+                            chore.title,
+                            style: _nunito(
+                              13,
+                              FontWeight.w700,
+                              FigmaColors.ink,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            chore.time,
+                            style: _nunito(
+                              12,
+                              FontWeight.w500,
+                              FigmaColors.mute,
+                            ),
                           ),
                         ],
                       ),
-                      _StatusPill(state: task.state),
-                      if (task.requiresPhoto)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.photo_camera_outlined,
-                              size: 14,
-                              color: FigmaColors.mute,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Photo',
-                              style: FigmaType.label(
-                                color: FigmaColors.mute,
-                              ),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: FigmaColors.ink,
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            _TrailingAction(state: task.state, submittable: submittable),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Pastel tile with a glyph. Material icons are stand-ins only: the Figma
-/// tile/avatar glyphs (laundry basket, plate, bed, cat, …) must come from
-/// local SVG exports. No emoji anywhere.
-class _TileGlyph extends StatelessWidget {
-  const _TileGlyph({required this.task, required this.background});
-
-  final ChoreTask task;
-  final Color background;
-
-  // TODO(figma 100:4622): replace this keyword guess with the exact
-  // per-task glyph + tile color + glyph size from the re-pulled node.
-  IconData _glyphFor(ChoreTask task) {
-    final haystack = '${task.title} ${task.details}'.toLowerCase();
-    if (haystack.contains('trash') || haystack.contains('laundry')) {
-      return Icons.local_laundry_service_outlined;
-    }
-    if (haystack.contains('dish') || haystack.contains('plate')) {
-      return Icons.dinner_dining_outlined;
-    }
-    if (haystack.contains('bed') || haystack.contains('tidy')) {
-      return Icons.bed_outlined;
-    }
-    if (haystack.contains('cat') || haystack.contains('pet')) {
-      return Icons.pets_outlined;
-    }
-    if (haystack.contains('plant') || haystack.contains('water')) {
-      return Icons.spa_outlined;
-    }
-    if (haystack.contains('read') || haystack.contains('book')) {
-      return Icons.menu_book_outlined;
-    }
-    if (haystack.contains('math') || haystack.contains('homework')) {
-      return Icons.calculate_outlined;
-    }
-    return Icons.task_alt_outlined;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // TODO(figma 100:4622): confirm tile size, radius, and glyph size.
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Icon(_glyphFor(task), color: FigmaColors.ink, size: 24),
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.state});
-
-  final TaskState state;
-
-  @override
-  Widget build(BuildContext context) {
-    // TODO(figma 100:4622): confirm status copy, colors, and whether a
-    // pill exists per card.
-    final (label, background, foreground) = switch (state) {
-      TaskState.pending => (
-          'To do',
-          FigmaColors.pastelYellow,
-          FigmaColors.ink,
-        ),
-      TaskState.pendingReview => (
-          'In review',
-          FigmaColors.pastelBlue,
-          FigmaColors.ink,
-        ),
-      TaskState.approved => (
-          'Done',
-          FigmaColors.sageLight,
-          FigmaColors.sageDark,
-        ),
-      TaskState.changesRequested => (
-          'Try again',
-          FigmaColors.pastelPink,
-          FigmaColors.ink,
-        ),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: FigmaType.label(color: foreground),
-      ),
-    );
-  }
-}
-
-class _TrailingAction extends StatelessWidget {
-  const _TrailingAction({required this.state, required this.submittable});
-
-  final TaskState state;
-  final bool submittable;
-
-  @override
-  Widget build(BuildContext context) {
-    // TODO(figma 100:4622): confirm the trailing affordance (checkbox vs
-    // chevron vs button) and its size.
-    if (state == TaskState.approved) {
-      return const DecoratedBox(
-        decoration: BoxDecoration(
-          color: FigmaColors.sage,
-          shape: BoxShape.circle,
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(6),
-          child: Icon(
-            // TODO(figma 100:4622): replace with `icon/check` SVG.
-            Icons.check_rounded,
-            size: 18,
-            color: FigmaColors.white,
+          const SizedBox(height: 12),
+          Text(
+            'Separate from your list · Photo/video and parent review '
+            'required for chore points.',
+            style: _nunito(11, FontWeight.w500, FigmaColors.mute),
           ),
-        ),
-      );
-    }
-    if (state == TaskState.pendingReview) {
-      return const DecoratedBox(
-        decoration: BoxDecoration(
-          color: FigmaColors.sageLight,
-          shape: BoxShape.circle,
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(6),
-          child: Icon(
-            Icons.hourglass_top_rounded,
-            size: 18,
-            color: FigmaColors.sageDark,
-          ),
-        ),
-      );
-    }
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: FigmaColors.sageMid, width: 2),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Icon(
-          submittable ? Icons.chevron_right_rounded : Icons.lock_outline,
-          size: 18,
-          color: FigmaColors.sageDark,
-        ),
+        ],
       ),
     );
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+/// Bottom nav with exactly Home (active), Rewards, Calendar.
+class _BottomNav extends StatelessWidget {
+  const _BottomNav({
+    required this.onNavigateHome,
+    required this.onNavigateRewards,
+    required this.onNavigateCalendar,
+  });
+
+  final VoidCallback onNavigateHome;
+  final VoidCallback onNavigateRewards;
+  final VoidCallback onNavigateCalendar;
 
   @override
   Widget build(BuildContext context) {
-    // TODO(figma 100:4622): confirm empty-state copy and illustration.
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      child: Container(
-        decoration: FigmaCards.whiteCard(),
-        padding: const EdgeInsets.all(24),
+    return Container(
+      color: FigmaColors.frostedStrong,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _tab(
+                keyName: 'teen-nav-home',
+                label: 'Home',
+                icon: Icons.home_rounded,
+                active: true,
+                onTap: onNavigateHome,
+              ),
+              _tab(
+                keyName: 'teen-nav-rewards',
+                label: 'Rewards',
+                icon: Icons.stars_rounded,
+                active: false,
+                onTap: onNavigateRewards,
+              ),
+              _tab(
+                keyName: 'teen-nav-calendar',
+                label: 'Calendar',
+                icon: Icons.calendar_month_rounded,
+                active: false,
+                onTap: onNavigateCalendar,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tab({
+    required String keyName,
+    required String label,
+    required IconData icon,
+    required bool active,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      key: ValueKey(keyName),
+      onTap: onTap,
+      child: SizedBox(
+        width: 64,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.task_alt_outlined,
-              size: 40,
-              color: FigmaColors.sageMid,
+            SizedBox(
+              width: 23,
+              height: 23,
+              child: Icon(
+                icon,
+                size: 23,
+                color: active ? FigmaColors.sage : FigmaColors.mute,
+              ),
             ),
-            const SizedBox(height: 12),
-            Text('All clear', style: FigmaType.cardTitle()),
             const SizedBox(height: 4),
             Text(
-              'Nothing here under this filter.',
-              style: FigmaType.body(),
-              textAlign: TextAlign.center,
+              label,
+              style: _nunito(
+                11,
+                active ? FontWeight.w800 : FontWeight.w600,
+                active ? FigmaColors.sage : FigmaColors.mute,
+              ),
             ),
           ],
         ),

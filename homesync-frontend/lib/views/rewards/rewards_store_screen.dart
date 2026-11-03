@@ -2,39 +2,30 @@ import 'package:flutter/material.dart';
 
 import 'models/store_section.dart';
 
-/// Figma "09 Rewards Store" (node 5:139): SHELL — DO NOT USE AS FINAL.
+/// Figma "09 Rewards Store" (node 5:139): Teen Rewards, Digital view.
 ///
-/// The Figma specs for node 5:139 were never retrieved (Figma rate
-/// limit), so this file renders only the verified HomeSync design system
-/// plus explicit TODO placeholders from [kPlaceholderStoreSections],
-/// [kStoreAvailablePoints], [kStoreBalanceLabel], [kStoreTitle], and
-/// [kStoreSubtitle]. Re-pull node 5:139 and replace every TODO with the
-/// retrieved text, sizes, colors, and data before using this screen.
+/// All values are the real design: title-only header with the points
+/// pill, Digital/Real-world chips (Digital selected), the 6 real Digital
+/// rewards, the Custom Reward Request card, and the 3-item nav with
+/// Rewards active. Real-world items live in the sibling Real-World view
+/// ([TeenRewardStoreScreen]) and are never shown here.
 ///
-/// Verified patterns reused from the sibling Rewards screens
-/// (KidsRewardStoreScreen): screen-local tokens, Nunito fontFamily,
-/// header row, balance card, reward-card grid, and bottom nav. No Figma
-/// image assets exist in this repo, so Material icons stand in for
-/// artwork — never emoji.
-///
-/// [NOT RETRIEVED] items rendered as placeholders here: screen title,
-/// subtitle, avatar identity, back-button presence, balance label +
-/// value, balance-card presence, every section title/pill/subtitle,
-/// every reward's name/subtitle/points/preview/artwork/category,
-/// affordable action labels, nav variant + active item, and any
-/// custom-reward entry (deliberately NOT built).
+/// No Figma image assets exist in this repo, so Material icons stand in
+/// for artwork — never emoji. This screen makes no API calls and moves
+/// no points.
 class RewardsStoreScreen extends StatelessWidget {
   const RewardsStoreScreen({
     super.key,
     this.availablePoints = kStoreAvailablePoints,
-    this.balanceLabel = kStoreBalanceLabel,
     this.title = kStoreTitle,
-    this.subtitle = kStoreSubtitle,
-    this.sections = kPlaceholderStoreSections,
+    this.sections = kStoreSections,
+    this.selectedCategory = 'Digital',
+    this.onSelectCategory,
     this.onBack,
     this.onUnlockReward,
     this.onRedeemReward,
     this.onSaveUpForReward,
+    this.onRequestCustomReward,
     this.onNavigateHome,
     this.onNavigateRewards,
     this.onNavigateCalendar,
@@ -45,39 +36,49 @@ class RewardsStoreScreen extends StatelessWidget {
   static const Color _ink = Color(0xFF2B3A2B);
   static const Color _mute = Color(0xFF7C877A);
   static const Color _sage = Color(0xFF5F7F55);
-  static const Color _sageDark = Color(0xFF4A6A41);
   static const Color _sageLight = Color(0xFFE4EBDC);
+  static const Color _line = Color(0xFFE8E4D8);
   static const Color _white = Color(0xFFFFFFFF);
-  static const Color _yellowLight = Color(0xFFFDF0C8);
-  static const Color _gold = Color(0xFFF0B429);
 
   static const String _font = 'Nunito';
 
-  /// Card shadow: 0px 5px 16px -4px rgba(59,77,56,0.07).
+  /// Card shadow: 0px 6px 18px -8px rgba(59,77,56,0.09).
   static const List<BoxShadow> _cardShadow = [
     BoxShadow(
-      color: Color.fromRGBO(59, 77, 56, 0.07),
-      offset: Offset(0, 5),
-      blurRadius: 16,
-      spreadRadius: -4,
+      color: Color.fromRGBO(59, 77, 56, 0.09),
+      offset: Offset(0, 6),
+      blurRadius: 18,
+      spreadRadius: -8,
     ),
   ];
 
-  /// Single shared balance: drives the balance card and every
-  /// reward-card action state.
+  /// Bottom-nav top shadow.
+  static const List<BoxShadow> _navShadow = [
+    BoxShadow(
+      color: Color.fromRGBO(0, 0, 0, 0.05),
+      offset: Offset(0, -3),
+      blurRadius: 12,
+    ),
+  ];
+
+  /// Single shared balance: drives every reward-card action state and
+  /// the header points pill.
   final int availablePoints;
 
-  /// Balance-card label. TODO placeholder (see class doc).
-  final String balanceLabel;
-
-  /// Screen title + subtitle. TODO placeholders (see class doc).
+  /// Screen title.
   final String title;
-  final String subtitle;
 
-  /// Placeholder sections. Renders ALL rewards from this one array.
+  /// Reward sections; this view shows the Digital section's rewards.
   final List<StoreSection> sections;
 
-  // TODO(figma 5:139): confirm a back button is even present.
+  /// Selected category chip ('Digital' or 'Real-world').
+  final String selectedCategory;
+
+  /// Called with the tapped category name. The parent navigates to the
+  /// Real-World view for 'Real-world'.
+  final ValueChanged<String>? onSelectCategory;
+
+  /// Kept for API compatibility; the design has no back button.
   final VoidCallback? onBack;
 
   /// Called with the reward id. Placeholders — no backend, no points.
@@ -88,9 +89,12 @@ class RewardsStoreScreen extends StatelessWidget {
   /// Must NOT deduct points; a no-op/info handler.
   final ValueChanged<String>? onSaveUpForReward;
 
+  /// Called from the "+ Request Custom Reward" button.
+  final VoidCallback? onRequestCustomReward;
+
   final VoidCallback? onNavigateHome;
 
-  /// Placeholder assumption: Rewards active (see class doc).
+  /// Rewards is the active tab in this view.
   final VoidCallback? onNavigateRewards;
   final VoidCallback? onNavigateCalendar;
 
@@ -108,6 +112,10 @@ class RewardsStoreScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final section = sections.firstWhere(
+      (s) => s.title == selectedCategory,
+      orElse: () => sections.first,
+    );
     return Scaffold(
       backgroundColor: _cream,
       body: SafeArea(
@@ -123,12 +131,12 @@ class RewardsStoreScreen extends StatelessWidget {
             children: [
               _buildHeading(),
               const SizedBox(height: 16),
-              _buildBalanceCard(),
-              for (final section in sections) ...[
-                const SizedBox(height: 16),
-                _buildSectionHeading(section),
-                const SizedBox(height: 16),
+              _buildCategoryChips(),
+              const SizedBox(height: 16),
+              if (selectedCategory == 'Digital') ...[
                 _buildRewardRows(section),
+                const SizedBox(height: 16),
+                _buildCustomRequestCard(),
               ],
             ],
           ),
@@ -138,213 +146,95 @@ class RewardsStoreScreen extends StatelessWidget {
     );
   }
 
-  // Header pattern + TODO title/subtitle/avatar (see class doc).
+  // Title-only header: title + points pill (no back button, no avatar).
   Widget _buildHeading() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            GestureDetector(
-              onTap: onBack,
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: _white.withValues(alpha: 0.91),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: const Icon(
-                  Icons.chevron_left_rounded,
-                  size: 20,
-                  color: _ink,
-                ),
-              ),
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontFamily: _font,
+              fontWeight: FontWeight.w800,
+              fontSize: 26,
+              color: _ink,
             ),
-            const Expanded(
-              child: Text(
-                'HomeSync',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: _font,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                  color: _sage,
-                ),
-              ),
-            ),
-            // TODO(figma 5:139): avatar identity unknown — placeholder
-            // styling only.
-            Container(
-              width: 44,
-              height: 44,
-              alignment: Alignment.center,
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: _sageLight,
-                border: Border.all(color: _white),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: const Icon(
-                Icons.person_rounded,
-                size: 23,
-                color: _sageDark,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        Text(
-          title,
-          style: const TextStyle(
-            fontFamily: _font,
-            fontWeight: FontWeight.w800,
-            fontSize: 26,
-            color: _ink,
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            fontFamily: _font,
-            fontWeight: FontWeight.w500,
-            fontSize: 12,
-            color: _mute,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: _white,
+            border: Border.all(color: _line, width: 1.5),
+            borderRadius: BorderRadius.circular(18),
           ),
-        ),
-      ],
-    );
-  }
-
-  // Balance-card pattern (sibling-verified layout; label + value TODO).
-  Widget _buildBalanceCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _yellowLight,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.star_rounded,
-            size: 34,
-            color: _gold,
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  balanceLabel,
-                  style: const TextStyle(
-                    fontFamily: _font,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                    color: _ink,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '$availablePoints points',
-                  style: const TextStyle(
-                    fontFamily: _font,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 28,
-                    color: _ink,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 14),
-          // TODO(figma 5:139): avatar-mark styling unknown.
-          Container(
-            width: 28,
-            height: 28,
-            alignment: Alignment.center,
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: _sageLight,
-              border: Border.all(color: _white),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(
-              Icons.person_rounded,
-              size: 16,
-              color: _sageDark,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Section-heading pattern: 18px title + optional pill/subtitle.
-  Widget _buildSectionHeading(StoreSection section) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Text(
-                section.title,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.star_rounded,
+                size: 16,
+                color: _sage,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '$availablePoints pts',
                 style: const TextStyle(
                   fontFamily: _font,
                   fontWeight: FontWeight.w800,
-                  fontSize: 18,
+                  fontSize: 13,
                   color: _ink,
                 ),
               ),
-            ),
-            if (section.pillLabel != null)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: _sageLight,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  section.pillLabel!,
-                  style: const TextStyle(
-                    fontFamily: _font,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 11,
-                    color: _sageDark,
-                  ),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
-        if (section.subtitle != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            section.subtitle!,
-            style: const TextStyle(
-              fontFamily: _font,
-              fontWeight: FontWeight.w500,
-              fontSize: 11,
-              height: 1.35,
-              color: _mute,
-            ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryChips() {
+    return Row(
+      children: [
+        for (final category in kStoreCategories) ...[
+          if (category != kStoreCategories.first)
+            const SizedBox(width: 8),
+          _buildChip(
+            label: category,
+            selected: category == selectedCategory,
           ),
         ],
       ],
     );
   }
 
-  // Rows of 2 equal cards (sibling-verified card pattern).
+  Widget _buildChip({required String label, required bool selected}) {
+    return GestureDetector(
+      onTap: onSelectCategory == null
+          ? null
+          : () => onSelectCategory!(label),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? _sage : _white,
+          borderRadius: BorderRadius.circular(999),
+          border: selected ? null : Border.all(color: _line),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: _font,
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+            color: selected ? _white : _ink,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Rows of 2 equal cards.
   Widget _buildRewardRows(StoreSection section) {
     final rewards = section.rewards;
     return Column(
@@ -374,20 +264,20 @@ class RewardsStoreScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: _white.withValues(alpha: 0.79),
-        border: Border.all(color: _white),
-        borderRadius: BorderRadius.circular(22),
+        color: _white,
+        border: Border.all(color: _line),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: _cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            height: 72,
+            height: 76,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: reward.previewBackground,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
               reward.previewIcon,
@@ -395,42 +285,23 @@ class RewardsStoreScreen extends StatelessWidget {
               color: _ink,
             ),
           ),
-          const SizedBox(height: 7),
-          ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 55),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  reward.name,
-                  style: const TextStyle(
-                    fontFamily: _font,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                    color: _ink,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  reward.subtitle,
-                  style: const TextStyle(
-                    fontFamily: _font,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 10,
-                    color: _mute,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 8),
+          Text(
+            reward.name,
+            style: const TextStyle(
+              fontFamily: _font,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: _ink,
             ),
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 4),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
                 Icons.star_rounded,
-                size: 16,
+                size: 13,
                 color: _sage,
               ),
               const SizedBox(width: 4),
@@ -438,14 +309,14 @@ class RewardsStoreScreen extends StatelessWidget {
                 '${reward.points} pts',
                 style: const TextStyle(
                   fontFamily: _font,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
                   color: _sage,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 8),
           GestureDetector(
             onTap: () => _onAction(reward),
             child: Container(
@@ -461,7 +332,7 @@ class RewardsStoreScreen extends StatelessWidget {
                   fontFamily: _font,
                   fontWeight: FontWeight.w800,
                   fontSize: 12,
-                  color: affordable ? _white : _sageDark,
+                  color: affordable ? _white : _ink,
                 ),
               ),
             ),
@@ -471,9 +342,65 @@ class RewardsStoreScreen extends StatelessWidget {
     );
   }
 
-  // TODO(figma 5:139): nav variant + active item unknown. The kid/teen
-  // 3-item nav with Rewards active is a placeholder (no custom-reward
-  // entry is built on this screen).
+  Widget _buildCustomRequestCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _white,
+        border: Border.all(color: _line),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: _cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Have a perk in mind?',
+            style: TextStyle(
+              fontFamily: _font,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              color: _ink,
+            ),
+          ),
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: onRequestCustomReward,
+            child: Container(
+              height: 48,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: _sage,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Text(
+                '+ Request Custom Reward',
+                style: TextStyle(
+                  fontFamily: _font,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                  color: _white,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Examples: Stay up 30 mins late, Go to trampoline park, '
+            'Extra screen time.',
+            style: TextStyle(
+              fontFamily: _font,
+              fontWeight: FontWeight.w500,
+              fontSize: 11,
+              height: 1.35,
+              color: _mute,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBottomNav() {
     return Container(
       padding: const EdgeInsets.only(
@@ -482,7 +409,10 @@ class RewardsStoreScreen extends StatelessWidget {
         right: 20,
         bottom: 10,
       ),
-      color: _white.withValues(alpha: 0.91),
+      decoration: const BoxDecoration(
+        color: _white,
+        boxShadow: _navShadow,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

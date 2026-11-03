@@ -3,42 +3,27 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:homesync/views/onboarding/models/user_profile.dart';
-import 'package:homesync/views/tasks/models/chore_task.dart';
 import 'package:homesync/views/tasks/tasks_controller.dart';
 import 'package:homesync/views/tasks/teen_todo_list_screen.dart';
 
-UserProfile _teen({String name = 'Alex'}) => UserProfile(
-      name: name,
-      birthday: DateTime(2011, 6, 15),
+UserProfile _noah() => UserProfile(
+      name: 'Noah',
+      birthday: DateTime(2012, 3, 9),
       role: FamilyRole.child,
       mode: FamilyMode.teen,
     );
 
-ChoreTask _task({
-  String id = 't1',
-  String title = 'Take out the trash',
-  String child = 'Alex',
-  int points = 10,
-  TaskState state = TaskState.pending,
-}) {
-  return ChoreTask(
-    id: id,
-    title: title,
-    details: 'Details $id',
-    childName: child,
-    points: points,
-    state: state,
-  );
-}
-
 Future<void> _pumpScreen(
   WidgetTester tester, {
-  required TasksController controller,
-  required UserProfile profile,
+  TeenTodoListScreen Function()? build,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
-      home: TeenTodoListScreen(controller: controller, profile: profile),
+      home: build?.call() ??
+          TeenTodoListScreen(
+            controller: TasksController.test(),
+            profile: _noah(),
+          ),
     ),
   );
   await tester.pumpAndSettle();
@@ -51,99 +36,126 @@ void main() {
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
-  group('TeenTodoListScreen (Figma 03 skeleton)', () {
-    testWidgets('renders header, progress, balance, and task cards',
-        (tester) async {
-      final controller = TasksController.test(
-        tasks: [
-          _task(id: 't1', title: 'Take out the trash'),
-          _task(
-            id: 't2',
-            title: 'Water the plants',
-            points: 5,
-            state: TaskState.approved,
-          ),
-        ],
-        balances: {'Alex': 30},
-      );
+  group('TeenTodoListScreen (Figma 100:4622)', () {
+    testWidgets('renders identity, plain line, and add card', (tester) async {
+      await _pumpScreen(tester);
 
-      await _pumpScreen(
-        tester,
-        controller: controller,
-        profile: _teen(),
-      );
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+      expect(scaffold.backgroundColor, const Color(0xFFF4F3EF));
 
       expect(find.text('My To-Do List'), findsOneWidget);
-      expect(find.text('1 of 2 done'), findsOneWidget);
-      expect(find.text('30 pts'), findsOneWidget);
-      expect(find.text('Take out the trash'), findsOneWidget);
-      expect(find.text('Water the plants'), findsOneWidget);
-      // No emoji anywhere in the skeleton.
+      expect(find.text('Noah · 14 · Teen Mode'), findsOneWidget);
+      expect(find.text('N'), findsOneWidget);
+
+      // Plain line replaces the kids encouragement banner.
       expect(
-        find.textContaining(RegExp(r'[\u{1F300}-\u{1FAFF}]', unicode: true)),
-        findsNothing,
+        find.text(
+          'Your plans, your pace. Personal tasks are just for you — '
+          'no points or parent review.',
+        ),
+        findsOneWidget,
       );
+      expect(find.text('Little plans, big smiles!'), findsNothing);
+
+      expect(find.text('New personal task'), findsOneWidget);
+      expect(find.text('Outline science project'), findsOneWidget);
+      expect(find.text('Add my own task'), findsNothing);
     });
 
-    testWidgets('filter chips narrow the visible tasks', (tester) async {
-      final controller = TasksController.test(
-        tasks: [
-          _task(id: 't1', title: 'Take out the trash'),
-          _task(
-            id: 't2',
-            title: 'Water the plants',
-            state: TaskState.approved,
-          ),
-        ],
-      );
-
-      await _pumpScreen(
-        tester,
-        controller: controller,
-        profile: _teen(),
-      );
-
-      // Scope to the filter chips: card status pills reuse similar labels.
-      await tester.tap(find.widgetWithText(ChoiceChip, 'Done'));
-      await tester.pumpAndSettle();
-      expect(find.text('Take out the trash'), findsNothing);
-      expect(find.text('Water the plants'), findsOneWidget);
-
-      await tester.tap(find.widgetWithText(ChoiceChip, 'To do'));
-      await tester.pumpAndSettle();
-      expect(find.text('Take out the trash'), findsOneWidget);
-      expect(find.text('Water the plants'), findsNothing);
-    });
-
-    testWidgets('tapping a to-do task opens the submission sheet',
+    testWidgets('renders the 3 personal tasks with a computed pill',
         (tester) async {
-      final controller = TasksController.test(
-        tasks: [_task(id: 't1', title: 'Take out the trash')],
-      );
+      await _pumpScreen(tester);
 
-      await _pumpScreen(
-        tester,
-        controller: controller,
-        profile: _teen(),
-      );
+      expect(find.text('Created by me'), findsOneWidget);
+      expect(find.text('1 of 3 done'), findsOneWidget);
+      expect(find.text('1 of 3 done!'), findsNothing);
 
-      await tester.tap(find.text('Take out the trash'));
-      await tester.pumpAndSettle();
-      expect(find.text('Submit for review'), findsOneWidget);
+      expect(find.text('Read history chapter 4'), findsOneWidget);
+      expect(find.text('Homework · Today, 5:00 PM'), findsOneWidget);
+      expect(find.text('Run a mile'), findsOneWidget);
+      expect(find.text('Personal goal · Sun, Nov 1'), findsOneWidget);
+      expect(find.text('Pack soccer bag'), findsOneWidget);
+      expect(find.text('Task · Completed today'), findsOneWidget);
     });
 
-    testWidgets('shows an empty state when the filter matches nothing',
+    testWidgets('renders the parent block with two rows, no checkboxes',
         (tester) async {
-      final controller = TasksController.test(tasks: []);
+      await _pumpScreen(tester);
 
+      expect(find.text('Assigned by Sarah'), findsOneWidget);
+      expect(find.text('Math homework'), findsOneWidget);
+      expect(find.text('6:00 PM'), findsOneWidget);
+      expect(find.text('Vacuum living room'), findsOneWidget);
+      expect(find.text('7:00 PM'), findsOneWidget);
+      expect(
+        find.text(
+          'Separate from your list · Photo/video and parent review '
+          'required for chore points.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byType(Checkbox), findsNothing);
+    });
+
+    testWidgets('bottom nav has Home active', (tester) async {
+      await _pumpScreen(tester);
+
+      await tester.ensureVisible(find.text('Calendar'));
+      final home = tester.widget<Text>(find.text('Home'));
+      expect(home.style?.color, const Color(0xFF5F7F55));
+      final rewards = tester.widget<Text>(find.text('Rewards'));
+      expect(rewards.style?.color, const Color(0xFF7C877A));
+    });
+
+    testWidgets('toggling a task updates the pill', (tester) async {
+      await _pumpScreen(tester);
+
+      final toggle = find.byKey(const ValueKey('teen-complete-run-mile'));
+      await tester.ensureVisible(toggle);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+
+      expect(find.text('2 of 3 done'), findsOneWidget);
+    });
+
+    testWidgets('adding a task appends it to the list', (tester) async {
+      final controller = TasksController.test();
       await _pumpScreen(
         tester,
-        controller: controller,
-        profile: _teen(),
+        build: () => TeenTodoListScreen(
+          controller: controller,
+          profile: _noah(),
+        ),
       );
 
-      expect(find.text('Nothing assigned yet.'), findsOneWidget);
-      expect(find.text('All clear'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('teen-add-task')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Outline science project'), findsNWidgets(2));
+      expect(find.text('1 of 4 done'), findsOneWidget);
+    });
+
+    testWidgets('category chips and parent rows report taps', (tester) async {
+      String? category;
+      String? chore;
+      await _pumpScreen(
+        tester,
+        build: () => TeenTodoListScreen(
+          controller: TasksController.test(),
+          profile: _noah(),
+          onSelectCategory: (id) => category = id,
+          onParentChorePress: (id) => chore = id,
+        ),
+      );
+
+      await tester.tap(find.text('Personal goal'));
+      await tester.pumpAndSettle();
+      expect(category, 'personal-goal');
+
+      await tester.ensureVisible(find.text('Math homework'));
+      await tester.tap(find.text('Math homework'));
+      await tester.pumpAndSettle();
+      expect(chore, 'math-homework');
     });
   });
 }

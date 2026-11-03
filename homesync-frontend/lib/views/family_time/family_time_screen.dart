@@ -14,11 +14,12 @@ const _sageDark = Color(0xFF4A6A41);
 const _sageLight = Color(0xFFE4EBDC);
 const _line = Color(0xFFE8E4D8);
 const _white = Color(0xFFFFFFFF);
+const _yellowLight = Color(0xFFFDF0C8);
+const _peach = Color(0xFFF6D9C4);
 
 // Borrowed from sibling Figma screens: the same design system already
 // defines these shades (profile hub node 62:5787, 06 Calendar node 4:121).
 const _navFill = Color.fromRGBO(255, 255, 255, 0.8);
-const _sparkGold = Color(0xFFE0A83C);
 const _buttonShadow = Color(0x4D5E8054);
 
 // Card shadow reused from the sibling screens (family setup, link kids).
@@ -174,17 +175,21 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// Category strip: the four activity glyphs in white circles on a pale
-/// green card. Static in the design (no selection state is shown even
-/// though the Game Night chip below is selected), so the circles are
-/// not tappable.
+/// Hero: the four activity glyphs in separate 52px circles on an 82px
+/// sageLight card. Static in the design (no selection state is shown
+/// even though the Game Night chip below is selected), so the circles
+/// are not tappable.
 class _CategoryStrip extends StatelessWidget {
   const _CategoryStrip();
 
+  static const _tileBackgrounds = [_white, _yellowLight, _white, _peach];
+
   @override
   Widget build(BuildContext context) {
+    final ids = FamilyTimeData.stripTypeIds;
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      height: 82,
+      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 8),
       decoration: BoxDecoration(
         color: _sageLight,
         borderRadius: BorderRadius.circular(20),
@@ -192,8 +197,11 @@ class _CategoryStrip extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          for (final id in FamilyTimeData.stripTypeIds)
-            _StripIcon(type: FamilyTimeData.activityTypeById(id)),
+          for (var i = 0; i < ids.length; i++)
+            _StripIcon(
+              type: FamilyTimeData.activityTypeById(ids[i]),
+              background: _tileBackgrounds[i],
+            ),
         ],
       ),
     );
@@ -201,19 +209,20 @@ class _CategoryStrip extends StatelessWidget {
 }
 
 class _StripIcon extends StatelessWidget {
-  const _StripIcon({required this.type});
+  const _StripIcon({required this.type, required this.background});
 
   final ActivityType type;
+  final Color background;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 56,
-      height: 56,
+      width: 52,
+      height: 52,
       alignment: Alignment.center,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: _white,
+        color: background,
       ),
       child: Icon(type.icon, size: 28, color: _ink),
     );
@@ -247,16 +256,14 @@ class _SuggestedCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Icon(Icons.auto_awesome, size: 14, color: _sparkGold),
-              const SizedBox(width: 4),
               const Text(
                 FamilyTimeData.suggestedLabel,
                 style: TextStyle(
                   fontFamily: 'Nunito',
                   fontWeight: FontWeight.w700,
-                  fontSize: 14,
+                  fontSize: 13,
                   height: 1.3,
-                  color: _sage,
+                  color: _sageDark,
                 ),
               ),
               const Spacer(),
@@ -288,7 +295,7 @@ class _SuggestedCard extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Nunito',
               fontWeight: FontWeight.w800,
-              fontSize: 22,
+              fontSize: 20,
               height: 1.3,
               color: _ink,
             ),
@@ -355,7 +362,7 @@ class _AvailabilityRow extends StatelessWidget {
           FamilyTimeData.availabilityLabel,
           style: TextStyle(
             fontFamily: 'Nunito',
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             fontSize: 13,
             height: 1.35,
             color: _mute,
@@ -612,7 +619,7 @@ class _OptionRow extends StatelessWidget {
                   ),
                   child: const Icon(
                     Icons.calendar_month_rounded,
-                    size: 22,
+                    size: 20,
                     color: _sage,
                   ),
                 ),

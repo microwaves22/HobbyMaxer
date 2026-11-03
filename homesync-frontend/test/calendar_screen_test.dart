@@ -68,7 +68,7 @@ void main() {
     // Header: exact copy, Nunito, size, weight, color + add button.
     final title = _headerStyleOf(tester);
     expect(title.fontFamily, 'Nunito');
-    expect(title.fontSize, 28);
+    expect(title.fontSize, 26);
     expect(title.fontWeight, FontWeight.w800);
     expect(title.color, const Color(0xFF2B3A2B));
     expect(find.byIcon(Icons.add), findsOneWidget);
@@ -275,6 +275,16 @@ void main() {
     });
 
     test('events fall on the designed days', () {
+      final monday = CalendarData.eventsForDay(DateTime(2026, 10, 26));
+      expect(
+        monday.map((e) => e.id),
+        ['work'],
+      );
+      final tuesday = CalendarData.eventsForDay(DateTime(2026, 10, 27));
+      expect(
+        tuesday.map((e) => e.id),
+        ['dr'],
+      );
       final saturday = CalendarData.eventsForDay(DateTime(2026, 10, 31));
       expect(
         saturday.map((e) => e.id),
@@ -293,8 +303,12 @@ void main() {
 
     test('event colors match the design system', () {
       final byId = {for (final e in CalendarData.events) e.id: e};
-      expect(byId['dinner-fri']!.color, const Color(0xFF4A6A41));
+      expect(byId['work']!.color, const Color(0xFFCFE0EE));
+      expect(byId['dr']!.color, const Color(0xFFDDD5EE));
+      expect(byId['dinner-fri']!.color, const Color(0xFF5F7F55));
       expect(byId['dinner-fri']!.textColor, const Color(0xFFFFFFFF));
+      expect(byId['dinner-sat']!.color, const Color(0xFF5F7F55));
+      expect(byId['dinner-sat']!.textColor, const Color(0xFFFFFFFF));
       expect(byId['school-wed']!.color, const Color(0xFFFDF0C8));
       expect(byId['soccer']!.color, const Color(0xFFF6D9C4));
       expect(byId['piano']!.color, const Color(0xFFF4C9C9));

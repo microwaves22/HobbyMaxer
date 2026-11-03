@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 
 /// 09 Rewards Store (Figma node 5:139) data layer.
 ///
-/// WARNING: the Figma specs for node 5:139 were never retrieved
-/// (Figma rate limit), so EVERY value below is a TODO placeholder shaped
-/// by the sibling Rewards screens — NOT design content. Re-pull node
-/// 5:139 from Figma and replace each TODO before calling this final.
-/// This screen makes no API calls and moves no points.
+/// Teen Rewards, Digital category view. All values below are the real
+/// design: 6 rewards in order, balance 120, categories Digital (selected)
+/// and Real-world. This screen makes no API calls and moves no points.
 class StoreReward {
   const StoreReward({
     required this.id,
@@ -21,15 +19,19 @@ class StoreReward {
 
   final String id;
   final String name;
+
+  /// Kept for data-shape compatibility; the design shows NO subtitle
+  /// line on cards, so this is always empty here.
   final String subtitle;
 
   /// Cost in points.
   final int points;
 
-  /// Grouping key (sibling shape: digital vs family).
+  /// Grouping key: 'digital' (this view) or 'real-world' (sibling view).
   final String category;
 
-  /// Button label when affordable (placeholder copy).
+  /// Button label when affordable ('Equipped' for the equipped reward,
+  /// 'Redeem' otherwise).
   final String affordableLabel;
 
   /// Preview-block background.
@@ -68,70 +70,80 @@ class StoreSection {
   final List<StoreReward> rewards;
 }
 
-// TODO(figma 5:139): replace with the retrieved balance. 120 is a
-// placeholder borrowed only to verify layout — it is NOT this screen's
-// balance.
+/// Real balance for this view (Figma 5:139).
 const int kStoreAvailablePoints = 120;
 
-// TODO(figma 5:139): replace with the retrieved label (whose points).
-const String kStoreBalanceLabel = 'TODO(5:139): available points';
+/// Real screen title (Figma 5:139).
+const String kStoreTitle = 'Teen Rewards';
 
-// TODO(figma 5:139): replace with the retrieved screen title.
-const String kStoreTitle = '[NOT RETRIEVED \u2014 09 Rewards Store title]';
+/// Category chips in order; 'Digital' is selected in this view.
+const List<String> kStoreCategories = ['Digital', 'Real-world'];
 
-// TODO(figma 5:139): replace with the retrieved subtitle.
-const String kStoreSubtitle = '[NOT RETRIEVED]';
-
-// TODO(figma 5:139): replace with the retrieved sections, rewards, names,
-// subtitles, points, preview colors, and artwork. This single placeholder
-// section (two placeholder rewards) exists only to verify layout. The
-// Kids Reward Store items were deliberately NOT copied here.
-const List<StoreSection> kPlaceholderStoreSections = [
+/// The 6 real Digital rewards (Figma 5:139), in design order.
+const List<StoreSection> kStoreSections = [
   StoreSection(
-    // TODO(figma 5:139): section id.
-    id: 'placeholder-section',
-    // TODO(figma 5:139): section title.
-    title: 'Placeholder section',
-    // TODO(figma 5:139): pill label (or null if the design has none).
-    pillLabel: 'Placeholder',
-    // TODO(figma 5:139): section subtitle (or null if none).
-    subtitle: 'Placeholder subtitle.',
+    id: 'digital',
+    title: 'Digital',
     rewards: [
       StoreReward(
-        // TODO(figma 5:139): reward id.
-        id: 'placeholder-reward-a',
-        // TODO(figma 5:139): reward name.
-        name: 'Placeholder reward A',
-        // TODO(figma 5:139): reward subtitle.
-        subtitle: 'Placeholder subtitle',
-        // TODO(figma 5:139): point cost.
-        points: 100,
-        // TODO(figma 5:139): category.
-        category: 'placeholder',
-        // TODO(figma 5:139): affordable action label.
-        affordableLabel: 'Redeem',
-        // TODO(figma 5:139): preview background.
-        previewBackground: Color(0xFFF6D9C4),
-        // TODO(figma 5:139): preview artwork.
-        previewIcon: Icons.headphones_rounded,
+        id: 'neon-avatar',
+        name: 'Neon Avatar',
+        subtitle: '',
+        points: 0,
+        category: 'digital',
+        affordableLabel: 'Equipped',
+        previewBackground: Color(0xFFE4EBDC),
+        previewIcon: Icons.tag_faces_rounded,
       ),
       StoreReward(
-        // TODO(figma 5:139): reward id.
-        id: 'placeholder-reward-b',
-        // TODO(figma 5:139): reward name.
-        name: 'Placeholder reward B',
-        // TODO(figma 5:139): reward subtitle.
-        subtitle: 'Placeholder subtitle',
-        // TODO(figma 5:139): point cost.
-        points: 180,
-        // TODO(figma 5:139): category.
-        category: 'placeholder',
-        // TODO(figma 5:139): affordable action label.
+        id: 'midnight-sage',
+        name: 'Midnight Sage',
+        subtitle: '',
+        points: 50,
+        category: 'digital',
         affordableLabel: 'Redeem',
-        // TODO(figma 5:139): preview background.
         previewBackground: Color(0xFFCFE0EE),
-        // TODO(figma 5:139): preview artwork.
-        previewIcon: Icons.sports_soccer_rounded,
+        previewIcon: Icons.dark_mode_rounded,
+      ),
+      StoreReward(
+        id: 'rare-dragon-armor',
+        name: 'Rare Dragon Armor',
+        subtitle: '',
+        points: 100,
+        category: 'digital',
+        affordableLabel: 'Redeem',
+        previewBackground: Color(0xFFDDD5EE),
+        previewIcon: Icons.shield_rounded,
+      ),
+      StoreReward(
+        id: 'profile-wallpaper',
+        name: 'Profile Wallpaper',
+        subtitle: '',
+        points: 150,
+        category: 'digital',
+        affordableLabel: 'Redeem',
+        previewBackground: Color(0xFFFDF0C8),
+        previewIcon: Icons.wallpaper_rounded,
+      ),
+      StoreReward(
+        id: 'app-icon-theme',
+        name: 'App Icon Theme',
+        subtitle: '',
+        points: 80,
+        category: 'digital',
+        affordableLabel: 'Redeem',
+        previewBackground: Color(0xFFE4EBDC),
+        previewIcon: Icons.apps_rounded,
+      ),
+      StoreReward(
+        id: 'creature-palette',
+        name: 'Creature Palette',
+        subtitle: '',
+        points: 120,
+        category: 'digital',
+        affordableLabel: 'Redeem',
+        previewBackground: Color(0xFFCFE0EE),
+        previewIcon: Icons.palette_rounded,
       ),
     ],
   ),

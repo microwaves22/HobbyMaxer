@@ -59,11 +59,11 @@ void main() {
     expect(find.byIcon(Icons.restaurant_rounded), findsOneWidget);
 
     // Suggested card: verbatim copy.
-    expect(find.byIcon(Icons.auto_awesome), findsOneWidget);
-    final suggested = _styleOf(tester, 'Suggested Time');
+    final suggested = _styleOf(tester, '✨ Suggested Time');
     expect(suggested.fontFamily, 'Nunito');
+    expect(suggested.fontSize, 13);
     expect(suggested.fontWeight, FontWeight.w700);
-    expect(suggested.color, const Color(0xFF5F7F55));
+    expect(suggested.color, const Color(0xFF4A6A41));
     expect(find.text('Best match'), findsOneWidget);
     final day = _styleOf(tester, 'Friday, Nov 6');
     expect(day.fontWeight, FontWeight.w800);
