@@ -1,0 +1,23 @@
+{
+  "name": "hobbymaxer",
+  "version": "1.0.0",
+  "description": "Family organization app — chores, homework, points, rewards, and a shared calendar.",
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/microwaves22/HobbyMaxer.git"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "dependencies": {
+    "expo": "^58.0.23",
+    "react": "19.3.0",
+    "react-native": "0.76.7"
+  }
+}
