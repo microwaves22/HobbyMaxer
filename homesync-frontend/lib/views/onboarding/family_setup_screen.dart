@@ -1,14 +1,20 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../core/state/focus_areas.dart';
 
+import 'family_member.dart';
 import 'member_detail_screen.dart';
 import 'profile_setup_screen.dart';
 
-
-
 /// Figma "03 Set Up Family" (node 3:63): member list plus add-member form.
+///
+/// New users start with a clean slate: the member list is empty until the
+/// parent adds members below. Tapping a member opens the edit screen where
+/// every field can be changed or the member deleted.
 ///
 /// Figma tokens are hard-coded here because they differ from the shared
 /// theme (`AppColors` cream/sage/ink predate this design). Do not move
@@ -18,28 +24,6 @@ class FamilySetupScreen extends StatefulWidget {
 
   @override
   State<FamilySetupScreen> createState() => _FamilySetupScreenState();
-}
-
-/// Which trailing widget a member card shows.
-enum _MemberTrailing { chevron, kidsMode, teenMode }
-
-/// One row in the existing-members list.
-class _FamilyMember {
-  const _FamilyMember({
-    required this.id,
-    required this.name,
-    required this.detail,
-    required this.avatarColor,
-    required this.glyph,
-    required this.trailing,
-  });
-
-  final String id;
-  final String name;
-  final String detail;
-  final Color avatarColor;
-  final String glyph;
-  final _MemberTrailing trailing;
 }
 
 class _FamilySetupScreenState extends State<FamilySetupScreen> {
@@ -74,42 +58,14 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
     color: _ink,
   );
 
-  /// Role picker options. The shared [FamilyRole] enum has only
-  /// Parent/Child (tied to onboarding semantics, no Teen), so this screen
-  /// keeps the spec's fallback set locally instead of widening it.
-  static const List<String> _roleOptions = ['Parent', 'Child', 'Teen'];
-
-  static const List<_FamilyMember> _initialMembers = [
-    _FamilyMember(
-      id: 'sarah',
-      name: 'Sarah',
-      detail: 'Mom · Parent',
-      avatarColor: _peach,
-      glyph: '👩',
-      trailing: _MemberTrailing.chevron,
-    ),
-    _FamilyMember(
-      id: 'ava',
-      name: 'Ava',
-      detail: 'Child · Age 8',
-      avatarColor: _pink,
-      glyph: '👧',
-      trailing: _MemberTrailing.kidsMode,
-    ),
-    _FamilyMember(
-      id: 'noah',
-      name: 'Noah',
-      detail: 'Child · Age 14',
-      avatarColor: _blue,
-      glyph: '👦',
-      trailing: _MemberTrailing.teenMode,
-    ),
-  ];
-
-  final List<_FamilyMember> _members = List.of(_initialMembers);
+  /// Clean slate: no pre-populated members for new Parent Mode users.
+  final List<FamilySetupMember> _members = [];
   final _nameController = TextEditingController();
   final _ageController = TextEditingController(text: '12');
-  String _role = 'Child';
+  String _role = FamilySetupOptions.roles.first;
+  String _gender = FamilySetupOptions.genders.first;
+  String? _photoPath;
+  final _picker = ImagePicker();
 
   @override
   void dispose() {
@@ -118,46 +74,122 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
     super.dispose();
   }
 
-  void _onPressMember(String memberId) {
-    final member = _members.firstWhere((m) => m.id == memberId);
-    Navigator.of(context).push(
+  Future<void> _onPressMember(String memberId) async {
+    final index = _members.indexWhere((m) => m.id == memberId);
+    if (index == -1) return;
+    final result = await Navigator.of(context).push<MemberEditResult>(
       MaterialPageRoute(
-        builder: (_) => MemberDetailScreen(
-          memberId: member.id,
-          name: member.name,
-          detail: member.detail,
-          avatarColor: member.avatarColor,
-          glyph: member.glyph,
-        ),
+        builder: (_) => MemberDetailScreen(member: _members[index]),
       ),
     );
+    if (!mounted || result == null) return;
+    switch (result) {
+      case MemberUpdated(:final member):
+        setState(() {
+          final at = _members.indexWhere((m) => m.id == member.id);
+          if (at != -1) _members[at] = member;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Member updated')),
+        );
+      case MemberDeleted(:final memberId):
+        setState(() {
+          _members.removeWhere((m) => m.id == memberId);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Member deleted')),
+        );
+    }
+  }
+
+  String _glyphFor({required String gender, required bool isParent}) {
+    switch (gender) {
+      case 'Female':
+        return isParent ? '👩' : '👧';
+      case 'Male':
+        return isParent ? '👨' : '👦';
+      default:
+        return '👤';
+    }
   }
 
   /// Appends the entered member to the local list only. No API call.
   void _onAddMember() {
     final name = _nameController.text.trim();
     final age = _ageController.text.trim();
+    final isParent = _role == 'Parent';
+    const avatarColors = [_peach, _pink, _blue];
     _nameController.clear();
     setState(() {
       _members.add(
-        _FamilyMember(
-          id: 'custom-${_members.length}',
+        FamilySetupMember(
+          id: 'custom-${DateTime.now().microsecondsSinceEpoch}',
           name: name.isEmpty ? 'New member' : name,
-          detail: _role == 'Parent'
-              ? 'Parent'
-              : '$_role · Age ${age.isEmpty ? '–' : age}',
-          avatarColor: _peach,
-          glyph: '👤',
-          trailing: _MemberTrailing.chevron,
+          age: age,
+          gender: _gender,
+          role: _role,
+          avatarColor: avatarColors[_members.length % avatarColors.length],
+          glyph: _glyphFor(gender: _gender, isParent: isParent),
+          photoPath: _photoPath,
         ),
       );
+      _photoPath = null;
     });
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    try {
+      final file = await _picker.pickImage(source: source, maxWidth: 1600);
+      if (file != null && mounted) {
+        setState(() => _photoPath = file.path);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open camera/gallery.')),
+      );
+    }
+  }
+
+  void _choosePhotoSource() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('Profile picture'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _pickPhoto(ImageSource.camera);
+            },
+            child: const Row(
+              children: [
+                Icon(Icons.photo_camera_outlined),
+                SizedBox(width: 12),
+                Text('Take a photo'),
+              ],
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _pickPhoto(ImageSource.gallery);
+            },
+            child: const Row(
+              children: [
+                Icon(Icons.photo_library_outlined),
+                SizedBox(width: 12),
+                Text('Choose from gallery'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _onDoneLater() {
     // Focus picker shelved: straight to profile setup, all areas on.
-
-
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ProfileSetupScreen(focusAreas: FocusAreas.all),
@@ -213,6 +245,34 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
         const SizedBox(height: 8),
         input,
       ],
+    );
+  }
+
+  Widget _dropdownField({
+    required String value,
+    required List<String> options,
+    required ValueChanged<String> onChanged,
+  }) {
+    return _shadowedInput(
+      DropdownButtonFormField<String>(
+        initialValue: value,
+        isExpanded: true,
+        items: [
+          for (final option in options)
+            DropdownMenuItem(value: option, child: Text(option)),
+        ],
+        onChanged: (selected) {
+          if (selected != null) onChanged(selected);
+        },
+        icon: const Icon(
+          Icons.keyboard_arrow_down_rounded,
+          size: 20,
+          color: _mute,
+        ),
+        style: _inputTextStyle,
+        dropdownColor: _white,
+        decoration: _inputDecoration(),
+      ),
     );
   }
 
@@ -285,13 +345,27 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
             color: _mute,
           ),
         ),
-        for (final member in _members) ...[
-          const SizedBox(height: 6),
-          _MemberCard(
-            member: member,
-            onTap: () => _onPressMember(member.id),
-          ),
-        ],
+        if (_members.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Text(
+              'No members yet. Add your first member below.',
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w500,
+                fontSize: 13,
+                color: _mute,
+              ),
+            ),
+          )
+        else
+          for (final member in _members) ...[
+            const SizedBox(height: 6),
+            _MemberCard(
+              member: member,
+              onTap: () => _onPressMember(member.id),
+            ),
+          ],
       ],
     );
   }
@@ -336,26 +410,67 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
         ),
         const SizedBox(height: 12),
         _labeledField(
+          label: 'Gender',
+          input: _dropdownField(
+            value: _gender,
+            options: FamilySetupOptions.genders,
+            onChanged: (value) => setState(() => _gender = value),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _labeledField(
           label: 'Role',
+          input: _dropdownField(
+            value: _role,
+            options: FamilySetupOptions.roles,
+            onChanged: (value) => setState(() => _role = value),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _labeledField(
+          label: 'Profile picture',
           input: _shadowedInput(
-            DropdownButtonFormField<String>(
-              initialValue: _role,
-              isExpanded: true,
-              items: [
-                for (final option in _roleOptions)
-                  DropdownMenuItem(value: option, child: Text(option)),
-              ],
-              onChanged: (value) {
-                if (value != null) setState(() => _role = value);
-              },
-              icon: const Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: 20,
-                color: _mute,
+            Material(
+              color: _white,
+              borderRadius: BorderRadius.circular(18),
+              child: InkWell(
+                key: const Key('add-member-photo'),
+                onTap: _choosePhotoSource,
+                borderRadius: BorderRadius.circular(18),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 16,
+                  ),
+                  child: Row(
+                    children: [
+                      _PhotoPreview(
+                        photoPath: _photoPath,
+                        size: 40,
+                        glyph: _glyphFor(
+                          gender: _gender,
+                          isParent: _role == 'Parent',
+                        ),
+                        background: _peach,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _photoPath == null
+                              ? 'Choose a photo (optional)'
+                              : 'Photo selected — tap to change',
+                          style: _inputTextStyle,
+                        ),
+                      ),
+                      const Icon(
+                        Icons.add_a_photo_outlined,
+                        size: 20,
+                        color: _mute,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              style: _inputTextStyle,
-              dropdownColor: _white,
-              decoration: _inputDecoration(),
             ),
           ),
         ),
@@ -451,11 +566,69 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
   }
 }
 
-/// One existing-member row: avatar glyph, name/detail block, trailing.
+/// Round avatar preview: picked photo when set, glyph tile otherwise.
+class _PhotoPreview extends StatelessWidget {
+  const _PhotoPreview({
+    required this.photoPath,
+    required this.size,
+    required this.glyph,
+    required this.background,
+  });
+
+  final String? photoPath;
+  final double size;
+  final String glyph;
+  final Color background;
+
+  static const Color _ink = Color(0xFF2B3A2B);
+
+  @override
+  Widget build(BuildContext context) {
+    final path = photoPath;
+    if (path != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(size / 2),
+        child: Image.file(
+          File(path),
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            width: size,
+            height: size,
+            color: background,
+            alignment: Alignment.center,
+            child: const Icon(Icons.broken_image_outlined, color: _ink),
+          ),
+        ),
+      );
+    }
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(size / 2),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        glyph,
+        style: const TextStyle(
+          fontFamily: 'Nunito',
+          fontWeight: FontWeight.w400,
+          fontSize: 31,
+          color: _ink,
+        ),
+      ),
+    );
+  }
+}
+
+/// One existing-member row: avatar, name/detail block, trailing.
 class _MemberCard extends StatelessWidget {
   const _MemberCard({required this.member, required this.onTap});
 
-  final _FamilyMember member;
+  final FamilySetupMember member;
   final VoidCallback onTap;
 
   static const Color _ink = Color(0xFF2B3A2B);
@@ -465,18 +638,13 @@ class _MemberCard extends StatelessWidget {
   static const Color _white = Color(0xFFFFFFFF);
 
   Widget _trailing() {
-    switch (member.trailing) {
-      case _MemberTrailing.chevron:
-        return const Icon(
-          Icons.chevron_right_rounded,
-          size: 20,
-          color: _mute,
-        );
-      case _MemberTrailing.kidsMode:
-        return _modePill('Kids Mode', _yellowLight);
-      case _MemberTrailing.teenMode:
-        return _modePill('Teen Mode', _lavender);
-    }
+    if (member.isKids) return _modePill('Kids Mode', _yellowLight);
+    if (member.isTeen) return _modePill('Teen Mode', _lavender);
+    return const Icon(
+      Icons.chevron_right_rounded,
+      size: 20,
+      color: _mute,
+    );
   }
 
   Widget _modePill(String label, Color background) {
@@ -526,23 +694,11 @@ class _MemberCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: member.avatarColor,
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    member.glyph,
-                    style: const TextStyle(
-                      fontFamily: 'Nunito',
-                      fontWeight: FontWeight.w400,
-                      fontSize: 31,
-                      color: _ink,
-                    ),
-                  ),
+                _PhotoPreview(
+                  photoPath: member.photoPath,
+                  size: 40,
+                  glyph: member.glyph,
+                  background: member.avatarColor,
                 ),
                 const SizedBox(width: 14),
                 Expanded(
