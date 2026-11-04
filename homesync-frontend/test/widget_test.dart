@@ -10,6 +10,10 @@ Future<void> _pumpToWelcome(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Finder _fieldWithHint(String hint) => find.byWidgetPredicate(
+      (w) => w is TextField && w.decoration?.hintText == hint,
+    );
+
 void main() {
   testWidgets('Welcome shows Get Started and Login', (tester) async {
     await _pumpToWelcome(tester);
@@ -30,7 +34,7 @@ void main() {
 
     // Focus-area picker is shelved: signup starts at the profile form.
     expect(find.text('Tell us about yourself'), findsOneWidget);
-    expect(find.text('I am a…'), findsOneWidget);
+    expect(find.text('Account type'), findsOneWidget);
   });
 
   testWidgets('Login button opens the login screen', (tester) async {
@@ -48,8 +52,10 @@ void main() {
     await tester.tap(find.text('Get Started'));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).at(0), 'Mom');
-    await tester.enterText(find.byType(TextField).at(1), '1990-01-01');
+    await tester.enterText(_fieldWithHint('Email address'), 'mom@x.com');
+    await tester.enterText(_fieldWithHint('Password'), 'secret123');
+    await tester.enterText(_fieldWithHint('Enter name'), 'Mom');
+    await tester.enterText(_fieldWithHint('Birthday (YYYY-MM-DD)'), '1990-01-01');
     final cont = find.text('Continue');
     await tester.ensureVisible(cont);
     await tester.tap(cont);

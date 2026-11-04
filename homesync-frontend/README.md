@@ -41,7 +41,7 @@ homesync-frontend/
 ## Flow
 
 Splash → Welcome ([Get Started] / [Login]) →
-Profile Setup (name, birthday, role, Kids/Teen/Parent mode) →
+Profile Setup (email, password, name, birthday, Parent/Kid, Kids/Teens/Parent mode) →
 Home.
 
 The focus-area picker lives in the family-setup flow (`choose_mode_screen`

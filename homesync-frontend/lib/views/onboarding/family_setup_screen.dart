@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/state/focus_areas.dart';
 
@@ -327,6 +328,7 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
             TextField(
               controller: _ageController,
               keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               style: _inputTextStyle,
               decoration: _inputDecoration(),
             ),

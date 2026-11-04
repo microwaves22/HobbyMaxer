@@ -26,7 +26,7 @@ enum FamilyRole { parent, child }
 extension FamilyRoleLabel on FamilyRole {
   String get label => switch (this) {
         FamilyRole.parent => 'Parent',
-        FamilyRole.child => 'Child',
+        FamilyRole.child => 'Kid',
       };
 }
 
@@ -35,7 +35,7 @@ enum FamilyMode { kids, teen, parent }
 extension FamilyModeLabel on FamilyMode {
   String get label => switch (this) {
         FamilyMode.kids => 'Kids',
-        FamilyMode.teen => 'Teen',
+        FamilyMode.teen => 'Teens',
         FamilyMode.parent => 'Parent',
       };
 }

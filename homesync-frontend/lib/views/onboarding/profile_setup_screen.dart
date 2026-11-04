@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../../core/network/api_client.dart';
+import '../../core/network/auth_session.dart';
 import '../../core/state/focus_areas.dart';
 import '../../core/widgets/liquid_glass_card.dart';
 import '../home/home_screen.dart';
 import 'models/user_profile.dart';
 
-/// Single-user profile setup: name, birthday, role, and Kids/Teen mode.
+/// Create-an-account profile setup: email, password, name, birthday,
+/// account type (Parent/Kid), and Kids/Teens/Parent mode.
 ///
-/// Other family members are added later from settings, not here.
+/// When an [AuthScope] is available above this screen, Continue registers
+/// the account with the backend (`POST /auth/register`); otherwise the
+/// profile is created locally only. Other family members are added later
+/// from settings, not here.
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key, this.focusAreas = const []});
 
@@ -18,15 +24,23 @@ class ProfileSetupScreen extends StatefulWidget {
 }
 
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   final _birthdayController = TextEditingController();
   FamilyRole _role = FamilyRole.parent;
   FamilyMode _mode = FamilyMode.kids;
+  String? _emailError;
+  String? _passwordError;
   String? _nameError;
   String? _birthdayError;
+  String? _formError;
+  bool _busy = false;
 
   @override
   void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
     _nameController.dispose();
     _birthdayController.dispose();
     super.dispose();
@@ -49,14 +63,48 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
   }
 
-  void _continue() {
+  Future<void> _continue() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
     final name = _nameController.text.trim();
+    final emailError =
+        email.isEmpty || !email.contains('@') ? 'Enter a valid email.' : null;
+    final passwordError = password.length < 6
+        ? 'Enter a password (6+ characters).'
+        : null;
     final birthdayError = validateBirthday(_birthdayController.text);
     setState(() {
+      _emailError = emailError;
+      _passwordError = passwordError;
       _nameError = name.isEmpty ? 'Enter your name.' : null;
       _birthdayError = birthdayError;
+      _formError = null;
     });
-    if (name.isEmpty || birthdayError != null) return;
+    if (emailError != null ||
+        passwordError != null ||
+        name.isEmpty ||
+        birthdayError != null) {
+      return;
+    }
+    final session = AuthScope.maybeOf(context);
+    if (session != null) {
+      setState(() => _busy = true);
+      try {
+        await session.register(
+          email: email,
+          password: password,
+          displayName: name,
+        );
+      } on ApiException catch (e) {
+        if (!mounted) return;
+        setState(() {
+          _busy = false;
+          _formError = e.message;
+        });
+        return;
+      }
+    }
+    if (!mounted) return;
     final profile = UserProfile(
       name: name,
       birthday: tryParseBirthday(_birthdayController.text)!,
@@ -97,6 +145,28 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        hintText: 'Email address',
+                        errorText: _emailError,
+                      ),
+                      onChanged: (_) => setState(() => _emailError = null),
+                      onSubmitted: (_) => _continue(),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        hintText: 'Password',
+                        errorText: _passwordError,
+                      ),
+                      onChanged: (_) => setState(() => _passwordError = null),
+                      onSubmitted: (_) => _continue(),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
                       controller: _nameController,
                       textCapitalization: TextCapitalization.words,
                       decoration: InputDecoration(
@@ -124,7 +194,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       onSubmitted: (_) => _continue(),
                     ),
                     const SizedBox(height: 16),
-                    Text('I am a…', style: text.labelSmall),
+                    Text('Account type', style: text.labelSmall),
                     const SizedBox(height: 8),
                     SegmentedButton<FamilyRole>(
                       segments: const [
@@ -134,7 +204,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         ),
                         ButtonSegment(
                           value: FamilyRole.child,
-                          label: Text('Child'),
+                          label: Text('Kid'),
                         ),
                       ],
                       selected: {_role},
@@ -152,7 +222,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         ),
                         ButtonSegment(
                           value: FamilyMode.teen,
-                          label: Text('Teen'),
+                          label: Text('Teens'),
                         ),
                         ButtonSegment(
                           value: FamilyMode.parent,
@@ -163,13 +233,24 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       onSelectionChanged: (selected) =>
                           setState(() => _mode = selected.first),
                     ),
+                    if (_formError != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        _formError!,
+                        style: text.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ],
                 ),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: _continue,
-                child: const Text('Continue'),
+                onPressed: _busy ? null : _continue,
+                child: Text(_busy ? 'Creating account…' : 'Continue'),
               ),
             ],
           ),
