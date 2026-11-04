@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/network/api_client.dart';
@@ -5,6 +7,7 @@ import '../../core/network/auth_session.dart';
 import '../../core/state/focus_areas.dart';
 import '../../core/widgets/liquid_glass_card.dart';
 import '../home/home_screen.dart';
+import 'family_member.dart';
 import 'models/user_profile.dart';
 
 /// Create-an-account profile setup: email, password, name, birthday,
@@ -15,9 +18,17 @@ import 'models/user_profile.dart';
 /// profile is created locally only. Other family members are added later
 /// from settings, not here.
 class ProfileSetupScreen extends StatefulWidget {
-  const ProfileSetupScreen({super.key, this.focusAreas = const []});
+  const ProfileSetupScreen({
+    super.key,
+    this.focusAreas = const [],
+    this.familyMembers = const [],
+  });
 
   final List<String> focusAreas;
+
+  /// Members collected on the Set Up Family screen. They seed the
+  /// profile switcher and (for parents) the backend child profiles.
+  final List<FamilySetupMember> familyMembers;
 
   @override
   State<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
@@ -63,6 +74,29 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
   }
 
+  /// Approximate birthday from an entered age, or null when unknown.
+  static DateTime? _birthdayFor(String age) {
+    final years = int.tryParse(age);
+    if (years == null) return null;
+    final now = DateTime.now();
+    return DateTime(now.year - years, now.month, now.day);
+  }
+
+  /// Profiles for the dashboard switcher, from the family-setup list.
+  List<UserProfile> _switcherProfiles() => [
+        for (final member in widget.familyMembers)
+          UserProfile(
+            name: member.name,
+            birthday: _birthdayFor(member.age),
+            role: member.isParent ? FamilyRole.parent : FamilyRole.child,
+            mode: member.isTeen
+                ? FamilyMode.teen
+                : member.isParent
+                    ? FamilyMode.parent
+                    : FamilyMode.kids,
+          ),
+      ];
+
   Future<void> _continue() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
@@ -89,17 +123,36 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     final session = AuthScope.maybeOf(context);
     if (session != null) {
       setState(() => _busy = true);
+      // Transport failures fall through to a local account; real
+      // backend rejections surface as form errors below.
       try {
-        await session.register(
+        try {
+          await session.register(
           email: email,
           password: password,
           displayName: name,
-        );
+        ).timeout(const Duration(seconds: 8));
+        } on ApiException catch (e) {
+          if (e.statusCode != null) rethrow;
+          debugPrint('Signup proceeding offline: $e');
+        } on TimeoutException {
+          debugPrint('Signup proceeding offline: register timed out.');
+        }
       } on ApiException catch (e) {
         if (!mounted) return;
         setState(() {
           _busy = false;
           _formError = e.message;
+        });
+        return;
+      } catch (err) {
+        debugPrint('Signup failed: $err');
+        // Non-API failures (bad payload, secure storage, ...) must
+        // never wedge the form in its busy state.
+        if (!mounted) return;
+        setState(() {
+          _busy = false;
+          _formError = 'Could not create your account. Please try again.';
         });
         return;
       }
@@ -115,7 +168,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       MaterialPageRoute(
         builder: (_) => FocusAreasScope(
           controller: FocusAreasController(widget.focusAreas),
-          child: HomeScreen(profile: profile),
+          child: HomeScreen(
+            profile: profile,
+            otherProfiles: _switcherProfiles(),
+            pendingMembers: widget.familyMembers,
+          ),
         ),
       ),
       (_) => false,

@@ -82,6 +82,21 @@ void main() {
       expect(body['access_token'], 'tok');
     });
 
+    test('client errors become ApiException without a status', () async {
+      final client = ApiClient(
+        inner: MockClient((_) => throw http.ClientException('boom')),
+      );
+
+      expect(
+        () => client.get('/tasks/'),
+        throwsA(
+          isA<ApiException>()
+              .having((e) => e.statusCode, 'statusCode', isNull)
+              .having((e) => e.message, 'message', contains('Could not reach')),
+        ),
+      );
+    });
+
     test('socket errors become ApiException without a status', () async {
       final client = ApiClient(
         inner: MockClient((_) => throw const SocketException('down')),

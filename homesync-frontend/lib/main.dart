@@ -1,32 +1,43 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import 'core/network/auth_session.dart';
 import 'core/theme/app_theme.dart';
 import 'views/onboarding/splash_screen.dart';
 
-// NOTE (2026-11-02): this entry file was reconstructed during the Family
-// calendars delivery after the previous main.dart was accidentally
-// overwritten. It wires the canonical pieces only: the shared AppTheme and
-// the 01 Splash screen as the launch route. If the original entry did more
-// (e.g. session bootstrap), restore that here.
-void main() => runApp(const HomeSyncApp());
+void main() {
+  // The restore below touches the secure-storage platform channel, which
+  // requires the binding before runApp.
+  WidgetsFlutterBinding.ensureInitialized();
+  final session = AuthSession();
+  // Restore a saved JWT in the background; failures fall back to login.
+  unawaited(session.restore());
+  runApp(HomeSyncApp(session: session));
+}
 
-/// Minimal app entry. Home previews the 06 Calendar screen; switch back
-/// to OnboardingInterestsScreen once navigation is built out.
 /// App entry. Home is the Figma 01 Splash screen, which routes to
 /// account setup (Choose Mode) or login.
+///
+/// An [AuthScope] wraps the app so login, registration, and the
+/// dashboard share one authenticated backend session.
 class HomeSyncApp extends StatelessWidget {
-  const HomeSyncApp({super.key});
+  HomeSyncApp({super.key, AuthSession? session})
+      : _session = session ?? AuthSession();
+
+  final AuthSession _session;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'HomeSync',
-      debugShowCheckedModeBanner: false,
-      // home: CalendarScreen(),
-      // home: SplashScreen(),
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      home: const SplashScreen(),
+    return AuthScope(
+      session: _session,
+      child: MaterialApp(
+        title: 'HomeSync',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        home: const SplashScreen(),
+      ),
     );
   }
 }

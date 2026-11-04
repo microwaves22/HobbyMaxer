@@ -12,7 +12,13 @@ from ..core.security import (
     verify_password,
 )
 from ..models import Family, User
-from ..schemas.auth import AuthResponse, RegisterRequest, SwitchProfileRequest, Token
+from ..schemas.auth import (
+    AuthResponse,
+    ChildLoginRequest,
+    RegisterRequest,
+    SwitchProfileRequest,
+    Token,
+)
 from ..schemas.users import UserRead
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -67,13 +73,47 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
 def switch_profile(payload: SwitchProfileRequest, db: Session = Depends(get_db)):
     """Swap the shared-device session to another family profile.
 
-    The caller sends the target profile id plus the family parent PIN.
+    Parent targets need the family parent PIN; child targets need only
+    their own child PIN (or nothing when unset). The parent PIN never
+    grants child access.
     """
     user = db.get(User, payload.user_id)
     if user is None or user.family_id is None:
         raise HTTPException(status_code=404, detail="Profile not found.")
-    family = db.get(Family, user.family_id)
-    if family is None or not verify_password(payload.pin, family.parent_pin_hashed):
+    if user.role == "parent":
+        family = db.get(Family, user.family_id)
+        if (
+            family is None
+            or payload.pin is None
+            or not verify_password(payload.pin, family.parent_pin_hashed)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid PIN."
+            )
+    elif user.child_pin_hashed is not None:
+        if payload.pin is None or not verify_password(
+            payload.pin, user.child_pin_hashed
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid PIN."
+            )
+    return _issue(user)
+
+
+@router.post("/child-login", response_model=AuthResponse)
+def child_login(payload: ChildLoginRequest, db: Session = Depends(get_db)):
+    """Independent child login with the child's own PIN (optional).
+
+    Separate from parent email/password auth and from switch-profile:
+    children authenticate as themselves without any parent credential.
+    """
+    user = db.get(User, payload.user_id)
+    if user is None or user.role != "child" or user.family_id is None:
+        raise HTTPException(status_code=404, detail="Profile not found.")
+    if user.child_pin_hashed is not None and (
+        payload.child_pin is None
+        or not verify_password(payload.child_pin, user.child_pin_hashed)
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid PIN."
         )

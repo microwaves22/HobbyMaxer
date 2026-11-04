@@ -18,7 +18,7 @@ Muse Code reads this file as project rules when it runs in this directory.
 ## Project Layout
 
 - `homesync-backend/app/core/`: config, database, security.
-- `homesync-backend/app/models/`: family, user, task, submission, reward (+ledger), event.
+- `homesync-backend/app/models/`: family (+co-parent invites), user, task, submission, reward (+ledger), event.
 - `homesync-backend/app/schemas/`: Pydantic request/response models.
 - `homesync-backend/app/routers/`: auth, families, tasks, rewards, calendar.
 - `homesync-backend/app/services/`: points ledger, photo-retention cleanup.

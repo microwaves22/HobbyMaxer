@@ -400,7 +400,8 @@ class _RequestCustomRewardScreenState extends State<RequestCustomRewardScreen> {
         ),
         decoration: const InputDecoration(
           filled: true,
-          fillColor: Color.fromRGBO(255, 255, 255, 0.91),
+          // Opaque white so typed text stays readable over the blur.
+          fillColor: RequestCustomRewardScreen._white,
           contentPadding: EdgeInsets.all(12),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(14)),
@@ -431,7 +432,7 @@ class _RequestCustomRewardScreenState extends State<RequestCustomRewardScreen> {
       constraints: const BoxConstraints(minHeight: 46),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color.fromRGBO(255, 255, 255, 0.91),
+        color: RequestCustomRewardScreen._white,
         border: Border.all(color: RequestCustomRewardScreen._line),
         borderRadius: BorderRadius.circular(14),
       ),

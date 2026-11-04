@@ -48,7 +48,9 @@ The focus-area picker lives in the family-setup flow (`choose_mode_screen`
 → `family_setup_screen` → `focus_areas_screen`); Welcome [Get Started] and
 login skip it and enable all areas by default via `FocusAreasScope`.
 Switching to a parent profile asks for the Parent PIN (demo default `1234`;
-wire to `POST /auth/switch-profile` later).
+wire to `POST /auth/switch-profile` later). Kids log in directly from the
+login screen with their child ID plus their own optional PIN (parents
+manage PINs in Account settings → Child PINs).
 
 ## Tasks & photo evidence
 
@@ -58,8 +60,9 @@ review queue on the dashboard with zoomable photo previews, per-task
 [Approve & Award Points] / [Request Changes] per task (Request Changes opens
 a feedback popup for points/detail/photo edits plus a note the child sees on retry), and an [Approve All Simple Tasks] batch action for no-photo tasks. Points chips and parent task rows open the same chore editor.
 
-Tasks live in an in-memory `TasksController` seeded per profile; wire to
-the backend (`POST /tasks/{id}/submit`, `PUT /tasks/{id}/approve`) later.
+Tasks live in a `TasksController` seeded per profile; once signed in
+it syncs with the backend (`GET /tasks/`, `POST /tasks/{id}/submit`
+multipart, `PUT /tasks/{id}/approve`), falling back to the local seeds offline.
 
 `image_picker` platform setup (when building for devices):
 
@@ -76,7 +79,8 @@ Perks tabs, a live points balance header, and per-reward redeem buttons
 deducts via `TasksController` (one shared balance), logs a
 `RedemptionRecord`, and raises a `PerkRequest` card on the parent
 dashboard for real-world fulfillment. Parents add perks from the Perks
-tab. Wire to the backend (`/rewards/...`, `/rewards/ledger/me`) later.
+tab. Signed-in families sync through the backend (`GET/POST
+`/rewards/`, `POST /rewards/{id}/redeem`); offline it uses the local ledger.
 
 ## Backend sync
 
@@ -99,11 +103,12 @@ cards show an "Evidence stored on server" placeholder.
 - The profile menu's Account settings page (all roles) shows account
   info plus Customization, Link your kids (share the invite code),
   Join a family circle (link with a code), and Sign out. Circle
-  joining is local-only until the backend adds invite codes.
+  joining uses the backend invite code (`POST /families/join`) when
+  signed in, with a local mock acceptance offline.
 - Parents get a "Parent To-Do" dashboard section (add, edit, complete,
   delete, reorder) backed by `ChoreTask.isParentTodo`. To-dos are
-  local-only for now; syncing them to the backend is a future step
-  (like rewards redemption, which still uses the local ledger).
+  local-only for now; syncing them to the backend is a future step.
 
-The backend lives in `../homesync-backend/` (FastAPI). API wiring
-(login/register, family sync) is the next step after this UI scaffold.
+The backend lives in `../homesync-backend/` (FastAPI). Login,
+registration, first-run family setup, tasks, rewards, and calendar
+all sync against it when signed in; offline the app runs on local state.

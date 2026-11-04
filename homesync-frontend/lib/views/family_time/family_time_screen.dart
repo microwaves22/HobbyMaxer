@@ -55,11 +55,11 @@ class FamilyTimeScreen extends StatefulWidget {
   /// Called with the newly selected activity-type id.
   final ValueChanged<String>? onActivityTypeChange;
 
-  /// Called when "Confirm Family Time" is tapped. No confirmation flow
-  /// exists yet.
+  /// Called when "Confirm Family Time" is tapped. Defaults to a
+  /// confirmation snackbar for the selected activity and time.
   final VoidCallback? onConfirmFamilyTime;
 
-  /// Called when "See All" is tapped. No options list screen exists yet.
+  /// Called when "See All" is tapped. Defaults to an options sheet.
   final VoidCallback? onSeeAllOptions;
 
   /// Called with the tapped option id. Updates the selected radio.
@@ -85,6 +85,46 @@ class _FamilyTimeScreenState extends State<FamilyTimeScreen> {
   void _selectOption(String id) {
     setState(() => _selectedOptionId = id);
     widget.onOptionSelect?.call(id);
+  }
+
+  void _defaultConfirm() {
+    final activity = FamilyTimeData.activityTypeById(_activityTypeId).label;
+    FamilyTimeOption? option;
+    for (final candidate in FamilyTimeData.options) {
+      if (candidate.id == _selectedOptionId) option = candidate;
+    }
+    final when = option == null
+        ? '${FamilyTimeData.suggestedDay}, ${FamilyTimeData.suggestedTime}'
+        : '${option.dayLabel}, ${option.timeLabel}';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Family time confirmed: $activity on $when')),
+    );
+  }
+
+  void _defaultSeeAll() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final option in FamilyTimeData.options)
+              ListTile(
+                title: Text(option.dayLabel),
+                subtitle: Text(option.timeLabel),
+                trailing: _selectedOptionId == option.id
+                    ? const Icon(Icons.check_rounded)
+                    : null,
+                onTap: () {
+                  _selectOption(option.id);
+                  Navigator.of(sheetContext).pop();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _handleNavigate(String tabId) {
@@ -121,11 +161,13 @@ class _FamilyTimeScreenState extends State<FamilyTimeScreen> {
                 onActivityTypeChange: _changeActivityType,
               ),
               const SizedBox(height: 12),
-              _ConfirmButton(onConfirm: widget.onConfirmFamilyTime),
+              _ConfirmButton(
+                onConfirm: widget.onConfirmFamilyTime ?? _defaultConfirm,
+              ),
               const SizedBox(height: 20),
               _OtherOptions(
                 selectedOptionId: _selectedOptionId,
-                onSeeAll: widget.onSeeAllOptions,
+                onSeeAll: widget.onSeeAllOptions ?? _defaultSeeAll,
                 onSelectOption: _selectOption,
               ),
             ],

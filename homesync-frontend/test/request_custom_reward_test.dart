@@ -119,4 +119,52 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('form inputs use opaque white with dark text', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: RequestCustomRewardScreen()),
+    );
+    await tester.pumpAndSettle();
+
+    final fields = _fields(tester);
+    expect(fields.length, 3);
+
+    const white = Color(0xFFFFFFFF);
+    const ink = Color(0xFF2B3A2B);
+
+    final perk = fields.firstWhere(
+      (f) => f.controller?.text == 'Go to trampoline park',
+    );
+    expect(perk.decoration?.filled, isTrue);
+    expect(perk.decoration?.fillColor, white);
+    expect(perk.style?.color, ink);
+
+    final note = fields.firstWhere(
+      (f) =>
+          f.controller?.text ==
+          'Could we go this weekend? I am happy to save up.',
+    );
+    expect(note.decoration?.filled, isTrue);
+    expect(note.decoration?.fillColor, white);
+    expect(note.style?.color, ink);
+
+    // The cost field is borderless: its white box is the parent container.
+    final cost = fields.firstWhere(
+      (f) => f.controller?.text == '200 points',
+    );
+    expect(cost.style?.color, ink);
+    Container? costBox;
+    tester.element(find.byWidget(cost)).visitAncestorElements((ancestor) {
+      final widget = ancestor.widget;
+      if (widget is Container && widget.decoration is BoxDecoration) {
+        costBox = widget;
+        return false;
+      }
+      return true;
+    });
+    expect(
+      (costBox?.decoration as BoxDecoration?)?.color,
+      white,
+    );
+  });
 }

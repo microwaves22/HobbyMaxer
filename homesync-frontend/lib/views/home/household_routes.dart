@@ -54,6 +54,24 @@ abstract final class HouseholdRoutes {
     );
   }
 
+  /// Dashboard-family Home: pops back to the first route, which is the
+  /// dashboard in every authenticated flow (login, splash restore,
+  /// child login, and onboarding all reset the stack with HomeScreen
+  /// first). Unlike [openTab]'s hub home, this returns to the live
+  /// dashboard instead of opening a new screen, so profile state and
+  /// scroll position survive the trip.
+  static void goHome(BuildContext context) {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
+  /// Dashboard-family Calendar: replaces the current route with the
+  /// shared Calendar view, so repeated taps never stack duplicates.
+  static void goCalendar(BuildContext context) {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const CalendarScreen()),
+    );
+  }
+
   static void openAccountSettings(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(

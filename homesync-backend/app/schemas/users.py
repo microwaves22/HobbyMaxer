@@ -16,10 +16,15 @@ class _FromORM(BaseModel):
 class ChildCreate(BaseModel):
     display_name: str = Field(min_length=1, max_length=255)
     mode: UserMode
+    child_pin: str | None = Field(default=None, min_length=4, max_length=16)
 
 
 class ChildModeUpdate(BaseModel):
     mode: UserMode
+
+
+class ChildPinUpdate(BaseModel):
+    child_pin: str | None = Field(default=None, min_length=4, max_length=16)
 
 
 class UserRead(_FromORM):
@@ -30,4 +35,6 @@ class UserRead(_FromORM):
     role: str
     mode: str | None
     points_balance: int
+    streak_count: int
+    has_child_pin: bool = False
     created_at: datetime

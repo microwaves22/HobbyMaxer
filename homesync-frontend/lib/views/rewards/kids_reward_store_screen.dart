@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../core/widgets/profile_avatar_dropdown.dart';
 import 'models/kids_store_reward.dart';
 
 /// Figma "Kids Reward Store" (node 100:4854): Ava's reward store.
@@ -29,6 +30,15 @@ class KidsRewardStoreScreen extends StatelessWidget {
     this.onNavigateHome,
     this.onNavigateRewards,
     this.onNavigateCalendar,
+    this.activeProfile = const ProfileOption(
+      name: 'Ava',
+      roleLabel: 'Kids Mode',
+    ),
+    this.profiles = const [],
+    this.parentPin = '1234',
+    this.onSwitchProfile,
+    this.onAccountSettings,
+    this.onManageFamily,
   });
 
   // Figma tokens (screen-only, see class doc).
@@ -79,6 +89,20 @@ class KidsRewardStoreScreen extends StatelessWidget {
   /// Current screen — already selected.
   final VoidCallback? onNavigateRewards;
   final VoidCallback? onNavigateCalendar;
+
+  /// Active household profile for the header menu. Defaults to the mock
+  /// kids profile; hosts pass the real roster to enable switching.
+  final ProfileOption activeProfile;
+
+  /// Other household profiles offered in the header menu.
+  final List<ProfileOption> profiles;
+
+  /// Parent PIN guarding switches to parent profiles from this menu.
+  final String parentPin;
+
+  final ValueChanged<ProfileOption>? onSwitchProfile;
+  final VoidCallback? onAccountSettings;
+  final VoidCallback? onManageFamily;
 
   List<KidsStoreReward> _of(KidsRewardCategory category) =>
       rewards.where((r) => r.category == category).toList();
@@ -170,20 +194,28 @@ class KidsRewardStoreScreen extends StatelessWidget {
                 ),
               ),
             ),
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: _pink,
-                border: Border.all(color: _white),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              alignment: Alignment.center,
-              clipBehavior: Clip.antiAlias,
-              child: const Icon(
-                Icons.pets_rounded,
-                size: 23,
-                color: _sageDark,
+            ProfileAvatarDropdown(
+              active: activeProfile,
+              profiles: profiles,
+              parentPin: parentPin,
+              onSwitchProfile: onSwitchProfile,
+              onAccountSettings: onAccountSettings,
+              onManageFamily: onManageFamily,
+              buttonChild: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: _pink,
+                  border: Border.all(color: _white),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                alignment: Alignment.center,
+                clipBehavior: Clip.antiAlias,
+                child: const Icon(
+                  Icons.pets_rounded,
+                  size: 23,
+                  color: _sageDark,
+                ),
               ),
             ),
           ],

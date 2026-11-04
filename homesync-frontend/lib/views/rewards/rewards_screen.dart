@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/network/api_client.dart';
 import '../../core/widgets/home_title.dart';
 import '../../core/widgets/liquid_glass_card.dart';
 import '../onboarding/models/user_profile.dart';
@@ -10,7 +11,7 @@ import 'rewards_controller.dart';
 ///
 /// Children redeem with their points balance (shown live at the top);
 /// parents can add new real-world perks from the Perks tab.
-class RewardsScreen extends StatelessWidget {
+class RewardsScreen extends StatefulWidget {
   const RewardsScreen({
     super.key,
     required this.controller,
@@ -20,15 +21,52 @@ class RewardsScreen extends StatelessWidget {
   final RewardsController controller;
   final UserProfile profile;
 
-  void _redeem(BuildContext context, RewardItem reward) {
-    final result = controller.redeem(profile.name, reward.id);
+  @override
+  State<RewardsScreen> createState() => _RewardsScreenState();
+}
+
+class _RewardsScreenState extends State<RewardsScreen> {
+  bool _synced = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_synced) return;
+    _synced = true;
+    if (!widget.controller.isSynced) return;
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    try {
+      await widget.controller.refresh();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    }
+  }
+
+  Future<void> _redeem(BuildContext context, RewardItem reward) async {
+    final messenger = ScaffoldMessenger.of(context);
+    late final RedeemResult result;
+    try {
+      result = await widget.controller.redeemAsync(
+        widget.profile.name,
+        reward.id,
+      );
+    } on ApiException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      return;
+    }
     final message = switch (result) {
       RedeemResult.success => 'Redeemed ${reward.title}!',
       RedeemResult.insufficient =>
         'Not enough points for ${reward.title}.',
       RedeemResult.notFound => 'That reward is no longer available.',
     };
-    ScaffoldMessenger.of(context).showSnackBar(
+    messenger.showSnackBar(
       SnackBar(content: Text(message)),
     );
   }
@@ -39,11 +77,20 @@ class RewardsScreen extends StatelessWidget {
       builder: (_) => const _AddPerkDialog(),
     );
     if (draft == null || !context.mounted) return;
-    controller.addPerk(
-      title: draft.title,
-      description: draft.description,
-      cost: draft.cost,
-    );
+    try {
+      await widget.controller.addPerkAsync(
+        title: draft.title,
+        description: draft.description,
+        cost: draft.cost,
+      );
+    } on ApiException catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+      return;
+    }
+    if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Added perk: ${draft.title}.')),
     );
@@ -64,10 +111,10 @@ class RewardsScreen extends StatelessWidget {
           ),
         ),
         body: AnimatedBuilder(
-          animation: Listenable.merge([controller, controller.tasks]),
+          animation: Listenable.merge([widget.controller, widget.controller.tasks]),
           builder: (context, _) {
             final text = Theme.of(context).textTheme;
-            final balance = controller.balanceFor(profile.name);
+            final balance = widget.controller.balanceFor(widget.profile.name);
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -78,7 +125,7 @@ class RewardsScreen extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            "${profile.name}'s balance",
+                            "${widget.profile.name}'s balance",
                             style: text.titleLarge,
                           ),
                         ),
@@ -95,22 +142,22 @@ class RewardsScreen extends StatelessWidget {
                   child: TabBarView(
                     children: [
                       _RewardList(
-                        rewards: controller.rewardsOf(RewardKind.digital),
+                        rewards: widget.controller.rewardsOf(RewardKind.digital),
                         balance: balance,
                         redeemLabel: true,
-                        onRedeem: profile.isParent
+                        onRedeem: widget.profile.isParent
                             ? null
                             : (reward) => _redeem(context, reward),
                       ),
                       _RewardList(
                         rewards:
-                            controller.rewardsOf(RewardKind.parentPerk),
+                            widget.controller.rewardsOf(RewardKind.parentPerk),
                         balance: balance,
                         redeemLabel: true,
-                        onRedeem: profile.isParent
+                        onRedeem: widget.profile.isParent
                             ? null
                             : (reward) => _redeem(context, reward),
-                        header: profile.isParent
+                        header: widget.profile.isParent
                             ? Padding(
                                 padding: const EdgeInsets.only(bottom: 12),
                                 child: OutlinedButton.icon(

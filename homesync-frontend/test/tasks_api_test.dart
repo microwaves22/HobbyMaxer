@@ -127,6 +127,39 @@ MockClient _mock({bool forbidFamily = false}) {
   });
 }
 
+/// The co-parent already approved task 7: review conflicts with 409,
+/// while refresh reports the server's approved state and balance.
+MockClient _conflictMock() {
+  return MockClient((request) async {
+    http.Response json(Object body, [int status = 200]) =>
+        http.Response(jsonEncode(body), status);
+    final path = request.url.path;
+    if (request.method == 'PUT' && path == '/tasks/7/approve') {
+      return json(
+        {'detail': 'Already approved by Dad at 6:42 PM UTC.'},
+        409,
+      );
+    }
+    if (request.method == 'GET' && path == '/tasks/') {
+      return json([
+        _task(id: 7, status: 'approved', assignee: 10, requiresPhoto: true),
+      ]);
+    }
+    if (request.method == 'GET' && path == '/families/me') {
+      return json({
+        'id': 2,
+        'name': 'Fam',
+        'created_at': '2026-01-01T00:00:00',
+        'members': [
+          _member(id: 9, name: 'Mom', role: 'parent'),
+          _member(id: 10, name: 'Maya', role: 'child', balance: 130),
+        ],
+      });
+    }
+    return http.Response('not found', 404);
+  });
+}
+
 void main() {
   group('TasksApi + synced controller', () {
     test('fetchSnapshot maps tasks, names, photos, and balances', () async {
@@ -172,6 +205,37 @@ void main() {
       );
 
       await controller.approve('srv-7');
+      expect(controller.byId('srv-7')!.state, TaskState.approved);
+      expect(controller.balanceFor('Maya'), 130);
+    });
+
+    test('approve conflict reconciles the queue and rethrows the message',
+        () async {
+      final controller = TasksController.test(
+        tasks: [
+          ChoreTask(
+            id: 'srv-7',
+            title: 'Task 7',
+            details: 'Details 7',
+            childName: 'Maya',
+            points: 10,
+            requiresPhoto: true,
+            state: TaskState.pendingReview,
+            serverId: 7,
+          ),
+        ],
+        balances: const {'Maya': 120},
+      );
+      controller.attachBackend(TasksApi(ApiClient(inner: _conflictMock())));
+
+      await expectLater(
+        () => controller.approve('srv-7'),
+        throwsA(
+          isA<ApiException>().having((e) => e.statusCode, 'status', 409),
+        ),
+      );
+      // Stale queue entry reconciles to the server's approved state
+      // without awarding the points a second time.
       expect(controller.byId('srv-7')!.state, TaskState.approved);
       expect(controller.balanceFor('Maya'), 130);
     });

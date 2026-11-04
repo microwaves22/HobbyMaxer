@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -136,6 +138,107 @@ void main() {
 
       expect(session.isAuthenticated, isTrue);
       expect(find.text('Hello, New!'), findsOneWidget);
+    });
+  });
+
+  group('Create-an-account failure handling', () {
+    Future<void> fillAndSubmit(WidgetTester tester) async {
+      await tester.enterText(
+          _fieldWithHint('Email address'), 'new@x.com');
+      await tester.enterText(_fieldWithHint('Password'), 'secret123');
+      await tester.enterText(_fieldWithHint('Enter name'), 'New Mom');
+      await tester.enterText(
+          _fieldWithHint('Birthday (YYYY-MM-DD)'), '1990-01-01');
+      await tester.ensureVisible(find.text('Continue'));
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+    }
+
+    Future<AuthSession> pumpWithMock(
+      WidgetTester tester,
+      MockClient mock,
+    ) async {
+      final session = AuthSession(
+        client: ApiClient(inner: mock),
+        tokenStore: InMemoryTokenStore(),
+      );
+      await _pumpSignup(tester, session: session);
+      return session;
+    }
+
+    testWidgets('malformed register response shows an error, not a hang',
+        (tester) async {
+      final mock = MockClient((request) async {
+        if (request.method == 'POST' &&
+            request.url.path == '/auth/register') {
+          return http.Response('[]', 200);
+        }
+        return http.Response('not found', 404);
+      });
+      await pumpWithMock(tester, mock);
+      await fillAndSubmit(tester);
+
+      expect(
+        find.text('Could not create your account. Please try again.'),
+        findsOneWidget,
+      );
+      // Busy state cleared: the button is back and usable.
+      final button = tester.widget<ElevatedButton>(
+        find.widgetWithText(ElevatedButton, 'Continue'),
+      );
+      expect(button.onPressed, isNotNull);
+      expect(find.text('Tell us about yourself'), findsOneWidget);
+    });
+
+    testWidgets('unreachable backend falls back to a local account',
+        (tester) async {
+      final mock = MockClient(
+        (_) async => throw const SocketException('Connection refused'),
+      );
+      final session = await pumpWithMock(tester, mock);
+      await fillAndSubmit(tester);
+
+      expect(session.isAuthenticated, isFalse);
+      expect(find.text('Hello, New!'), findsOneWidget);
+      expect(find.byType(HomeScreen), findsOneWidget);
+    });
+
+    testWidgets('stalled backend falls back after a capped wait',
+        (tester) async {
+      final mock = MockClient((_) => Completer<http.Response>().future);
+      final session = await pumpWithMock(tester, mock);
+      await fillAndSubmit(tester);
+      // Let the capped 8s wait expire (virtual time), then settle.
+      await tester.pump(const Duration(seconds: 9));
+      await tester.pumpAndSettle();
+
+      expect(session.isAuthenticated, isFalse);
+      expect(find.text('Hello, New!'), findsOneWidget);
+      expect(find.byType(HomeScreen), findsOneWidget);
+
+      // Let the orphaned client timer expire so teardown is clean.
+      await tester.pump(const Duration(seconds: 7));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('server rejection is shown, not bypassed', (tester) async {
+      final mock = MockClient((request) async {
+        if (request.method == 'POST' &&
+            request.url.path == '/auth/register') {
+          return http.Response(
+            jsonEncode({'detail': 'Email already registered.'}),
+            400,
+          );
+        }
+        return http.Response('not found', 404);
+      });
+      final session = await pumpWithMock(tester, mock);
+      await fillAndSubmit(tester);
+
+      expect(find.text('Email already registered.'), findsOneWidget);
+      expect(session.isAuthenticated, isFalse);
+      expect(find.text('Tell us about yourself'), findsOneWidget);
+      expect(find.byType(HomeScreen), findsNothing);
     });
   });
 

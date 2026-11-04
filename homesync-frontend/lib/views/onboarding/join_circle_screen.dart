@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../core/network/api_client.dart';
+import '../../core/network/auth_session.dart';
+import '../../core/network/families_api.dart';
+
 /// Figma-style "Join a family circle": enter the invite code shown on a
 /// parent's [LinkKidsScreen] to link this account into the circle.
 ///
-/// Local-only for now (the backend has no invite-code endpoint yet):
-/// any well-formed 6-character code is accepted.
+/// Signed-in accounts join through the backend (`POST /families/join`);
+/// signed-out accounts keep the local mock acceptance.
 class JoinCircleScreen extends StatefulWidget {
   const JoinCircleScreen({super.key});
 
@@ -25,6 +29,7 @@ class _JoinCircleScreenState extends State<JoinCircleScreen> {
   final _codeController = TextEditingController();
   String? _error;
   String? _joinedCode;
+  bool _busy = false;
 
   @override
   void dispose() {
@@ -40,10 +45,34 @@ class _JoinCircleScreenState extends State<JoinCircleScreen> {
     return '${compact.substring(0, 3)} ${compact.substring(3)}';
   }
 
-  void _join() {
+  Future<void> _join() async {
     final code = normalizeInviteCode(_codeController.text);
     if (code == null) {
       setState(() => _error = 'Enter the 6-character invite code.');
+      return;
+    }
+    final session = AuthScope.maybeOf(context);
+    if (session != null && session.isAuthenticated) {
+      setState(() {
+        _busy = true;
+        _error = null;
+      });
+      try {
+        await FamiliesApi(session.client).joinFamily(code);
+      } on ApiException catch (e) {
+        if (!mounted) return;
+        setState(() {
+          _busy = false;
+          _error = e.message;
+        });
+        return;
+      }
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = null;
+        _joinedCode = code;
+      });
       return;
     }
     setState(() {
@@ -136,7 +165,7 @@ class _JoinCircleScreenState extends State<JoinCircleScreen> {
               SizedBox(
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: _join,
+                  onPressed: _busy ? null : _join,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _sage,
                     foregroundColor: _white,
@@ -149,7 +178,7 @@ class _JoinCircleScreenState extends State<JoinCircleScreen> {
                       fontSize: 16,
                     ),
                   ),
-                  child: const Text('Join'),
+                  child: Text(_busy ? 'Joining...' : 'Join'),
                 ),
               ),
             ],

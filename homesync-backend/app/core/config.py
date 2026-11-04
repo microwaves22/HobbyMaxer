@@ -29,6 +29,25 @@ class Settings:
     uploads_dir: str = field(
         default_factory=lambda: os.getenv("UPLOADS_DIR", "uploads")
     )
+    streak_bonus_points: int = field(
+        default_factory=lambda: _get_int("STREAK_BONUS_POINTS", 10)
+    )
+    co_parent_invite_hours: int = field(
+        default_factory=lambda: _get_int("CO_PARENT_INVITE_HOURS", 48)
+    )
+    meta_ai_api_key: str | None = field(
+        default_factory=lambda: os.getenv("META_AI_API_KEY") or None
+    )
+    meta_ai_api_url: str = field(
+        default_factory=lambda: os.getenv(
+            "META_AI_API_URL", "https://api.llama.com/v1/chat/completions"
+        )
+    )
+    meta_ai_model: str = field(
+        default_factory=lambda: os.getenv(
+            "META_AI_MODEL", "Llama-4-Maverick-17B-128E-Instruct-FP8"
+        )
+    )
     photo_retention_days: int = field(
         default_factory=lambda: _get_int("PHOTO_RETENTION_DAYS", 30)
     )

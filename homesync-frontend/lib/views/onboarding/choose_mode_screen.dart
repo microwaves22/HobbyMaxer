@@ -52,8 +52,13 @@ class _ChooseModeScreenState extends State<ChooseModeScreen> {
   }
 
   void _onContinue(BuildContext context) {
+    final role = switch (_selectedId) {
+      'teen' => 'Teen',
+      'kids' => 'Kids',
+      _ => 'Parent',
+    };
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const FamilySetupScreen()),
+      MaterialPageRoute(builder: (_) => FamilySetupScreen(initialRole: role)),
     );
   }
 

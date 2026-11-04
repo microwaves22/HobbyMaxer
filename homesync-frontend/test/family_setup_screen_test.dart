@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:homesync/views/onboarding/family_setup_screen.dart';
@@ -386,6 +387,18 @@ void main() {
 
   testWidgets('photo picker degrades gracefully without the plugin',
       (tester) async {
+    // Simulate the missing native plugin: without a mock the channel
+    // call never settles in widget tests, so throw explicitly like a
+    // device with no camera/gallery support would.
+    const channel = MethodChannel('plugins.flutter.io/image_picker');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      channel,
+      (call) async => throw MissingPluginException('No implementation found'),
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
     await _pumpFamilySetup(tester);
 
     await tester.ensureVisible(find.byKey(const Key('add-member-photo')));

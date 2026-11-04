@@ -25,7 +25,9 @@ class FamilyMember {
 class CalendarEvent {
   const CalendarEvent({
     required this.id,
+    this.serverId,
     required this.title,
+    this.description,
     required this.date,
     required this.startMinutes,
     required this.endMinutes,
@@ -36,8 +38,14 @@ class CalendarEvent {
 
   final String id;
 
+  /// Backend event id once synced; null for design and local events.
+  final int? serverId;
+
   /// Verbatim title from the design.
   final String title;
+
+  /// Optional longer description (backend events only).
+  final String? description;
 
   /// Day the event belongs to (midnight, local).
   final DateTime date;

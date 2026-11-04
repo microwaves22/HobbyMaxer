@@ -1,8 +1,8 @@
 """User model: parents and children with Kids/Teen mode."""
 
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..core.database import Base
@@ -23,11 +23,19 @@ class User(Base):
         String(255), unique=True, nullable=True, index=True
     )
     hashed_password: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    child_pin_hashed: Mapped[str | None] = mapped_column(String(255), nullable=True)
     display_name: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(16), default="parent", index=True)
     mode: Mapped[str | None] = mapped_column(String(16), nullable=True)
     points_balance: Mapped[int] = mapped_column(Integer, default=0)
+    streak_count: Mapped[int] = mapped_column(Integer, default=0)
+    streak_last_day: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    @property
+    def has_child_pin(self) -> bool:
+        """Whether a child PIN is set (never exposes the hash)."""
+        return self.child_pin_hashed is not None
 
     family: Mapped["Family | None"] = relationship(back_populates="users")
     created_tasks: Mapped[list["Task"]] = relationship(

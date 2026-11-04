@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../core/network/api_client.dart';
+import '../../core/network/auth_session.dart';
 import '../home/household_routes.dart';
+import 'calendar_api.dart';
 import 'calendar_data.dart';
 import 'models/calendar_event.dart';
 
@@ -33,9 +36,10 @@ const _sparkGold = Color(0xFFE0A83C);
 /// Sizes, gaps, and the estimated colors above are read from the design
 /// screenshot; see the delivery report for the flagged estimates.
 ///
-/// All callbacks are placeholders: local UI state only, no backend, no
-/// persistence. Day/Month timetable content is out of scope (separate
-/// screens); the card always shows the week grid.
+/// Explicit callbacks override the defaults; otherwise the header +
+/// button opens an add-event form and tapping a block opens its detail,
+/// both persisted to the backend when signed in. Day/Month timetable
+/// content stays out of scope: the card always shows the week grid.
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({
     super.key,
@@ -60,10 +64,10 @@ class CalendarScreen extends StatefulWidget {
   /// Called with the newly selected Day/Week/Month view.
   final ValueChanged<CalendarView>? onViewChange;
 
-  /// Called with the tapped event id. No detail screen exists yet.
+  /// Called with the tapped event id. Defaults to the detail dialog.
   final ValueChanged<String>? onEventPress;
 
-  /// Called from the header "+" button. No event form exists yet.
+  /// Called from the header "+" button. Defaults to the add-event form.
   final VoidCallback? onAddEvent;
 
   /// Called with the tapped bottom-nav tab id. When null, tabs switch
@@ -78,6 +82,97 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _weekStart = CalendarData.designedWeekStart;
   DateTime _selectedDay = CalendarData.designedSelectedDay;
   CalendarView _view = CalendarView.week;
+
+  /// Backend + locally added events, merged over the design timetable.
+  List<CalendarEvent> _extraEvents = [];
+  bool _remoteLoaded = false;
+
+  /// Design events the user deleted locally (never on the server).
+  final Set<String> _hiddenIds = {};
+
+  /// Design fills reused for synced events, cycling by server id.
+  static const _remotePalette = [
+    Color(0xFFCFE0EE),
+    Color(0xFFDDD5EE),
+    Color(0xFFFDF0C8),
+    Color(0xFFF6D9C4),
+    Color(0xFFF4C9C9),
+    Color(0xFF5F7F55),
+    Color(0xFFE4EBDC),
+  ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_remoteLoaded) return;
+    final session = AuthScope.maybeOf(context);
+    if (session == null || !session.isAuthenticated) return;
+    _remoteLoaded = true;
+    _loadRemote(session.client);
+  }
+
+  Future<void> _loadRemote(ApiClient client) async {
+    try {
+      final raw = await CalendarApi(client).fetchEvents();
+      if (!mounted) return;
+      final mapped = <CalendarEvent>[];
+      for (final json in raw) {
+        final event = _mapRemote(json);
+        if (event != null) mapped.add(event);
+      }
+      setState(() => _extraEvents = mapped);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    }
+  }
+
+  /// Maps one backend event onto the week grid. Returns null when the
+  /// event falls fully outside the 8 AM - 8 PM window.
+  static CalendarEvent? _mapRemote(Map<String, dynamic> json) {
+    final startsAt = DateTime.parse(json['starts_at'] as String).toLocal();
+    final endsRaw = json['ends_at'] as String?;
+    final endsAt = endsRaw == null
+        ? startsAt.add(const Duration(hours: 1))
+        : DateTime.parse(endsRaw).toLocal();
+    final id = json['id'] as int;
+    var start = startsAt.hour * 60 + startsAt.minute;
+    var end = endsAt.hour * 60 + endsAt.minute;
+    start = start.clamp(
+        CalendarData.gridStartHour * 60, CalendarData.gridEndHour * 60);
+    end = end.clamp(
+        CalendarData.gridStartHour * 60, CalendarData.gridEndHour * 60);
+    if (end <= start) return null;
+    final color = _remotePalette[id % _remotePalette.length];
+    return CalendarEvent(
+      id: 'srv-$id',
+      serverId: id,
+      title: json['title'] as String? ?? 'Untitled',
+      description: json['description'] as String?,
+      date: DateTime(startsAt.year, startsAt.month, startsAt.day),
+      startMinutes: start,
+      endMinutes: end,
+      color: color,
+      textColor: color == _sage ? _white : _ink,
+    );
+  }
+
+  List<CalendarEvent> _eventsForDay(DateTime day) => [
+        ...CalendarData.eventsForDay(day).where((e) => !_hiddenIds.contains(e.id)),
+        ..._extraEvents.where((e) => CalendarData.isSameDay(e.date, day)),
+      ];
+
+  CalendarEvent? _findEvent(String id) {
+    for (final event in CalendarData.events) {
+      if (event.id == id) return event;
+    }
+    for (final event in _extraEvents) {
+      if (event.id == id) return event;
+    }
+    return null;
+  }
 
   void _selectDay(DateTime day) {
     setState(() => _selectedDay = day);
@@ -108,6 +203,72 @@ class _CalendarScreenState extends State<CalendarScreen> {
     HouseholdRoutes.openTab(context, tabId);
   }
 
+  Future<void> _defaultAddEvent() async {
+    final draft = await showDialog<_EventDraft>(
+      context: context,
+      builder: (_) => _AddEventDialog(day: _selectedDay),
+    );
+    if (draft == null || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final session = AuthScope.maybeOf(context);
+    final day = _selectedDay;
+    final startsAt = DateTime(
+        day.year, day.month, day.day, draft.start.hour, draft.start.minute);
+    final endsAt = DateTime(
+        day.year, day.month, day.day, draft.end.hour, draft.end.minute);
+    if (session != null && session.isAuthenticated) {
+      try {
+        final json = await CalendarApi(session.client).createEvent(
+          title: draft.title,
+          startsAt: startsAt,
+          endsAt: endsAt,
+        );
+        final event = _mapRemote(json);
+        if (event != null && mounted) setState(() => _extraEvents.add(event));
+      } on ApiException catch (e) {
+        messenger.showSnackBar(SnackBar(content: Text(e.message)));
+        return;
+      }
+    } else {
+      setState(() => _extraEvents.add(CalendarEvent(
+            id: 'local-${DateTime.now().microsecondsSinceEpoch}',
+            title: draft.title,
+            date: DateTime(day.year, day.month, day.day),
+            startMinutes: draft.start.hour * 60 + draft.start.minute,
+            endMinutes: draft.end.hour * 60 + draft.end.minute,
+            color: const Color(0xFFCFE0EE),
+            textColor: _ink,
+          )));
+    }
+    messenger.showSnackBar(const SnackBar(content: Text('Event added.')));
+  }
+
+  Future<void> _defaultEventPress(String id) async {
+    final event = _findEvent(id);
+    if (event == null) return;
+    final delete = await showDialog<bool>(
+      context: context,
+      builder: (_) => _EventDetailDialog(event: event),
+    );
+    if (delete != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final session = AuthScope.maybeOf(context);
+    final serverId = event.serverId;
+    if (session != null && session.isAuthenticated && serverId != null) {
+      try {
+        await CalendarApi(session.client).deleteEvent(serverId);
+      } on ApiException catch (e) {
+        messenger.showSnackBar(SnackBar(content: Text(e.message)));
+        return;
+      }
+    }
+    setState(() {
+      _extraEvents.removeWhere((e) => e.id == id);
+      _hiddenIds.add(id);
+    });
+    messenger.showSnackBar(const SnackBar(content: Text('Event deleted.')));
+  }
+
   @override
   Widget build(BuildContext context) {
     final days = CalendarData.weekDays(_weekStart);
@@ -125,7 +286,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _HeaderRow(onAddEvent: widget.onAddEvent),
+              _HeaderRow(onAddEvent: widget.onAddEvent ?? _defaultAddEvent),
               const SizedBox(height: 16),
               _ViewSwitcher(
                 activeView: _view,
@@ -142,7 +303,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 days: days,
                 selectedDay: _selectedDay,
                 onSelectDay: _selectDay,
-                onEventPress: widget.onEventPress,
+                onEventPress: widget.onEventPress ?? _defaultEventPress,
+                eventsForDay: _eventsForDay,
               ),
               const SizedBox(height: 16),
               const _SmartPlannerCard(),
@@ -343,15 +505,20 @@ class _WeekCard extends StatelessWidget {
     required this.selectedDay,
     required this.onSelectDay,
     required this.onEventPress,
+    this.eventsForDay,
   });
 
   final List<DateTime> days;
   final DateTime selectedDay;
   final ValueChanged<DateTime> onSelectDay;
   final ValueChanged<String>? onEventPress;
+  final List<CalendarEvent> Function(DateTime)? eventsForDay;
 
   static const double _hourHeight = 21;
   static const double _gutterWidth = 44;
+
+  List<CalendarEvent> _resolve(DateTime day) =>
+      eventsForDay?.call(day) ?? CalendarData.eventsForDay(day);
 
   double get _gridHeight =>
       (CalendarData.gridEndHour - CalendarData.gridStartHour) *
@@ -414,7 +581,7 @@ class _WeekCard extends StatelessWidget {
                           for (final day in days)
                             Expanded(
                               child: _DayColumn(
-                                events: CalendarData.eventsForDay(day),
+                                events: _resolve(day),
                                 hourHeight: _hourHeight,
                                 onEventPress: onEventPress,
                               ),
@@ -814,6 +981,186 @@ class _NavTabButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Draft for the add-event form: title plus start/end times on the day.
+class _EventDraft {
+  const _EventDraft({required this.title, required this.start, required this.end});
+
+  final String title;
+  final TimeOfDay start;
+  final TimeOfDay end;
+}
+
+/// Add-event form for the selected day. Times stay inside the 8 AM -
+/// 8 PM grid window so the new block always renders.
+class _AddEventDialog extends StatefulWidget {
+  const _AddEventDialog({required this.day});
+
+  final DateTime day;
+
+  @override
+  State<_AddEventDialog> createState() => _AddEventDialogState();
+}
+
+class _AddEventDialogState extends State<_AddEventDialog> {
+  final _titleController = TextEditingController();
+  TimeOfDay _start = const TimeOfDay(hour: 18, minute: 0);
+  TimeOfDay _end = const TimeOfDay(hour: 19, minute: 0);
+  String? _error;
+
+  static const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  static const _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  int _minutes(TimeOfDay t) => t.hour * 60 + t.minute;
+
+  Future<void> _pick(bool isStart) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: isStart ? _start : _end,
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        if (isStart) {
+          _start = picked;
+        } else {
+          _end = picked;
+        }
+        _error = null;
+      });
+    }
+  }
+
+  void _submit() {
+    final title = _titleController.text.trim();
+    final start = _minutes(_start);
+    final end = _minutes(_end);
+    final lo = CalendarData.gridStartHour * 60;
+    final hi = CalendarData.gridEndHour * 60;
+    String? error;
+    if (title.isEmpty) {
+      error = 'Enter an event title.';
+    } else if (start < lo || end > hi) {
+      error = 'Keep times between 8:00 AM and 8:00 PM.';
+    } else if (end <= start) {
+      error = 'End time must be after the start.';
+    }
+    if (error != null) {
+      setState(() => _error = error);
+      return;
+    }
+    Navigator.of(context).pop(_EventDraft(title: title, start: _start, end: _end));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final day = widget.day;
+    return AlertDialog(
+      title: const Text('Add event'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('${_weekdays[day.weekday - 1]}, ${_months[day.month - 1]} ${day.day}'),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _titleController,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(hintText: 'Event title'),
+            onSubmitted: (_) => _submit(),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _pick(true),
+                  child: Text(_start.format(context)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(''),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _pick(false),
+                  child: Text(_end.format(context)),
+                ),
+              ),
+            ],
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(onPressed: _submit, child: const Text('Add')),
+      ],
+    );
+  }
+}
+
+/// Event detail with its time range and a delete action.
+class _EventDetailDialog extends StatelessWidget {
+  const _EventDetailDialog({required this.event});
+
+  final CalendarEvent event;
+
+  static String _clock(int minutes) {
+    final hour = minutes ~/ 60;
+    final minute = minutes % 60;
+    final suffix = hour >= 12 ? 'PM' : 'AM';
+    final twelve = hour % 12 == 0 ? 12 : hour % 12;
+    return '$twelve:${minute.toString().padLeft(2, '0')} $suffix';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final description = event.description;
+    return AlertDialog(
+      title: Text(event.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+        Text('${_clock(event.startMinutes)}  ${_clock(event.endMinutes)}'),
+          if (description != null && description.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(description),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Close'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: TextButton.styleFrom(foregroundColor: const Color(0xFFB3261E)),
+          child: const Text('Delete'),
+        ),
+      ],
     );
   }
 }

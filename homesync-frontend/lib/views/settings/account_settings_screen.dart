@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/network/auth_session.dart';
 import '../customization/customization_screen.dart';
+import 'child_pin_screen.dart';
+import 'notification_settings_screen.dart';
 import '../onboarding/join_circle_screen.dart';
 import '../onboarding/link_kids_screen.dart';
 import '../onboarding/models/user_profile.dart';
@@ -35,6 +37,8 @@ class AccountSettingsScreen extends StatelessWidget {
   static const Color _blue = Color(0xFFCFE0EE);
   static const Color _sageLight = Color(0xFFE4EBDC);
   static const Color _pink = Color(0xFFF4C9C9);
+  static const Color _peach = Color(0xFFF6D9C4);
+  static const Color _mint = Color(0xFFD5E8D5);
 
   static const List<BoxShadow> _cardShadow = [
     BoxShadow(
@@ -164,6 +168,35 @@ class AccountSettingsScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (signedIn && profile.isParent) ...[
+                      const Divider(height: 1, thickness: 1, color: _line),
+                      _SettingsRow(
+                        icon: Icons.pin_rounded,
+                        tile: _mint,
+                        label: 'Child PINs',
+                        sublabel: 'Kids log in with their own PIN',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ChildPinScreen(),
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (signedIn && profile.isParent) ...[
+                      const Divider(height: 1, thickness: 1, color: _line),
+                      _SettingsRow(
+                        icon: Icons.notifications_rounded,
+                        tile: _peach,
+                        label: 'Notifications',
+                        sublabel: 'Inbox and family preferences',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const NotificationSettingsScreen(),
+                          ),
+                        ),
+                      ),
+                    ],
                     if (signedIn) ...[
                       const Divider(height: 1, thickness: 1, color: _line),
                       _SettingsRow(

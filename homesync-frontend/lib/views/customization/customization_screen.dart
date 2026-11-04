@@ -139,7 +139,9 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
       widget.onSaveChanges!(selection);
     } else {
       unawaited(_persist());
-      // Saved locally; a remote endpoint can replace the store later.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Customization saved.')),
+      );
     }
   }
 
@@ -378,10 +380,10 @@ class _ProfileCard extends StatelessWidget {
               for (var i = 0; i < avatarOptions.length; i++) ...[
                 if (i > 0) const SizedBox(width: 12),
                 GestureDetector(
-                  key: Key('avatar-option-${avatarOptions[i].id}'),
                   onTap: () => onSelectAvatar(avatarOptions[i].id),
                   behavior: HitTestBehavior.opaque,
                   child: Container(
+                    key: Key('avatar-option-${avatarOptions[i].id}'),
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
@@ -446,13 +448,13 @@ class _BackgroundCard extends StatelessWidget {
                 if (i > 0) const SizedBox(width: 10),
                 Expanded(
                   child: GestureDetector(
-                    key: Key(
-                      'background-tile-${backgroundOptions[i].id}',
-                    ),
                     onTap: () =>
                         onSelectBackground(backgroundOptions[i].id),
                     behavior: HitTestBehavior.opaque,
                     child: Container(
+                      key: Key(
+                        'background-tile-${backgroundOptions[i].id}',
+                      ),
                       height: 72,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(

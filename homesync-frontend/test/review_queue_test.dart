@@ -51,6 +51,11 @@ ElevatedButton _batchButton(WidgetTester tester) =>
       find.widgetWithText(ElevatedButton, 'Approve All Simple Tasks'),
     );
 
+/// TextField inside the revision dialogs, found by its label.
+Finder _dialogField(String label) => find.byWidgetPredicate(
+      (w) => w is TextField && w.decoration?.labelText == label,
+    );
+
 void main() {
   group('Parent review queue', () {
     testWidgets('shows pending tasks with review actions', (tester) async {
@@ -147,3 +152,5 @@ void main() {
     });
   });
 }
+
+

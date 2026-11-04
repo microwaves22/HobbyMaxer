@@ -9,6 +9,7 @@ class RewardItem {
     required this.cost,
     required this.kind,
     required this.icon,
+    this.serverId,
   });
 
   final String id;
@@ -19,6 +20,9 @@ class RewardItem {
   final int cost;
   final RewardKind kind;
   final IconData icon;
+
+  /// Backend reward id once synced; null for local-only entries.
+  final int? serverId;
 }
 
 enum RewardKind { digital, parentPerk }

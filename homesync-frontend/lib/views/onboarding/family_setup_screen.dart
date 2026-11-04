@@ -20,7 +20,11 @@ import 'profile_setup_screen.dart';
 /// theme (`AppColors` cream/sage/ink predate this design). Do not move
 /// them into the theme files: no other screen uses these values.
 class FamilySetupScreen extends StatefulWidget {
-  const FamilySetupScreen({super.key});
+  const FamilySetupScreen({super.key, this.initialRole});
+
+  /// Default role for the add-member form, carried from the
+  /// Choose Mode screen. Defaults to the first option when null.
+  final String? initialRole;
 
   @override
   State<FamilySetupScreen> createState() => _FamilySetupScreenState();
@@ -62,7 +66,13 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
   final List<FamilySetupMember> _members = [];
   final _nameController = TextEditingController();
   final _ageController = TextEditingController(text: '12');
-  String _role = FamilySetupOptions.roles.first;
+  late String _role;
+
+  @override
+  void initState() {
+    super.initState();
+    _role = widget.initialRole ?? FamilySetupOptions.roles.first;
+  }
   String _gender = FamilySetupOptions.genders.first;
   String? _photoPath;
   final _picker = ImagePicker();
@@ -134,6 +144,8 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
         ),
       );
       _photoPath = null;
+      _role = widget.initialRole ?? FamilySetupOptions.roles.first;
+      _gender = FamilySetupOptions.genders.first;
     });
   }
 
@@ -155,7 +167,7 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => SimpleDialog(
-        title: const Text('Profile picture'),
+        title: const Text('Add a profile picture'),
         children: [
           SimpleDialogOption(
             onPressed: () {
@@ -192,7 +204,10 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
     // Focus picker shelved: straight to profile setup, all areas on.
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ProfileSetupScreen(focusAreas: FocusAreas.all),
+        builder: (_) => ProfileSetupScreen(
+          focusAreas: FocusAreas.all,
+          familyMembers: _members,
+        ),
       ),
     );
   }

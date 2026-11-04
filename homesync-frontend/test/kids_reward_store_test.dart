@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:homesync/core/widgets/profile_avatar_dropdown.dart';
 import 'package:homesync/views/rewards/kids_reward_store_screen.dart';
 import 'package:homesync/views/rewards/models/kids_store_reward.dart';
 
@@ -16,6 +17,15 @@ Future<void> _pumpStore(
   VoidCallback? onNavigateHome,
   VoidCallback? onNavigateRewards,
   VoidCallback? onNavigateCalendar,
+  ProfileOption activeProfile = const ProfileOption(
+    name: 'Ava',
+    roleLabel: 'Kids Mode',
+  ),
+  List<ProfileOption> profiles = const [],
+  String parentPin = '1234',
+  ValueChanged<ProfileOption>? onSwitchProfile,
+  VoidCallback? onAccountSettings,
+  VoidCallback? onManageFamily,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -30,6 +40,12 @@ Future<void> _pumpStore(
         onNavigateHome: onNavigateHome,
         onNavigateRewards: onNavigateRewards,
         onNavigateCalendar: onNavigateCalendar,
+        activeProfile: activeProfile,
+        profiles: profiles,
+        parentPin: parentPin,
+        onSwitchProfile: onSwitchProfile,
+        onAccountSettings: onAccountSettings,
+        onManageFamily: onManageFamily,
       ),
     ),
   );
@@ -197,5 +213,69 @@ void main() {
       await tester.pumpAndSettle();
       expect(wentBack, isTrue);
     });
+
+    testWidgets('header avatar opens the standard profile menu',
+        (tester) async {
+      ProfileOption? switched;
+      var settingsOpened = false;
+      var familyOpened = false;
+      await _pumpStore(
+        tester,
+        activeProfile: const ProfileOption(
+          name: 'Ava',
+          roleLabel: 'Kids Mode',
+        ),
+        profiles: const [
+          ProfileOption(name: 'Ava', roleLabel: 'Kids Mode'),
+          ProfileOption(name: 'Noah', roleLabel: 'Teen Mode'),
+          ProfileOption(
+            name: 'Sarah',
+            roleLabel: 'Parent',
+            isParent: true,
+          ),
+        ],
+        onSwitchProfile: (profile) => switched = profile,
+        onAccountSettings: () => settingsOpened = true,
+        onManageFamily: () => familyOpened = true,
+      );
+
+      await tester.tap(find.byTooltip('Profile'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ava'), findsOneWidget);
+      expect(find.text('Noah'), findsOneWidget);
+      expect(find.text('Sarah'), findsOneWidget);
+      expect(find.text('Manage family'), findsOneWidget);
+      expect(find.text('Account settings'), findsOneWidget);
+
+      await tester.tap(find.text('Noah'));
+      await tester.pumpAndSettle();
+      expect(switched?.name, 'Noah');
+
+      await tester.tap(find.byTooltip('Profile'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Account settings'));
+      await tester.pumpAndSettle();
+      expect(settingsOpened, isTrue);
+
+      await tester.tap(find.byTooltip('Profile'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Manage family'));
+      await tester.pumpAndSettle();
+      expect(familyOpened, isTrue);
+    });
+
+    testWidgets('header menu opens with the default mock profile',
+        (tester) async {
+      await _pumpStore(tester);
+
+      await tester.tap(find.byTooltip('Profile'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ava'), findsOneWidget);
+      expect(find.text('Manage family'), findsOneWidget);
+      expect(find.text('Account settings'), findsOneWidget);
+    });
+
   });
 }

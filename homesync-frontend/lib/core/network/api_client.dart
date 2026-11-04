@@ -72,6 +72,8 @@ class ApiClient {
       response = await call();
     } on SocketException {
       throw ApiException('Could not reach the server at $baseUrl.');
+    } on http.ClientException {
+      throw ApiException('Could not reach the server at $baseUrl.');
     } on TimeoutException {
       throw ApiException('The server took too long to respond.');
     }
@@ -109,6 +111,26 @@ class ApiClient {
             headers: _headers(),
             body: body == null ? null : jsonEncode(body),
           )
+          .timeout(_timeout),
+    );
+  }
+
+  Future<dynamic> patch(String path, {Object? body}) {
+    return _send(
+      () => _inner
+          .patch(
+            Uri.parse('$baseUrl$path'),
+            headers: _headers(),
+            body: body == null ? null : jsonEncode(body),
+          )
+          .timeout(_timeout),
+    );
+  }
+
+  Future<dynamic> delete(String path) {
+    return _send(
+      () => _inner
+          .delete(Uri.parse('$baseUrl$path'), headers: _headers())
           .timeout(_timeout),
     );
   }

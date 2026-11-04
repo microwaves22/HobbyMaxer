@@ -8,22 +8,45 @@ import 'tasks_controller.dart';
 import 'widgets/chore_edit_dialog.dart';
 import 'widgets/submission_sheet.dart';
 
-/// Task list. Children see their own tasks and tap one to open the
-/// submission modal; parents see every task in the household.
+/// Hub segments: household chores vs school work.
+enum TasksSegment { chores, homework }
+
+extension TasksSegmentLabel on TasksSegment {
+  String get label => switch (this) {
+        TasksSegment.chores => 'Chores',
+        TasksSegment.homework => 'Homework',
+      };
+}
+
+/// Combined work hub: chores and homework live in one view, divided by
+/// a segmented control. Children see their own tasks and tap one to
+/// open the submission modal; parents see every task in the household.
 /// Chores sent back for revision show the parent's feedback with a
 /// Retry action; parents can edit any chore inline.
-class TasksScreen extends StatelessWidget {
+class TasksScreen extends StatefulWidget {
   const TasksScreen({
     super.key,
     required this.controller,
     required this.profile,
+    this.initialSegment = TasksSegment.chores,
   });
 
   final TasksController controller;
   final UserProfile profile;
 
+  /// Segment selected on open. Dashboard cards preselect their side.
+  final TasksSegment initialSegment;
+
+  @override
+  State<TasksScreen> createState() => _TasksScreenState();
+}
+
+class _TasksScreenState extends State<TasksScreen> {
+  late TasksSegment _segment = widget.initialSegment;
+
   Future<void> _openSubmission(BuildContext context, ChoreTask task) async {
-    final submitted = await showSubmissionSheet(context, task, controller);
+    final submitted =
+        await showSubmissionSheet(context, task, widget.controller);
     if (submitted == true && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Submitted — pending review.')),
@@ -34,7 +57,7 @@ class TasksScreen extends StatelessWidget {
   Future<void> _editChore(BuildContext context, ChoreTask task) async {
     final result = await showChoreEditDialog(context, task);
     if (result == null || !context.mounted) return;
-    final updated = controller.updateChore(
+    final updated = widget.controller.updateChore(
       task.id,
       points: result.points,
       details: result.details,
@@ -51,106 +74,150 @@ class TasksScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: controller,
+      animation: widget.controller,
       builder: (context, _) {
         final text = Theme.of(context).textTheme;
+        final profile = widget.profile;
         // Parent to-dos live in their own dashboard section, not here.
-        final tasks = profile.isParent
-            ? controller.tasks.where((t) => !t.isParentTodo).toList()
-            : controller.tasksFor(profile.name);
+        final base = profile.isParent
+            ? widget.controller.tasks.where((t) => !t.isParentTodo)
+            : widget.controller.tasksFor(profile.name);
+        final tasks = base
+            .where((t) => _segment == TasksSegment.homework
+                ? t.isHomework
+                : !t.isHomework)
+            .toList();
         return Scaffold(
           appBar: AppBar(title: const HomeTitle(label: 'Tasks')),
-          body: tasks.isEmpty
-              ? Center(
-                  child: Text('No tasks yet.', style: text.bodyMedium),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(24),
-                  itemCount: tasks.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final task = tasks[index];
-                    final submittable = task.state == TaskState.pending ||
-                        task.state == TaskState.changesRequested;
-                    final feedback = task.feedback;
-                    return LiquidGlassCard(
-                      onTap: submittable
-                          ? () => _openSubmission(context, task)
-                          : null,
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                child: SegmentedButton<TasksSegment>(
+                  segments: const [
+                    ButtonSegment(
+                      value: TasksSegment.chores,
+                      label: Text('Chores'),
+                    ),
+                    ButtonSegment(
+                      value: TasksSegment.homework,
+                      label: Text('Homework'),
+                    ),
+                  ],
+                  selected: {_segment},
+                  onSelectionChanged: (selection) =>
+                      setState(() => _segment = selection.first),
+                ),
+              ),
+              Expanded(
+                child: tasks.isEmpty
+                    ? Center(
+                        child: Text(
+                          _segment == TasksSegment.homework
+                              ? 'No homework yet.'
+                              : 'No chores yet.',
+                          style: text.bodyMedium,
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                        itemCount: tasks.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final task = tasks[index];
+                          final submittable =
+                              task.state == TaskState.pending ||
+                                  task.state == TaskState.changesRequested;
+                          final feedback = task.feedback;
+                          return LiquidGlassCard(
+                            onTap: submittable
+                                ? () => _openSubmission(context, task)
+                                : null,
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
                               children: [
-                                Text(task.title, style: text.titleLarge),
-                                const SizedBox(height: 4),
-                                Text(
-                                  profile.isParent
-                                      ? '${task.childName} · ${task.details}'
-                                      : task.details,
-                                  style: text.bodyMedium,
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    _StateChip(state: task.state),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '${task.points} pts',
-                                      style: text.labelSmall,
-                                    ),
-                                    if (task.photoPath != null ||
-                                        task.remotePhoto != null) ...[
-                                      const SizedBox(width: 8),
-                                      const Icon(
-                                        Icons.photo_outlined,
-                                        size: 16,
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(task.title,
+                                          style: text.titleLarge),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        profile.isParent
+                                            ? '${task.childName} · ${task.details}'
+                                            : task.details,
+                                        style: text.bodyMedium,
                                       ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          _StateChip(state: task.state),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            '${task.points} pts',
+                                            style: text.labelSmall,
+                                          ),
+                                          if (task.photoPath != null ||
+                                              task.remotePhoto != null) ...[
+                                            const SizedBox(width: 8),
+                                            const Icon(
+                                              Icons.photo_outlined,
+                                              size: 16,
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                      if (feedback != null &&
+                                          feedback.isNotEmpty) ...[
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .secondaryContainer,
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            'Feedback: $feedback',
+                                            style: text.bodySmall,
+                                          ),
+                                        ),
+                                      ],
                                     ],
-                                  ],
-                                ),
-                                if (feedback != null &&
-                                    feedback.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .secondaryContainer,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      'Feedback: $feedback',
-                                      style: text.bodySmall,
-                                    ),
                                   ),
-                                ],
+                                ),
+                                if (profile.isParent)
+                                  IconButton(
+                                    tooltip: 'Edit chore',
+                                    icon:
+                                        const Icon(Icons.edit_outlined),
+                                    onPressed: () =>
+                                        _editChore(context, task),
+                                  ),
+                                if (submittable)
+                                  task.state == TaskState.changesRequested
+                                      ? TextButton(
+                                          onPressed: () => _openSubmission(
+                                              context, task),
+                                          child: const Text('Retry'),
+                                        )
+                                      : const Icon(
+                                          Icons.chevron_right_rounded),
                               ],
                             ),
-                          ),
-                          if (profile.isParent)
-                            IconButton(
-                              tooltip: 'Edit chore',
-                              icon: const Icon(Icons.edit_outlined),
-                              onPressed: () => _editChore(context, task),
-                            ),
-                          if (submittable)
-                            task.state == TaskState.changesRequested
-                                ? TextButton(
-                                    onPressed: () =>
-                                        _openSubmission(context, task),
-                                    child: const Text('Retry'),
-                                  )
-                                : const Icon(Icons.chevron_right_rounded),
-                        ],
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
+              ),
+            ],
+          ),
         );
       },
     );

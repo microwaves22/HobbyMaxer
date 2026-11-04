@@ -161,6 +161,69 @@ void main() {
       expect(await store.readToken(), isNull);
     });
 
+    test('switchProfile swaps the session user', () async {
+      final mock = MockClient((request) async {
+        expect(request.url.path, '/auth/switch-profile');
+        return http.Response(
+          jsonEncode({
+            'access_token': 'kid-tok',
+            'token_type': 'bearer',
+            'user': {
+              'id': 12,
+              'family_id': 2,
+              'email': null,
+              'display_name': 'Maya',
+              'role': 'child',
+              'mode': 'kids',
+              'points_balance': 30,
+              'created_at': '2026-01-01T00:00:00',
+            },
+          }),
+          200,
+        );
+      });
+      final store = InMemoryTokenStore();
+      final session = _session(mock, store);
+
+      await session.switchProfile(userId: 12);
+
+      expect(session.isAuthenticated, isTrue);
+      expect(session.token, 'kid-tok');
+      expect(session.user!.displayName, 'Maya');
+      expect(await store.readToken(), 'kid-tok');
+    });
+
+    test('childLogin authenticates with the child PIN', () async {
+      String? body;
+      final mock = MockClient((request) async {
+        expect(request.url.path, '/auth/child-login');
+        body = request.body;
+        return http.Response(
+          jsonEncode({
+            'access_token': 'kid-tok',
+            'token_type': 'bearer',
+            'user': {
+              'id': 12,
+              'family_id': 2,
+              'email': null,
+              'display_name': 'Maya',
+              'role': 'child',
+              'mode': 'kids',
+              'points_balance': 30,
+              'created_at': '2026-01-01T00:00:00',
+            },
+          }),
+          200,
+        );
+      });
+      final session = _session(mock, InMemoryTokenStore());
+
+      await session.childLogin(userId: 12, pin: '2468');
+
+      expect(body, contains('2468'));
+      expect(session.isAuthenticated, isTrue);
+    });
+
     test('parent PIN round-trips through the store', () async {
       final mock = MockClient((_) async => http.Response('{}', 200));
       final session = _session(mock, InMemoryTokenStore());

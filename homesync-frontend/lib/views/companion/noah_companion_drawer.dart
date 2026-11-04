@@ -382,38 +382,41 @@ class _CareActions extends StatelessWidget {
                 color: const Color(0xFF5F7F55),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('🍎', style: TextStyle(fontSize: 22)),
-                  SizedBox(width: 8),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Feed',
-                        style: TextStyle(
-                          fontFamily: _kFont,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                          height: 1.2,
-                          color: Color(0xFFFFFFFF),
+              child: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('🍎', style: TextStyle(fontSize: 22)),
+                    SizedBox(width: 8),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Feed',
+                          style: TextStyle(
+                            fontFamily: _kFont,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                            height: 1.2,
+                            color: Color(0xFFFFFFFF),
+                          ),
                         ),
-                      ),
-                      Text(
-                        '3 emberberries',
-                        style: TextStyle(
-                          fontFamily: _kFont,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 11,
-                          height: 1.2,
-                          color: Color(0xFFFFFFFF),
+                        Text(
+                          '3 emberberries',
+                          style: TextStyle(
+                            fontFamily: _kFont,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 11,
+                            height: 1.2,
+                            color: Color(0xFFFFFFFF),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -431,42 +434,45 @@ class _CareActions extends StatelessWidget {
                 color: const Color(0xFFE4EBDC),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.auto_awesome_rounded,
-                    size: 22,
-                    color: Color(0xFF4A6A41),
-                  ),
-                  SizedBox(width: 8),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Interact',
-                        style: TextStyle(
-                          fontFamily: _kFont,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                          height: 1.2,
-                          color: Color(0xFF4A6A41),
+              child: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.auto_awesome_rounded,
+                      size: 22,
+                      color: Color(0xFF4A6A41),
+                    ),
+                    SizedBox(width: 8),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Interact',
+                          style: TextStyle(
+                            fontFamily: _kFont,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                            height: 1.2,
+                            color: Color(0xFF4A6A41),
+                          ),
                         ),
-                      ),
-                      Text(
-                        'Bond with Ember',
-                        style: TextStyle(
-                          fontFamily: _kFont,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 11,
-                          height: 1.2,
-                          color: Color(0xFF4A6A41),
+                        Text(
+                          'Bond with Ember',
+                          style: TextStyle(
+                            fontFamily: _kFont,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 11,
+                            height: 1.2,
+                            color: Color(0xFF4A6A41),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -609,7 +615,7 @@ class _CollectionGrid extends StatelessWidget {
           crossAxisCount: 2,
           mainAxisSpacing: 10,
           crossAxisSpacing: 10,
-          childAspectRatio: 1.6,
+          childAspectRatio: 1.45,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           children: [

@@ -4,14 +4,20 @@ import 'package:flutter/material.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/network/auth_session.dart';
+import '../../core/network/families_api.dart';
 import '../../core/state/focus_areas.dart';
 import '../../core/widgets/home_title.dart';
 import '../../core/widgets/liquid_glass_card.dart';
 import '../../core/widgets/profile_avatar_dropdown.dart';
+import '../ai/quick_add_screen.dart';
 import '../calendar/calendar_screen.dart';
 import '../onboarding/link_kids_screen.dart';
+import '../onboarding/family_member.dart';
 import '../onboarding/models/user_profile.dart';
 import '../rewards/kids_reward_store_screen.dart';
+import '../rewards/models/kids_store_reward.dart';
+import '../rewards/models/reward_item.dart';
+import '../rewards/rewards_api.dart';
 import '../rewards/rewards_controller.dart';
 import '../rewards/rewards_routes.dart';
 import '../rewards/rewards_screen.dart';
@@ -23,6 +29,9 @@ import '../tasks/widgets/parent_todo_section.dart';
 import '../tasks/tasks_screen.dart';
 import '../tasks/teen_todo_list_screen.dart';
 import '../tasks/widgets/review_queue_section.dart';
+import 'widgets/load_balance_section.dart';
+import 'household_routes.dart';
+import 'widgets/notification_bell.dart';
 
 /// Dashboard landing after onboarding or login.
 ///
@@ -36,6 +45,7 @@ class HomeScreen extends StatefulWidget {
     required this.profile,
     this.otherProfiles = const [],
     this.parentPin = '1234',
+    this.pendingMembers = const [],
   });
 
   final UserProfile profile;
@@ -47,6 +57,10 @@ class HomeScreen extends StatefulWidget {
   /// Demo Parent PIN. Wire to the backend (`POST /auth/switch-profile`)
   /// once API integration lands.
   final String parentPin;
+
+  /// Members collected during onboarding, added as backend child
+  /// profiles on the first authenticated sync (parents only).
+  final List<FamilySetupMember> pendingMembers;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -83,12 +97,83 @@ class _HomeScreenState extends State<HomeScreen> {
     _backendAttached = true;
     final user = session.user!;
     _tasks.attachBackend(TasksApi(session.client));
+    _rewards.attachBackend(RewardsApi(session.client));
     _tasks.setBalance(user.displayName, user.pointsBalance);
     unawaited(_syncBackend());
   }
 
+  /// Creates the backend family on first sync (parents only), adds the
+  /// kids collected during onboarding as child profiles, and surfaces
+  /// the invite code for any additional parents so they can join.
+  /// No-ops for children.
+  Future<void> _ensureFamily() async {
+    final session = AuthScope.maybeOf(context);
+    final user = session?.user;
+    if (session == null || user == null || !user.isParent) return;
+    final families = FamiliesApi(session.client);
+    late final Map<String, dynamic> family;
+    try {
+      family = await families.myFamily();
+    } on ApiException catch (e) {
+      if (e.statusCode != 404) rethrow;
+      var pin = '1234';
+      try {
+        pin = await session.getParentPin() ?? '1234';
+        await session.setParentPin(pin);
+      } catch (_) {
+        // Keychain unavailable: the default still works locally.
+      }
+      final firstName = user.displayName.split(' ').first;
+      family = await families.createFamily(
+        name: 'The $firstName Family',
+        parentPin: pin,
+      );
+    }
+    final familyId = family['id'] as int;
+    // Parent-role entries are login-bearing accounts, not child
+    // profiles: the creator's own entry is skipped, and any additional
+    // parents join later with the invite code below.
+    final creatorName = user.displayName.trim().toLowerCase();
+    final awaitingParents = <String>[];
+    for (final member in widget.pendingMembers) {
+      if (member.isParent) {
+        if (member.name.trim().toLowerCase() != creatorName) {
+          awaitingParents.add(member.name);
+        }
+        continue;
+      }
+      try {
+        await families.addChild(
+          familyId: familyId,
+          displayName: member.name,
+          mode: member.isTeen ? 'teen' : 'kids',
+        );
+      } on ApiException {
+        // Keep syncing the rest; unsent members retry next launch.
+      }
+    }
+
+    if (awaitingParents.isNotEmpty && mounted) {
+      final names = awaitingParents.join(' & ');
+      final code = family['invite_code'] as String?;
+      final detail = code == null
+          ? 'Share your invite code so $names can join.'
+          : 'Family code ${FamiliesApi.formatInviteCode(code)} — share it so $names can join.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(detail),
+          action: SnackBarAction(
+            label: 'Share',
+            onPressed: _openManageFamily,
+          ),
+        ),
+      );
+    }
+  }
+
   Future<void> _syncBackend() async {
     try {
+      await _ensureFamily();
       await _tasks.refresh();
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -117,9 +202,9 @@ class _HomeScreenState extends State<HomeScreen> {
         for (final other in widget.otherProfiles) _toOption(other),
       ];
 
-  void _openTasks() {
-    // Teen profiles get the Figma 03 Teen My To-Do List; parents
-    // and kids keep the generic task list.
+  void _openTasks([TasksSegment initial = TasksSegment.chores]) {
+    // Teen profiles keep the Figma 03 Teen My To-Do List; parents
+    // and kids get the combined chores/homework hub.
     final isTeen =
         !widget.profile.isParent && widget.profile.mode == FamilyMode.teen;
     Navigator.of(context).push(
@@ -128,12 +213,21 @@ class _HomeScreenState extends State<HomeScreen> {
             ? TeenTodoListScreen(
                 controller: _tasks,
                 profile: widget.profile,
+                onNavigateHome: () => HouseholdRoutes.goHome(context),
+                onNavigateCalendar: () => HouseholdRoutes.goCalendar(context),
               )
             : TasksScreen(
                 controller: _tasks,
                 profile: widget.profile,
+                initialSegment: initial,
               ),
       ),
+    );
+  }
+
+  void _openQuickAdd() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const QuickAddScreen()),
     );
   }
 
@@ -153,13 +247,24 @@ class _HomeScreenState extends State<HomeScreen> {
     if (widget.profile.mode == FamilyMode.kids) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          // Mock-only storefront (node 100:4854): placeholder handlers,
-          // fixed mock balance. Back/Home return to the dashboard.
-          builder: (_) => KidsRewardStoreScreen(
-            onBack: () => Navigator.of(context).pop(),
-            onRequestCustomReward: () =>
-                RewardsRoutes.openRequestCustomReward(context),
-            onNavigateHome: () => Navigator.of(context).pop(),
+          builder: (_) => Builder(
+            builder: (storeContext) => KidsRewardStoreScreen(
+              availablePoints: _rewards.balanceFor(widget.profile.name),
+              onBack: () => Navigator.of(context).pop(),
+              onRequestCustomReward: () =>
+                  RewardsRoutes.openRequestCustomReward(
+                context,
+                controller: _rewards,
+                childName: widget.profile.name,
+              ),
+              onUnlockReward: (id) =>
+                  _redeemExternal(storeContext, id, RewardKind.digital),
+              onRedeemReward: (id) =>
+                  _redeemExternal(storeContext, id, RewardKind.parentPerk),
+              onNavigateHome: () => HouseholdRoutes.goHome(context),
+              onNavigateCalendar: () =>
+                  HouseholdRoutes.goCalendar(context),
+            ),
           ),
         ),
       );
@@ -167,7 +272,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     if (!widget.profile.isParent &&
         widget.profile.mode == FamilyMode.teen) {
-      RewardsRoutes.openTeenStore(context);
+      RewardsRoutes.openTeenStore(
+        context,
+        controller: _rewards,
+        childName: widget.profile.name,
+        availablePoints: _rewards.balanceFor(widget.profile.name),
+      );
       return;
     }
     Navigator.of(context).push(
@@ -180,9 +290,39 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Redeems a kids-store item through the shared ledger and confirms.
+  void _redeemExternal(
+    BuildContext context,
+    String rewardId,
+    RewardKind kind,
+  ) {
+    KidsStoreReward? match;
+    for (final candidate in kKidsStoreRewards) {
+      if (candidate.id == rewardId) match = candidate;
+    }
+    final reward = match;
+    if (reward == null) return;
+    final result = _rewards.redeemExternal(
+      childName: widget.profile.name,
+      title: reward.name,
+      cost: reward.points,
+      kind: kind,
+    );
+    final balance = _rewards.balanceFor(widget.profile.name);
+    final message = switch (result) {
+      RedeemResult.success => 'Redeemed ${reward.name}! Balance: $balance pts.',
+      RedeemResult.insufficient => 'Not enough points for ${reward.name}.',
+      RedeemResult.notFound => 'That reward is no longer available.',
+    };
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   VoidCallback? _cardAction(String area) => switch (area) {
         FocusAreas.calendar => _openCalendar,
-        FocusAreas.chores => _openTasks,
+        FocusAreas.chores => () => _openTasks(TasksSegment.chores),
+        FocusAreas.homework => () => _openTasks(TasksSegment.homework),
         FocusAreas.rewards => _openRewards,
         _ => null,
       };
@@ -195,6 +335,14 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const HomeTitle(label: 'HomeSync'),
         actions: [
+          if (widget.profile.isParent) const NotificationBell(),
+          if (widget.profile.isParent)
+            IconButton(
+              key: const Key('quick-add-button'),
+              tooltip: 'Quick add',
+              icon: const Icon(Icons.auto_awesome_rounded),
+              onPressed: _openQuickAdd,
+            ),
           ProfileAvatarDropdown(
             onManageFamily: _openManageFamily,
             active: _active,
@@ -232,6 +380,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 20),
                 ParentTodoSection(controller: _tasks),
                 const SizedBox(height: 20),
+                LoadBalanceSection(refreshTrigger: _tasks),
+                const SizedBox(height: 20),
                 LiquidGlassCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -243,14 +393,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 12),
                       OutlinedButton.icon(
                         onPressed: () =>
-                            RewardsRoutes.openReviewQueue(context),
+                            RewardsRoutes.openReviewQueue(
+                              context,
+                              controller: _rewards,
+                            ),
                         icon: const Icon(Icons.mark_email_read_rounded),
                         label: const Text('Review reward requests'),
                       ),
                       const SizedBox(height: 8),
                       OutlinedButton.icon(
                         onPressed: () =>
-                            RewardsRoutes.openManagement(context),
+                            RewardsRoutes.openManagement(
+                              context,
+                              controller: _rewards,
+                            ),
                         icon: const Icon(Icons.storefront_rounded),
                         label: const Text('Manage store perks'),
                       ),

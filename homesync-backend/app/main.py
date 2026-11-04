@@ -13,8 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import models  # noqa: F401 - register tables
 from .core.config import settings
-from .core.database import Base, SessionLocal, engine
-from .routers import auth, calendar, families, rewards, tasks
+from .core.database import Base, SessionLocal, engine, ensure_schema
+from .routers import ai, auth, calendar, families, notifications, rewards, tasks
 from .services.cleanup_service import delete_expired_photos
 
 logger = logging.getLogger("homesync")
@@ -24,6 +24,7 @@ logger = logging.getLogger("homesync")
 async def lifespan(app: FastAPI):
     os.makedirs(settings.uploads_dir, exist_ok=True)
     Base.metadata.create_all(bind=engine)
+    ensure_schema()
     try:
         db = SessionLocal()
         try:
@@ -46,8 +47,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(ai.router)
 app.include_router(auth.router)
 app.include_router(families.router)
+app.include_router(notifications.router)
 app.include_router(tasks.router)
 app.include_router(rewards.router)
 app.include_router(calendar.router)

@@ -13,7 +13,12 @@ class RegisterRequest(BaseModel):
 
 class SwitchProfileRequest(BaseModel):
     user_id: int
-    pin: str = Field(min_length=4, max_length=16)
+    pin: str | None = Field(default=None, min_length=4, max_length=16)
+
+
+class ChildLoginRequest(BaseModel):
+    user_id: int
+    child_pin: str | None = Field(default=None, min_length=4, max_length=16)
 
 
 class Token(BaseModel):

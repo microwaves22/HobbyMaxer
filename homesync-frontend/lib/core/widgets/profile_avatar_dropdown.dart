@@ -43,6 +43,7 @@ class ProfileAvatarDropdown extends StatelessWidget {
     this.onSwitchProfile,
     this.onAccountSettings,
     this.onManageFamily,
+    this.buttonChild,
   });
 
   final ProfileOption active;
@@ -55,6 +56,11 @@ class ProfileAvatarDropdown extends StatelessWidget {
   final ValueChanged<ProfileOption>? onSwitchProfile;
   final VoidCallback? onAccountSettings;
   final VoidCallback? onManageFamily;
+
+  /// Replaces the default initials avatar as the menu button child,
+  /// keeping the standard menu. Screens with their own avatar artwork
+  /// (e.g. the kids store's paw badge) pass it here.
+  final Widget? buttonChild;
 
   void _requestSwitch(BuildContext context, ProfileOption target) {
     if (active.isParent || !target.isParent) {
@@ -150,7 +156,7 @@ class ProfileAvatarDropdown extends StatelessWidget {
           ),
         ),
       ],
-      child: Padding(
+      child: buttonChild ?? Padding(
         padding: const EdgeInsets.only(right: 12),
         child: _Avatar(option: active, radius: 18),
       ),

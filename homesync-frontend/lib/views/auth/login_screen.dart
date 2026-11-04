@@ -5,6 +5,7 @@ import '../../core/network/auth_session.dart';
 import '../../core/state/focus_areas.dart';
 import '../home/home_screen.dart';
 import '../onboarding/profile_setup_screen.dart';
+import 'child_login_screen.dart';
 
 
 
@@ -57,6 +58,15 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         _busy = false;
         _formError = e.message;
+      });
+      return;
+    } catch (_) {
+      // Non-API failures must not wedge the form in its busy state.
+      debugPrint('Login failed with an unexpected error.');
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _formError = 'Something went wrong. Please try again.';
       });
       return;
     }
@@ -251,6 +261,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: const Text(
                     'Create an account instead',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ChildLoginScreen(),
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF2C5E3B),
+                  ),
+                  child: const Text(
+                    'Log in as a kid instead',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),

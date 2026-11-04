@@ -10,8 +10,10 @@ from sqlalchemy.orm import Session
 from ..core.config import settings
 from ..core.database import get_db
 from ..core.security import get_current_user, require_family_member, require_parent
-from ..models import Task, TaskSubmission, User
+from ..models import Family, Task, TaskSubmission, User
+from ..models.task import next_repeat_date
 from ..schemas.tasks import ReviewRequest, SubmissionRead, TaskCreate, TaskRead
+from ..services.notification_service import notify_parents
 from ..services.points_service import apply_points
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -127,10 +129,113 @@ def submit_task(
         note=note,
     )
     task.status = "pending_review"
+    notify_parents(
+        db,
+        db.get(Family, task.family_id),
+        exclude_user_id=member.id,
+        kind="review_needed",
+        title=f"{member.display_name} submitted '{task.title}' for review.",
+        ref_type="task",
+        ref_id=task.id,
+    )
     db.add(submission)
     db.commit()
     db.refresh(submission)
     return submission
+
+
+def _format_review_time(reviewed_at) -> str | None:
+    """12-hour wall time (`6:42 PM UTC`) for a review timestamp."""
+    if reviewed_at is None:
+        return None
+    hour = reviewed_at.hour % 12 or 12
+    meridiem = "PM" if reviewed_at.hour >= 12 else "AM"
+    return f"{hour}:{reviewed_at.minute:02d} {meridiem} UTC"
+
+
+def _raise_not_pending(db: Session, task: Task) -> None:
+    """409 naming the approver when already approved, else the legacy 404."""
+    approved = (
+        db.query(TaskSubmission)
+        .filter(
+            TaskSubmission.task_id == task.id,
+            TaskSubmission.status == "approved",
+        )
+        .order_by(TaskSubmission.id.desc())
+        .first()
+    )
+    if approved is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No pending submission for this task.",
+        )
+    name = "another parent"
+    if approved.reviewed_by_user_id is not None:
+        reviewer = db.get(User, approved.reviewed_by_user_id)
+        if reviewer is not None:
+            name = reviewer.display_name
+    when = _format_review_time(approved.reviewed_at)
+    detail = (
+        f"Already approved by {name} at {when}."
+        if when is not None
+        else f"Already approved by {name}."
+    )
+    raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
+
+
+def _advance_streak(
+    db: Session, earner: User, now: datetime, submission_id: int
+) -> None:
+    """Extend the earner's UTC-day streak, minting milestone bonuses.
+
+    Same-day repeats hold the count; a gap day resets to 1 (losing the
+    run is the only consequence — never a penalty); every 5th day
+    mints STREAK_BONUS_POINTS through the ledger.
+    """
+    day = now.date()
+    last = earner.streak_last_day
+    if last is not None and day <= last:
+        return
+    count = earner.streak_count + 1 if last == day - timedelta(days=1) else 1
+    earner.streak_count = count
+    earner.streak_last_day = day
+    if count % 5 == 0:
+        apply_points(
+            db,
+            earner,
+            settings.streak_bonus_points,
+            "streak_bonus",
+            ref_type="submission",
+            ref_id=submission_id,
+        )
+
+
+def _spawn_next_instance(db: Session, task: Task, now: datetime) -> None:
+    """Create the next open instance of a repeating chore.
+
+    Due just after the approved instance (its due date, else now); an
+    unparseable rule skips the spawn instead of failing the approval.
+    """
+    anchor = task.due_date if task.due_date is not None else now
+    try:
+        due = next_repeat_date(task.repeat_rule or "", anchor)
+    except ValueError:
+        return
+    db.add(
+        Task(
+            family_id=task.family_id,
+            title=task.title,
+            description=task.description,
+            task_type=task.task_type,
+            points_reward=task.points_reward,
+            requires_photo=task.requires_photo,
+            assigned_to_user_id=task.assigned_to_user_id,
+            created_by_user_id=task.created_by_user_id,
+            status="open",
+            due_date=due,
+            repeat_rule=task.repeat_rule,
+        )
+    )
 
 
 @router.put("/{task_id}/approve", response_model=SubmissionRead)
@@ -151,25 +256,32 @@ def review_task(
         .first()
     )
     if submission is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No pending submission for this task.",
-        )
+        _raise_not_pending(db, task)
     now = datetime.now(timezone.utc)
-    if payload.action == "request_changes":
-        submission.status = "changes_requested"
-        submission.note = payload.note or submission.note
-        submission.reviewed_by_user_id = parent.id
-        submission.reviewed_at = now
-        task.status = "open"
-    else:
-        submission.status = "approved"
-        submission.reviewed_by_user_id = parent.id
-        submission.reviewed_at = now
-        if submission.photo_path:
-            submission.expires_at = now + timedelta(
-                days=settings.photo_retention_days
-            )
+    approved = payload.action != "request_changes"
+    target = "approved" if approved else "changes_requested"
+    claim = {
+        "status": target,
+        "reviewed_by_user_id": parent.id,
+        "reviewed_at": now,
+    }
+    if not approved and payload.note:
+        claim["note"] = payload.note
+    if approved and submission.photo_path:
+        claim["expires_at"] = now + timedelta(days=settings.photo_retention_days)
+    claimed = (
+        db.query(TaskSubmission)
+        .filter(
+            TaskSubmission.id == submission.id,
+            TaskSubmission.status == "pending",
+        )
+        .update(claim, synchronize_session="fetch")
+    )
+    if not claimed:
+        # Lost a concurrent review: report the state that won.
+        db.rollback()
+        _raise_not_pending(db, task)
+    if approved:
         earner = db.get(User, submission.submitted_by_user_id)
         if earner is not None and task.points_reward:
             apply_points(
@@ -180,7 +292,22 @@ def review_task(
                 ref_type="submission",
                 ref_id=submission.id,
             )
+        notify_parents(
+            db,
+            db.get(Family, task.family_id),
+            exclude_user_id=parent.id,
+            kind="approved",
+            title=f"{parent.display_name} approved '{task.title}'.",
+            ref_type="task",
+            ref_id=task.id,
+        )
+        if earner is not None:
+            _advance_streak(db, earner, now, submission.id)
+        if task.repeat_rule:
+            _spawn_next_instance(db, task, now)
         task.status = "approved"
+    else:
+        task.status = "open"
     db.commit()
     db.refresh(submission)
     return submission

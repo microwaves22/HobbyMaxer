@@ -86,6 +86,7 @@ class TasksApi {
       childName: childName,
       points: task['points_reward'] as int? ?? 0,
       requiresPhoto: task['requires_photo'] as bool? ?? false,
+      isHomework: (task['task_type'] as String?) == 'homework',
       state: state,
       remotePhoto: latest?['photo_path'] as String?,
       feedback: _feedbackFor(state, latest),

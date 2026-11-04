@@ -9,7 +9,12 @@ from ..core.database import Base
 from .family import utcnow
 
 REWARD_KINDS = ("avatar", "pet", "perk")
-TRANSACTION_REASONS = ("task_approved", "reward_redeemed", "adjustment")
+TRANSACTION_REASONS = (
+    "task_approved",
+    "reward_redeemed",
+    "adjustment",
+    "streak_bonus",
+)
 
 
 class Reward(Base):

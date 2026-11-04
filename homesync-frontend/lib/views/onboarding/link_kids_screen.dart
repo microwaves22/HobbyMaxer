@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/network/api_client.dart';
+import '../../core/network/auth_session.dart';
+import '../../core/network/families_api.dart';
+
 /// Sample invite code shown on [LinkKidsScreen] (UI build only, no backend).
 ///
 /// Referenced by both the code display and [_LinkKidsScreenBody.onCopyCode].
@@ -12,22 +16,77 @@ const String familyInviteCode = 'H7K 2M9';
 /// Figma tokens are hard-coded here because they differ from the shared
 /// theme (`AppColors` cream/sage/ink predate this design). Do not move
 /// them into the theme files: no other screen uses these values.
-class LinkKidsScreen extends StatelessWidget {
+class LinkKidsScreen extends StatefulWidget {
   const LinkKidsScreen({super.key});
 
   @override
+  State<LinkKidsScreen> createState() => _LinkKidsScreenState();
+}
+
+class _LinkKidsScreenState extends State<LinkKidsScreen> {
+  String? _inviteCode;
+  List<_LinkedKid>? _kids;
+  bool _loaded = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_loaded) return;
+    final session = AuthScope.maybeOf(context);
+    if (session == null || !session.isAuthenticated) return;
+    _loaded = true;
+    _loadFamily(session.client);
+  }
+
+  /// Shows the real invite code and roster when signed in; the sample
+  /// content stays as the signed-out fallback.
+  Future<void> _loadFamily(ApiClient client) async {
+    try {
+      final family = await FamiliesApi(client).myFamily();
+      if (!mounted) return;
+      final code = family['invite_code'] as String?;
+      final members = family['members'] as List? ?? const [];
+      final kids = <_LinkedKid>[];
+      for (final member in members) {
+        final user = member as Map<String, dynamic>;
+        if (user['role'] == 'parent') continue;
+        final name = user['display_name'] as String? ?? 'Kid';
+        final teen = user['mode'] == 'teen';
+        kids.add(_LinkedKid(
+          id: '${user['id']}',
+          name: name,
+          detail: teen ? 'Teen Mode' : 'Kids Mode',
+          avatarColor:
+              teen ? const Color(0xFFCFE0EE) : const Color(0xFFF4C9C9),
+          glyph: name.isNotEmpty ? name.characters.first : '?',
+          linked: true,
+        ));
+      }
+      setState(() {
+        if (code != null) _inviteCode = FamiliesApi.formatInviteCode(code);
+        if (kids.isNotEmpty) _kids = kids;
+      });
+    } on ApiException {
+      // Stay on the sample content.
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: _LinkKidsScreenBody.cream,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.only(
+          padding: const EdgeInsets.only(
             top: 6,
             left: 20,
             right: 20,
             bottom: 24,
           ),
-          child: _LinkKidsScreenBody(),
+          child: _LinkKidsScreenBody(
+            inviteCode: _inviteCode,
+            kids: _kids,
+          ),
         ),
       ),
     );
@@ -62,7 +121,21 @@ class _LinkedKid {
 }
 
 class _LinkKidsScreenBody extends StatelessWidget {
-  const _LinkKidsScreenBody();
+  const _LinkKidsScreenBody({this.inviteCode, this.kids});
+
+  /// Displayed invite code; the sample when null (signed out).
+  final String? inviteCode;
+
+  /// Displayed kid rows; the sample roster when null (signed out).
+  final List<_LinkedKid>? kids;
+
+  String get _code => inviteCode ?? familyInviteCode;
+  List<_LinkedKid> get _kidList => kids ?? _kids;
+
+  String get _linkedSubtitle {
+    final linked = _kidList.where((k) => k.linked).length;
+    return '$linked of ${_kidList.length} linked';
+  }
 
   // Figma tokens (screen-only, see class doc).
   static const Color cream = Color(0xFFFBF7EF);
@@ -130,11 +203,9 @@ class _LinkKidsScreenBody extends StatelessWidget {
   }
 
   Future<void> _onCopyCode(BuildContext context) async {
-    if (familyInviteCode.isEmpty) return;
+    if (_code.isEmpty) return;
     try {
-      await Clipboard.setData(
-        const ClipboardData(text: familyInviteCode),
-      );
+      await Clipboard.setData(ClipboardData(text: _code));
     } catch (_) {
       return;
     }
@@ -145,12 +216,12 @@ class _LinkKidsScreenBody extends StatelessWidget {
   }
 
   Future<void> _onShareInviteCode() async {
-    if (familyInviteCode.isEmpty) return;
+    if (_code.isEmpty) return;
     try {
       // Native share sheet (Messages, Email, WhatsApp, …) with the
       // invite text pre-filled; subject populates the email subject.
       await Share.share(
-        'Join our family on HomeSync! Use invite code: $familyInviteCode',
+        'Join our family on HomeSync! Use invite code: $_code',
         subject: 'Join our family on HomeSync',
       );
     } catch (_) {
@@ -290,9 +361,9 @@ class _LinkKidsScreenBody extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Text(
-                  familyInviteCode,
-                  style: TextStyle(
+                Text(
+                  _code,
+                  style: const TextStyle(
                     fontFamily: 'Nunito',
                     fontWeight: FontWeight.w800,
                     fontSize: 35,
@@ -470,11 +541,11 @@ class _LinkKidsScreenBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Row(
+        Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
+            const Text(
               'Your kids',
               style: TextStyle(
                 fontFamily: 'Nunito',
@@ -484,8 +555,8 @@ class _LinkKidsScreenBody extends StatelessWidget {
               ),
             ),
             Text(
-              '1 of 2 linked',
-              style: TextStyle(
+              _linkedSubtitle,
+              style: const TextStyle(
                 fontFamily: 'Nunito',
                 fontWeight: FontWeight.w700,
                 fontSize: 12,
@@ -506,7 +577,7 @@ class _LinkKidsScreenBody extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (var i = 0; i < _kids.length; i++) ...[
+              for (var i = 0; i < _kidList.length; i++) ...[
                 if (i > 0) ...[
                   const SizedBox(height: 10),
                   Container(
@@ -516,7 +587,7 @@ class _LinkKidsScreenBody extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                 ],
-                _KidRow(kid: _kids[i]),
+                _KidRow(kid: _kidList[i]),
               ],
             ],
           ),

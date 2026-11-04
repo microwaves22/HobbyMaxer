@@ -13,6 +13,7 @@ class ChoreTask {
     this.serverId,
     this.remotePhoto,
     this.isParentTodo = false,
+    this.isHomework = false,
   });
 
   final String id;
@@ -41,6 +42,11 @@ class ChoreTask {
   /// instead of the child chore / review flow.
   final bool isParentTodo;
 
+  /// True for homework/school work, shown under the hub's Homework
+  /// segment; false for household chores. Mirrors the backend
+  /// `task_type` (`homework` vs `chore`).
+  final bool isHomework;
+
   /// A task is "simple" when it needs no photo evidence, so a parent can
   /// batch-approve it without reviewing a photo.
   bool get isSimple => !requiresPhoto;
@@ -67,6 +73,7 @@ class ChoreTask {
       serverId: serverId,
       remotePhoto: remotePhoto ?? this.remotePhoto,
       isParentTodo: isParentTodo,
+      isHomework: isHomework,
       feedback: feedback ?? this.feedback,
     );
   }

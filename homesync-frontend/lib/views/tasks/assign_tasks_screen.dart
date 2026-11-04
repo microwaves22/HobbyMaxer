@@ -5,8 +5,8 @@ import '../../core/theme/figma_tokens.dart';
 
 // Figma node 4:30 — "05 Assign Tasks" (Parent To-Do & Chore Assignment).
 // All copy, sizes, colors, and spacing come from the design brief.
-// Local state only: every handler is a named placeholder with no
-// backend, persistence, or navigation.
+// Local state only: tiles, assignees, and the menu work in place;
+// the assign button confirms and reports through optional callbacks.
 
 /// Option rendered as a selectable tile in the task grid.
 class TaskOption {
@@ -150,7 +150,26 @@ TextStyle _nunito({
 /// "05 Assign Tasks" screen. Presented open-menu, scrolled column; the
 /// primary button sits after a spacer at the bottom of the content.
 class AssignTasksScreen extends StatefulWidget {
-  const AssignTasksScreen({super.key});
+  const AssignTasksScreen({
+    super.key,
+    this.onBack,
+    this.onOpenSettings,
+    this.onAddCustomTask,
+    this.onChangeDueTime,
+    this.onAssignTasks,
+  });
+
+  /// Back-button override. Defaults to popping when possible.
+  final VoidCallback? onBack;
+
+  /// Settings, custom-task, and due-time hooks for the parent.
+  /// No-ops by default (the design pins no destination).
+  final VoidCallback? onOpenSettings;
+  final VoidCallback? onAddCustomTask;
+  final VoidCallback? onChangeDueTime;
+
+  /// Called with the selected task ids and assignee id on assign.
+  final void Function(List<String> taskIds, String assigneeId)? onAssignTasks;
 
   @override
   State<AssignTasksScreen> createState() => _AssignTasksScreenState();
@@ -162,13 +181,16 @@ class _AssignTasksScreenState extends State<AssignTasksScreen> {
   List<TaskOption> _tasks = List.of(taskOptions);
   String _assigneeId = assignees.firstWhere((a) => a.selected).id;
 
-  // Named placeholder handlers: local state only.
+  void onBack() {
+    final override = widget.onBack;
+    if (override != null) {
+      override();
+      return;
+    }
+    if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+  }
 
-  // ignore: avoid_empty_blocks
-  void onBack() {}
-
-  // ignore: avoid_empty_blocks
-  void onOpenSettings() {}
+  void onOpenSettings() => widget.onOpenSettings?.call();
 
   void onToggleAssignMenu() => setState(() => _menuOpen = !_menuOpen);
 
@@ -189,17 +211,30 @@ class _AssignTasksScreenState extends State<AssignTasksScreen> {
     });
   }
 
-  // ignore: avoid_empty_blocks
-  void onAddCustomTask() {}
+  void onAddCustomTask() => widget.onAddCustomTask?.call();
 
   void onSelectAssignee(String assigneeId) =>
       setState(() => _assigneeId = assigneeId);
 
-  // ignore: avoid_empty_blocks
-  void onChangeDueTime() {}
+  void onChangeDueTime() => widget.onChangeDueTime?.call();
 
-  // ignore: avoid_empty_blocks
-  void onAssignTasks() {}
+  void onAssignTasks() {
+    final selected = [
+      for (final task in _tasks)
+        if (task.selected) task.id,
+    ];
+    widget.onAssignTasks?.call(selected, _assigneeId);
+    final assignee = assignees.firstWhere((a) => a.id == _assigneeId).label;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          selected.isEmpty
+              ? 'Select at least one task to assign.'
+              : 'Assigned ${selected.length} task${selected.length == 1 ? '' : 's'} to $assignee.',
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

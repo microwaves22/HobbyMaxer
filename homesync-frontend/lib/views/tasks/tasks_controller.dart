@@ -45,6 +45,7 @@ class TasksController extends ChangeNotifier {
         ChoreTask(
           id: 't4',
           title: 'Read 20 minutes',
+          isHomework: true,
           details: 'Any book, then log it.',
           childName: 'Leo',
           points: 6,
@@ -89,6 +90,7 @@ class TasksController extends ChangeNotifier {
         ChoreTask(
           id: 'c3',
           title: 'Math worksheet',
+          isHomework: true,
           details: 'Page 42, problems 1–10.',
           childName: me,
           points: 12,
@@ -213,6 +215,28 @@ class TasksController extends ChangeNotifier {
     );
   }
 
+  /// Runs a synced review, reconciling a 409 conflict (the co-parent
+  /// got there first) before rethrowing for the UI message. Only called
+  /// from synced branches, so [_backend] is non-null.
+  Future<Map<String, dynamic>> _reviewSynced(
+    int serverId,
+    String action, {
+    String? note,
+  }) async {
+    try {
+      return await _backend!.reviewTask(serverId, action, note: note);
+    } on ApiException catch (e) {
+      if (e.statusCode == 409) {
+        try {
+          await refresh();
+        } on ApiException {
+          // Keep the original 409: the queue refreshes on next sync.
+        }
+      }
+      rethrow;
+    }
+  }
+
   /// Parent approves [taskId] and awards its points to the child. The
   /// backend awards the same amount, so the local ledger stays exact.
   Future<void> approve(String taskId) async {
@@ -220,7 +244,7 @@ class TasksController extends ChangeNotifier {
     if (task == null || task.state != TaskState.pendingReview) return;
     final backend = _backend;
     if (backend != null && task.serverId != null) {
-      final submission = await backend.reviewTask(task.serverId!, 'approve');
+      final submission = await _reviewSynced(task.serverId!, 'approve');
       final state = _submissionState(submission['status'] as String?);
       if (state == TaskState.approved) _award(task);
       _replace(task.copyWith(state: state));
@@ -238,7 +262,7 @@ class TasksController extends ChangeNotifier {
     final feedback = _cleanFeedback(note);
     final backend = _backend;
     if (backend != null && task.serverId != null) {
-      final submission = await backend.reviewTask(
+      final submission = await _reviewSynced(
         task.serverId!,
         'request_changes',
         note: feedback,
