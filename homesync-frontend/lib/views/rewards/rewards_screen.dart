@@ -23,7 +23,10 @@ class RewardsScreen extends StatefulWidget {
   final RewardsController controller;
   final UserProfile profile;
 
-<<<<<<< HEAD
+  /// Called with the tapped bottom-nav tab id. When null, tabs switch
+  /// with replacement navigation.
+  final ValueChanged<String>? onNavigate;
+
   @override
   State<RewardsScreen> createState() => _RewardsScreenState();
 }
@@ -51,6 +54,14 @@ class _RewardsScreenState extends State<RewardsScreen> {
     }
   }
 
+  void _handleNavigate(BuildContext context, String tabId) {
+    if (widget.onNavigate != null) {
+      widget.onNavigate!(tabId);
+      return;
+    }
+    HouseholdRoutes.openTab(context, tabId);
+  }
+
   Future<void> _redeem(BuildContext context, RewardItem reward) async {
     final messenger = ScaffoldMessenger.of(context);
     late final RedeemResult result;
@@ -63,22 +74,6 @@ class _RewardsScreenState extends State<RewardsScreen> {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
       return;
     }
-=======
-  /// Called with the tapped bottom-nav tab id. When null, tabs switch
-  /// with replacement navigation.
-  final ValueChanged<String>? onNavigate;
-
-  void _handleNavigate(BuildContext context, String tabId) {
-    if (onNavigate != null) {
-      onNavigate!(tabId);
-      return;
-    }
-    HouseholdRoutes.openTab(context, tabId);
-  }
-
-  void _redeem(BuildContext context, RewardItem reward) {
-    final result = controller.redeem(profile.name, reward.id);
->>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
     final message = switch (result) {
       RedeemResult.success => 'Redeemed ${reward.title}!',
       RedeemResult.insufficient =>

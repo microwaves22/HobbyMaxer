@@ -36,7 +36,7 @@ class TeenRewardStoreScreen extends StatelessWidget {
   static const Color _bg = Color(0xFFF4F3EF);
   static const Color _ink = Color(0xFF2B3A2B);
   static const Color _mute = Color(0xFF7C877A);
-  static const Color _sage = Color(0xFF5F7F55);
+  static const Color _sage = Color(0xFF7A9A85);
   static const Color _sageDark = Color(0xFF4A6A41);
   static const Color _sageLight = Color(0xFFE4EBDC);
   static const Color _segmentTrack = Color(0xFFE9EAE3);

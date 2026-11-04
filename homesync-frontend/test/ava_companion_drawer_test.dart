@@ -20,7 +20,7 @@ Future<void> _pumpDrawer(
       home: Scaffold(
         body: Stack(
           children: [
-            Container(color: const Color(0xFFFBF7EF)),
+            Container(color: const Color(0xFFF9F8F6)),
             AvaCompanionDrawer(
               onCloseDrawer: onCloseDrawer,
               onCareAction: onCareAction,
@@ -132,7 +132,7 @@ void main() {
       final eyebrow = _styleOf(tester, "AVA'S COMPANION");
       expect(eyebrow.fontSize, 11);
       expect(eyebrow.fontWeight, FontWeight.w800);
-      expect(eyebrow.color, const Color(0xFF5F7F55));
+      expect(eyebrow.color, const Color(0xFF7A9A85));
       final name = _styleOf(tester, 'Meet Sparkle! ✨');
       expect(name.fontSize, 25);
       expect(name.fontWeight, FontWeight.w800);
@@ -209,7 +209,7 @@ void main() {
         expect(
           boxDecoration.color,
           id == 'feed'
-              ? const Color(0xFF5F7F55)
+              ? const Color(0xFF7A9A85)
               : const Color(0xFFDDD5EE),
         );
       }
@@ -234,7 +234,7 @@ void main() {
       );
       expect(footer.fontSize, 12);
       expect(footer.fontWeight, FontWeight.w500);
-      expect(footer.color, const Color(0xFF5F7F55));
+      expect(footer.color, const Color(0xFF7A9A85));
     });
 
     testWidgets('close button dismisses', (tester) async {

@@ -12,14 +12,14 @@ import 'package:google_fonts/google_fonts.dart';
 abstract final class FigmaColors {
   static const Color ink = Color(0xFF2B3A2B);
   static const Color mute = Color(0xFF7C877A);
-  static const Color sage = Color(0xFF5F7F55);
+  static const Color sage = Color(0xFF7A9A85);
   static const Color sageDark = Color(0xFF4A6A41);
   static const Color sageMid = Color(0xFFA9BE9C);
   static const Color sageLight = Color(0xFFE4EBDC);
 
   static const Color line = Color(0xFFE8E4D8);
   static const Color white = Color(0xFFFFFFFF);
-  static const Color cream = Color(0xFFFBF7EF);
+  static const Color cream = Color(0xFFF9F8F6);
 
   /// Teen My To-Do List canvas (node 100:4622). This screen's variable
   /// set has no cream in it at all — do not substitute [cream] here.

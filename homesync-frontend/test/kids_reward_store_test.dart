@@ -148,7 +148,7 @@ void main() {
 
       final rewardsLabel =
           tester.widget<Text>(find.text('Rewards')).style!;
-      expect(rewardsLabel.color, const Color(0xFF5F7F55));
+      expect(rewardsLabel.color, const Color(0xFF7A9A85));
       expect(rewardsLabel.fontWeight, FontWeight.w800);
       final homeLabel = tester.widget<Text>(find.text('Home')).style!;
       expect(homeLabel.color, const Color(0xFF7C877A));

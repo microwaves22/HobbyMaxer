@@ -16,14 +16,11 @@ class FamilySetupOptions {
 /// One member of the family list shared by [FamilySetupScreen] and the
 /// member edit screen.
 ///
-<<<<<<< HEAD
 /// Collected locally during onboarding: kids and teens are added as
 /// backend child profiles on the first authenticated sync, while
 /// additional parents join with the family invite code (see `HomeScreen`).
-=======
 /// Local UI state only: no API call persists these members yet, except
 /// the avatar upload once [serverId] is known (see [MembersApi]).
->>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
 class FamilySetupMember {
   const FamilySetupMember({
     required this.id,

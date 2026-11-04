@@ -28,7 +28,7 @@ class LoadBalanceSection extends StatefulWidget {
 
 class _LoadBalanceSectionState extends State<LoadBalanceSection> {
   static const _barColors = [
-    Color(0xFF5F7F55),
+    Color(0xFF7A9A85),
     Color(0xFF7FA6C9),
     Color(0xFFF0B429),
     Color(0xFFC97F8A),

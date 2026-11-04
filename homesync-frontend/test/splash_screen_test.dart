@@ -23,7 +23,7 @@ void main() {
 
     // Solid cream background, edge to edge (Scaffold paints it all).
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-    expect(scaffold.backgroundColor, const Color(0xFFFBF7EF));
+    expect(scaffold.backgroundColor, const Color(0xFFF9F8F6));
 
     // Brand: exact copy, Nunito, sizes, weights, colors.
     final title = _styleOf(tester, 'HomeSync');

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/network/auth_session.dart';
 import '../customization/customization_screen.dart';
+import '../home/widgets/household_bottom_nav.dart';
 import 'child_pin_screen.dart';
 import 'notification_settings_screen.dart';
 import '../onboarding/join_circle_screen.dart';
@@ -28,7 +29,7 @@ class AccountSettingsScreen extends StatelessWidget {
   /// The signed-in account these settings belong to.
   final UserProfile profile;
 
-  static const Color _cream = Color(0xFFFBF7EF);
+  static const Color _cream = Color(0xFFF9F8F6);
   static const Color _ink = Color(0xFF2B3A2B);
   static const Color _mute = Color(0xFF7C877A);
   static const Color _line = Color(0xFFE8E4D8);
@@ -75,6 +76,8 @@ class AccountSettingsScreen extends StatelessWidget {
     final signedIn = AuthScope.maybeOf(context)?.isAuthenticated == true;
     return Scaffold(
       backgroundColor: _cream,
+      bottomNavigationBar:
+          const HouseholdBottomNav(activeTabId: 'home'),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.only(

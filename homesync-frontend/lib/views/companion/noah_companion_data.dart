@@ -23,17 +23,17 @@ const List<NoahCompanionPill> kNoahCompanionPills = [
   NoahCompanionPill(
     label: 'Thriving',
     background: Color(0xFFE4EBDC),
-    foreground: Color(0xFF5F7F55),
+    foreground: Color(0xFF7A9A85),
   ),
   NoahCompanionPill(
     label: '☾ Rested',
     background: Color(0xFFFFFFFF),
-    foreground: Color(0xFF5F7F55),
+    foreground: Color(0xFF7A9A85),
   ),
   NoahCompanionPill(
     label: '94% care',
     background: Color(0xFFFFFFFF),
-    foreground: Color(0xFF5F7F55),
+    foreground: Color(0xFF7A9A85),
   ),
 ];
 

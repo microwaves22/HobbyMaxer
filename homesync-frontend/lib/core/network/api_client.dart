@@ -76,8 +76,6 @@ class ApiClient {
       response = await call();
     } on http.ClientException {
       throw ApiException('Could not reach the server at $baseUrl.');
-    } on http.ClientException {
-      throw ApiException('Could not reach the server at $baseUrl.');
     } on TimeoutException {
       throw ApiException('The server took too long to respond.');
     } on Exception catch (e) {

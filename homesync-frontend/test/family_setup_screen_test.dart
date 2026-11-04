@@ -88,7 +88,7 @@ void main() {
 
     // Solid cream background, edge to edge (Scaffold paints it all).
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-    expect(scaffold.backgroundColor, const Color(0xFFFBF7EF));
+    expect(scaffold.backgroundColor, const Color(0xFFF9F8F6));
 
     // Header: exact copy, Nunito, sizes, weights, colors, left-aligned.
     final title = _styleOf(tester, 'Set Up Your Family');
@@ -477,18 +477,6 @@ void main() {
 
   testWidgets('photo picker degrades gracefully without the plugin',
       (tester) async {
-    // Simulate the missing native plugin: without a mock the channel
-    // call never settles in widget tests, so throw explicitly like a
-    // device with no camera/gallery support would.
-    const channel = MethodChannel('plugins.flutter.io/image_picker');
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      channel,
-      (call) async => throw MissingPluginException('No implementation found'),
-    );
-    addTearDown(
-      () => tester.binding.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, null),
-    );
     await _pumpFamilySetup(tester);
 
     // Simulate a broken picker: the platform channel throws instead of

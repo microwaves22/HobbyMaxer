@@ -108,7 +108,7 @@ class SettingsScreen extends StatefulWidget {
     this.onDarkModeChange,
   });
 
-  static const Color _cream = Color(0xFFFBF7EF);
+  static const Color _cream = Color(0xFFF9F8F6);
   static const Color _ink = Color(0xFF2B3A2B);
   static const Color _mute = Color(0xFF7C877A);
   static const Color _sageMid = Color(0xFFA9BE9C);

@@ -46,7 +46,7 @@ void main() {
 
     // Solid cream background, no bottom nav on this settings-style screen.
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-    expect(scaffold.backgroundColor, const Color(0xFFFBF7EF));
+    expect(scaffold.backgroundColor, const Color(0xFFF9F8F6));
     expect(find.byType(BottomNavigationBar), findsNothing);
 
     // Header: back link + title copy, Nunito, size, weight, color.

@@ -100,7 +100,7 @@ void main() {
 
       await tester.ensureVisible(find.text('Calendar'));
       final home = tester.widget<Text>(find.text('Home'));
-      expect(home.style?.color, const Color(0xFF5F7F55));
+      expect(home.style?.color, const Color(0xFF7A9A85));
       final rewards = tester.widget<Text>(find.text('Rewards'));
       expect(rewards.style?.color, const Color(0xFF7C877A));
     });

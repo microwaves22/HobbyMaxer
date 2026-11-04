@@ -37,10 +37,10 @@ class RewardsStoreScreen extends StatelessWidget {
   });
 
   // Figma tokens (screen-only, sibling precedent).
-  static const Color _cream = Color(0xFFFBF7EF);
+  static const Color _cream = Color(0xFFF9F8F6);
   static const Color _ink = Color(0xFF2B3A2B);
   static const Color _mute = Color(0xFF7C877A);
-  static const Color _sage = Color(0xFF5F7F55);
+  static const Color _sage = Color(0xFF7A9A85);
   static const Color _sageLight = Color(0xFFE4EBDC);
   static const Color _line = Color(0xFFE8E4D8);
   static const Color _white = Color(0xFFFFFFFF);

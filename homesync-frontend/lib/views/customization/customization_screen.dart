@@ -3,15 +3,19 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/figma_tokens.dart';
+import '../home/widgets/household_bottom_nav.dart';
 import 'avatar_art.dart';
+import 'customization_controller.dart';
 import 'customization_data.dart';
 import 'customization_store.dart';
 
-/// Figma "10 Customization" (node 5:248): the "For You" segment content.
+/// Figma "10 Customization" (node 5:248): avatar ("For You") and
+/// background ("Settings") pickers.
 ///
-/// Sections, in order: Top Bar, Segmented Control, Profile Card,
-/// Background Card, flexible spacer, Save Changes button. No bottom nav,
-/// no inputs, no other cards.
+/// Sections, in order: Top Bar, Segmented Control, the active segment's
+/// card (Profile Card for "For You", Background Card for "Settings"),
+/// flexible spacer, Save Changes button, and the household bottom nav.
+/// No inputs, no other cards.
 ///
 /// Styling follows the Figma-screen precedent in this project: Nunito via
 /// `fontFamily`, colors/shadows from [FigmaColors]/[FigmaShadows], a 38px
@@ -19,9 +23,10 @@ import 'customization_store.dart';
 /// No status bar or phone frame is built here (device UI, like the other
 /// HomeSync screens).
 ///
-/// Local state only: [CustomizationSegment], avatar id, and background
-/// id. Every handler is an optional placeholder callback — this screen
-/// makes no API calls; selections persist locally via [CustomizationStore].
+/// Selections persist locally via [CustomizationStore] and are published
+/// to [CustomizationScope] when available, so applied surfaces (the
+/// dashboard background) update live. Every handler is an optional
+/// placeholder callback — this screen makes no API calls.
 class CustomizationScreen extends StatefulWidget {
   const CustomizationScreen({
     super.key,
@@ -75,6 +80,23 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
     unawaited(_restore());
   }
 
+  bool _scopeSynced = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_scopeSynced) return;
+    _scopeSynced = true;
+    // Prefer the live app-wide selection over the store so this screen
+    // always opens on what is currently applied.
+    final applied = CustomizationScope.maybeOf(context)?.selection;
+    if (applied != null) {
+      _segment = applied.segment;
+      _avatarId = applied.avatarId;
+      _backgroundId = applied.backgroundId;
+    }
+  }
+
   /// Applies the saved selection over the design defaults. Missing or
   /// corrupt data resolves to null and silently keeps the defaults.
   Future<void> _restore() async {
@@ -111,21 +133,33 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
     }
   }
 
+  /// Publishes the current selection app-wide so applied surfaces
+  /// update live. No-op without a [CustomizationScope] (tests).
+  void _publish() {
+    final controller = CustomizationScope.maybeOf(context);
+    if (controller != null) {
+      unawaited(controller.update(_currentSelection));
+    }
+  }
+
   void _handleSegmentChange(CustomizationSegment segment) {
     setState(() => _segment = segment);
     unawaited(_persist());
+    _publish();
     widget.onSegmentChange?.call(segment);
   }
 
   void _handleSelectAvatar(String avatarId) {
     setState(() => _avatarId = avatarId);
     unawaited(_persist());
+    _publish();
     widget.onSelectAvatar?.call(avatarId);
   }
 
   void _handleSelectBackground(String backgroundId) {
     setState(() => _backgroundId = backgroundId);
     unawaited(_persist());
+    _publish();
     widget.onSelectBackground?.call(backgroundId);
   }
 
@@ -135,6 +169,7 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
       avatarId: _avatarId,
       backgroundId: _backgroundId,
     );
+    _publish();
     if (widget.onSaveChanges != null) {
       widget.onSaveChanges!(selection);
     } else {
@@ -149,6 +184,7 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: FigmaColors.cream,
+      bottomNavigationBar: const HouseholdBottomNav(activeTabId: null),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) => SingleChildScrollView(
@@ -174,15 +210,18 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
                         onSegmentChange: _handleSegmentChange,
                       ),
                       const SizedBox(height: 12),
-                      _ProfileCard(
-                        avatarId: _avatarId,
-                        onSelectAvatar: _handleSelectAvatar,
-                      ),
-                      const SizedBox(height: 12),
-                      _BackgroundCard(
-                        backgroundId: _backgroundId,
-                        onSelectBackground: _handleSelectBackground,
-                      ),
+                      // Each segment owns its card: avatar on "For You",
+                      // background on "Settings".
+                      if (_segment == CustomizationSegment.forYou)
+                        _ProfileCard(
+                          avatarId: _avatarId,
+                          onSelectAvatar: _handleSelectAvatar,
+                        )
+                      else
+                        _BackgroundCard(
+                          backgroundId: _backgroundId,
+                          onSelectBackground: _handleSelectBackground,
+                        ),
                       const SizedBox(height: 12),
                       const Spacer(),
                       const SizedBox(height: 12),

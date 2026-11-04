@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/auth_session.dart';
 import '../../core/network/families_api.dart';
+import '../../core/widgets/liquid_glass_card.dart';
 
 /// Parent-managed child login PINs: per-child status with set/clear.
 ///
@@ -151,8 +152,10 @@ class _ChildPinScreenState extends State<ChildPinScreen> {
       itemBuilder: (context, index) {
         final kid = kids[index];
         final hasPin = kid['has_child_pin'] == true;
-        return Card(
+        return LiquidGlassCard(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
             title: Text(kid['display_name'] as String? ?? 'Kid'),
             subtitle: Text(hasPin ? 'PIN set' : 'No PIN'),
             trailing: TextButton(

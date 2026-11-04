@@ -68,6 +68,10 @@ def ensure_schema() -> None:
             conn.execute(
                 text("ALTER TABLE users ADD COLUMN child_pin_hashed VARCHAR(255)")
             )
+        if "avatar_url" not in user_cols:
+            conn.execute(
+                text("ALTER TABLE users ADD COLUMN avatar_url VARCHAR(512)")
+            )
     # Backfill codes for rows predating the column (imported lazily to
     # avoid a core -> models dependency at import time).
     from ..models import Family

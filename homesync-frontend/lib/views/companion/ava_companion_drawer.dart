@@ -110,7 +110,7 @@ class AvaCompanionDrawer extends StatelessWidget {
                             fontWeight: FontWeight.w500,
                             fontSize: 12,
                             height: 1.4,
-                            color: Color(0xFF5F7F55),
+                            color: Color(0xFF7A9A85),
                           ),
                         ),
                       ),
@@ -147,7 +147,7 @@ class _HeaderRow extends StatelessWidget {
                   fontFamily: _kFont,
                   fontWeight: FontWeight.w800,
                   fontSize: 11,
-                  color: Color(0xFF5F7F55),
+                  color: Color(0xFF7A9A85),
                 ),
               ),
               SizedBox(height: 2),
@@ -332,7 +332,7 @@ class _CareButton extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isFeed
-              ? const Color(0xFF5F7F55)
+              ? const Color(0xFF7A9A85)
               : const Color(0xFFDDD5EE),
           borderRadius: BorderRadius.circular(23),
         ),

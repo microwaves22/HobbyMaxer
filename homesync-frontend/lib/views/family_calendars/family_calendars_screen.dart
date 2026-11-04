@@ -5,10 +5,10 @@ import 'family_calendars_data.dart';
 // Figma tokens (screen-only): hard-coded here because they differ from the
 // shared theme (`AppColors` cream/sage/ink predate this design). Do not move
 // them into the theme files: no other screen uses these values.
-const _cream = Color(0xFFFBF7EF);
+const _cream = Color(0xFFF9F8F6);
 const _ink = Color(0xFF2B3A2B);
 const _mute = Color(0xFF7C877A);
-const _sage = Color(0xFF5F7F55);
+const _sage = Color(0xFF7A9A85);
 const _sageDark = Color(0xFF4A6A41);
 const _line = Color(0xFFE8E4D8);
 const _white = Color(0xFFFFFFFF);

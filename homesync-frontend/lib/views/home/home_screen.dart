@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
@@ -8,16 +9,12 @@ import '../../core/network/families_api.dart';
 import '../../core/state/focus_areas.dart';
 import '../../core/widgets/home_title.dart';
 import '../../core/widgets/liquid_glass_card.dart';
-import '../../core/widgets/member_avatar.dart';
 import '../../core/widgets/profile_avatar_dropdown.dart';
 import '../ai/quick_add_screen.dart';
-import '../calendar/calendar_screen.dart';
 import '../onboarding/link_kids_screen.dart';
 import '../onboarding/family_member.dart';
 import '../onboarding/models/user_profile.dart';
 import '../rewards/kids_reward_store_screen.dart';
-import '../rewards/models/kids_store_reward.dart';
-import '../rewards/models/reward_item.dart';
 import '../rewards/rewards_api.dart';
 import '../rewards/rewards_controller.dart';
 import '../rewards/rewards_routes.dart';
@@ -27,16 +24,12 @@ import '../settings/account_settings_screen.dart';
 import '../tasks/tasks_api.dart';
 import '../tasks/tasks_controller.dart';
 import '../tasks/widgets/parent_todo_section.dart';
-import '../tasks/tasks_screen.dart';
-import '../tasks/teen_todo_list_screen.dart';
 import '../tasks/widgets/review_queue_section.dart';
-<<<<<<< HEAD
 import 'widgets/load_balance_section.dart';
 import 'household_routes.dart';
+import 'widgets/household_bottom_nav.dart';
 import 'widgets/notification_bell.dart';
-=======
-import 'household_routes.dart';
->>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
+import '../customization/customization_controller.dart';
 
 /// Dashboard landing after onboarding or login.
 ///
@@ -51,6 +44,7 @@ class HomeScreen extends StatefulWidget {
     this.otherProfiles = const [],
     this.parentPin = '1234',
     this.pendingMembers = const [],
+    this.avatarBytes,
   });
 
   final UserProfile profile;
@@ -67,6 +61,10 @@ class HomeScreen extends StatefulWidget {
   /// profiles on the first authenticated sync (parents only).
   final List<FamilySetupMember> pendingMembers;
 
+  /// Profile photo picked during setup, shown on the header avatar
+  /// until a backend avatar replaces it.
+  final Uint8List? avatarBytes;
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -79,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _active = _toOption(widget.profile);
+    _active = _toOption(widget.profile, widget.avatarBytes);
     _tasks = TasksController.forProfile(widget.profile);
     _rewards = RewardsController(tasks: _tasks);
   }
@@ -101,8 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (session == null || !session.isAuthenticated) return;
     _backendAttached = true;
     final user = session.user!;
-    final headerAvatar =
-        resolveAvatarUrl(user.avatarUrl, session.client.baseUrl);
+    final headerAvatar = user.avatarUrl;
     if (headerAvatar != null) {
       _active = ProfileOption(
         name: _active.name,
@@ -110,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
         avatarColor: _active.avatarColor,
         isParent: _active.isParent,
         avatarUrl: headerAvatar,
+        avatarBytes: _active.avatarBytes,
       );
     }
     _tasks.attachBackend(TasksApi(session.client));
@@ -199,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  static ProfileOption _toOption(UserProfile profile) {
+  static ProfileOption _toOption(UserProfile profile, [Uint8List? bytes]) {
     final age = profile.age();
     final role = profile.role.label;
     final mode = profile.mode.label;
@@ -207,57 +205,20 @@ class _HomeScreenState extends State<HomeScreen> {
     final head = role == mode ? role : '$role · $mode';
     return ProfileOption(
       name: profile.name,
-      roleLabel:
-          '$head · ${age == null ? 'Age –' : 'Age $age'}',
+      roleLabel: '$head · ${age == null ? 'Age –' : 'Age $age'}',
       isParent: profile.isParent,
+      avatarBytes: bytes,
     );
   }
 
   List<ProfileOption> _options() => [
-        _toOption(widget.profile),
+        _toOption(widget.profile, widget.avatarBytes),
         for (final other in widget.otherProfiles) _toOption(other),
       ];
-
-  void _openTasks([TasksSegment initial = TasksSegment.chores]) {
-    // Teen profiles keep the Figma 03 Teen My To-Do List; parents
-    // and kids get the combined chores/homework hub.
-    final isTeen =
-        !widget.profile.isParent && widget.profile.mode == FamilyMode.teen;
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => isTeen
-            ? TeenTodoListScreen(
-                controller: _tasks,
-                profile: widget.profile,
-<<<<<<< HEAD
-                onNavigateHome: () => HouseholdRoutes.goHome(context),
-                onNavigateCalendar: () => HouseholdRoutes.goCalendar(context),
-=======
-                onNavigateHome: () => Navigator.of(context).pop(),
-                onNavigateRewards: () =>
-                    RewardsRoutes.openTeenStore(context),
-                onNavigateCalendar: () =>
-                    HouseholdRoutes.openTab(context, 'calendar'),
->>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
-              )
-            : TasksScreen(
-                controller: _tasks,
-                profile: widget.profile,
-                initialSegment: initial,
-              ),
-      ),
-    );
-  }
 
   void _openQuickAdd() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const QuickAddScreen()),
-    );
-  }
-
-  void _openCalendar() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const CalendarScreen()),
     );
   }
 
@@ -271,26 +232,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (widget.profile.mode == FamilyMode.kids) {
       Navigator.of(context).push(
         MaterialPageRoute(
-<<<<<<< HEAD
-          builder: (_) => Builder(
-            builder: (storeContext) => KidsRewardStoreScreen(
-              availablePoints: _rewards.balanceFor(widget.profile.name),
-              onBack: () => Navigator.of(context).pop(),
-              onRequestCustomReward: () =>
-                  RewardsRoutes.openRequestCustomReward(
-                context,
-                controller: _rewards,
-                childName: widget.profile.name,
-              ),
-              onUnlockReward: (id) =>
-                  _redeemExternal(storeContext, id, RewardKind.digital),
-              onRedeemReward: (id) =>
-                  _redeemExternal(storeContext, id, RewardKind.parentPerk),
-              onNavigateHome: () => HouseholdRoutes.goHome(context),
-              onNavigateCalendar: () =>
-                  HouseholdRoutes.goCalendar(context),
-            ),
-=======
           // Mock-only storefront (node 100:4854): placeholder handlers,
           // fixed mock balance. Back/Home return to the dashboard.
           builder: (_) => KidsRewardStoreScreen(
@@ -300,14 +241,12 @@ class _HomeScreenState extends State<HomeScreen> {
             onNavigateHome: () => Navigator.of(context).pop(),
             onNavigateCalendar: () =>
                 HouseholdRoutes.openTab(context, 'calendar'),
->>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
           ),
         ),
       );
       return;
     }
-    if (!widget.profile.isParent &&
-        widget.profile.mode == FamilyMode.teen) {
+    if (!widget.profile.isParent && widget.profile.mode == FamilyMode.teen) {
       RewardsRoutes.openTeenStore(
         context,
         controller: _rewards,
@@ -326,39 +265,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Redeems a kids-store item through the shared ledger and confirms.
-  void _redeemExternal(
-    BuildContext context,
-    String rewardId,
-    RewardKind kind,
-  ) {
-    KidsStoreReward? match;
-    for (final candidate in kKidsStoreRewards) {
-      if (candidate.id == rewardId) match = candidate;
-    }
-    final reward = match;
-    if (reward == null) return;
-    final result = _rewards.redeemExternal(
-      childName: widget.profile.name,
-      title: reward.name,
-      cost: reward.points,
-      kind: kind,
-    );
-    final balance = _rewards.balanceFor(widget.profile.name);
-    final message = switch (result) {
-      RedeemResult.success => 'Redeemed ${reward.name}! Balance: $balance pts.',
-      RedeemResult.insufficient => 'Not enough points for ${reward.name}.',
-      RedeemResult.notFound => 'That reward is no longer available.',
-    };
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
+  // Only Rewards keeps a dashboard card: Calendar, Chores, and
+  // Homework live in the bottom navigation bar instead.
   VoidCallback? _cardAction(String area) => switch (area) {
-        FocusAreas.calendar => _openCalendar,
-        FocusAreas.chores => () => _openTasks(TasksSegment.chores),
-        FocusAreas.homework => () => _openTasks(TasksSegment.homework),
         FocusAreas.rewards => _openRewards,
         _ => null,
       };
@@ -367,7 +276,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final areas = FocusAreasScope.of(context);
+    // Customization background applies only once the user has saved a
+    // choice; otherwise the theme surface shows.
+    final customization = CustomizationScope.maybeOf(context);
+    final background = customization?.selection == null
+        ? null
+        : customization!.background;
     return Scaffold(
+      bottomNavigationBar: const HouseholdBottomNav(activeTabId: 'home'),
       appBar: AppBar(
         title: const HomeTitle(label: 'HomeSync'),
         actions: [
@@ -396,9 +312,22 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+      body: Container(
+        decoration: background == null
+            ? null
+            : BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    background.gradientFrom,
+                    background.gradientTo,
+                  ],
+                ),
+              ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -416,13 +345,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 20),
                 ParentTodoSection(controller: _tasks),
                 const SizedBox(height: 20),
-<<<<<<< HEAD
                 LoadBalanceSection(refreshTrigger: _tasks),
                 const SizedBox(height: 20),
-=======
-                // Parents manage rewards; the child-facing storefront
-                // preview stays out of the parent view entirely.
->>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
                 LiquidGlassCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -433,21 +357,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 12),
                       OutlinedButton.icon(
-                        onPressed: () =>
-                            RewardsRoutes.openReviewQueue(
-                              context,
-                              controller: _rewards,
-                            ),
+                        onPressed: () => RewardsRoutes.openReviewQueue(
+                          context,
+                          controller: _rewards,
+                        ),
                         icon: const Icon(Icons.mark_email_read_rounded),
                         label: const Text('Review reward requests'),
                       ),
                       const SizedBox(height: 8),
                       OutlinedButton.icon(
-                        onPressed: () =>
-                            RewardsRoutes.openManagement(
-                              context,
-                              controller: _rewards,
-                            ),
+                        onPressed: () => RewardsRoutes.openManagement(
+                          context,
+                          controller: _rewards,
+                        ),
                         icon: const Icon(Icons.storefront_rounded),
                         label: const Text('Manage store perks'),
                       ),
@@ -475,6 +397,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
+        ),
       ),
     );
   }
@@ -488,26 +411,14 @@ class _Feature {
   final String blurb;
 }
 
+// Rewards is the only dashboard card: Calendar, Chores, and Homework
+// are covered by the bottom navigation bar, so their inline cards were
+// removed as duplicates.
 const _features = [
-  _Feature(
-    FocusAreas.calendar,
-    Icons.calendar_month_rounded,
-    'Upcoming events and the shared family plan.',
-  ),
-  _Feature(
-    FocusAreas.chores,
-    Icons.cleaning_services_rounded,
-    'Chores, who owns them, and what is due.',
-  ),
   _Feature(
     FocusAreas.rewards,
     Icons.stars_rounded,
     'Points balance and the reward store.',
-  ),
-  _Feature(
-    FocusAreas.homework,
-    Icons.school_rounded,
-    'Homework tracker and due dates.',
   ),
 ];
 

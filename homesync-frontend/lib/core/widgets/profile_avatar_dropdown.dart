@@ -173,12 +173,9 @@ class ProfileAvatarDropdown extends StatelessWidget {
           ),
         ),
       ],
-<<<<<<< HEAD
-      child: buttonChild ?? Padding(
-=======
-      child: avatar ??
+      child: buttonChild ??
+          avatar ??
           Padding(
->>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
         padding: const EdgeInsets.only(right: 12),
         child: _Avatar(option: active, radius: 18),
       ),

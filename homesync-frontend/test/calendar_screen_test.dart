@@ -63,7 +63,7 @@ void main() {
 
     // Solid cream background, edge to edge (Scaffold paints it all).
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-    expect(scaffold.backgroundColor, const Color(0xFFFBF7EF));
+    expect(scaffold.backgroundColor, const Color(0xFFF9F8F6));
 
     // Header: exact copy, Nunito, size, weight, color + add button.
     final title = _headerStyleOf(tester);
@@ -137,7 +137,7 @@ void main() {
     expect(navCalendar.fontFamily, 'Nunito');
     expect(navCalendar.fontSize, 11);
     expect(navCalendar.fontWeight, FontWeight.w800);
-    expect(navCalendar.color, const Color(0xFF5F7F55));
+    expect(navCalendar.color, const Color(0xFF7A9A85));
     expect(_styleOf(tester, 'Home').color, const Color(0xFF7C877A));
   });
 
@@ -305,9 +305,9 @@ void main() {
       final byId = {for (final e in CalendarData.events) e.id: e};
       expect(byId['work']!.color, const Color(0xFFCFE0EE));
       expect(byId['dr']!.color, const Color(0xFFDDD5EE));
-      expect(byId['dinner-fri']!.color, const Color(0xFF5F7F55));
+      expect(byId['dinner-fri']!.color, const Color(0xFF7A9A85));
       expect(byId['dinner-fri']!.textColor, const Color(0xFFFFFFFF));
-      expect(byId['dinner-sat']!.color, const Color(0xFF5F7F55));
+      expect(byId['dinner-sat']!.color, const Color(0xFF7A9A85));
       expect(byId['dinner-sat']!.textColor, const Color(0xFFFFFFFF));
       expect(byId['school-wed']!.color, const Color(0xFFFDF0C8));
       expect(byId['soccer']!.color, const Color(0xFFF6D9C4));

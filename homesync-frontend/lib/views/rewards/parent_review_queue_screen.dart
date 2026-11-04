@@ -38,10 +38,10 @@ class ParentReviewQueueScreen extends StatefulWidget {
   });
 
   // Figma tokens (screen-only, see class doc).
-  static const Color _cream = Color(0xFFFBF7EF);
+  static const Color _cream = Color(0xFFF9F8F6);
   static const Color _ink = Color(0xFF2B3A2B);
   static const Color _mute = Color(0xFF7C877A);
-  static const Color _sage = Color(0xFF5F7F55);
+  static const Color _sage = Color(0xFF7A9A85);
   static const Color _sageDark = Color(0xFF4A6A41);
   static const Color _sageMid = Color(0xFFA9BE9C);
   static const Color _sageLight = Color(0xFFE4EBDC);

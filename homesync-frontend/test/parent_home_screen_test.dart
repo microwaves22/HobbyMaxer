@@ -38,7 +38,7 @@ void main() {
       await _pumpParentHome(tester);
 
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-      expect(scaffold.backgroundColor, const Color(0xFFFBF7EF));
+      expect(scaffold.backgroundColor, const Color(0xFFF9F8F6));
     });
 
     testWidgets('header greeting, actions, and order', (tester) async {
@@ -60,7 +60,7 @@ void main() {
         _styleOf(tester, 'Assign Tasks'),
         weight: FontWeight.w700,
         size: 13,
-        color: const Color(0xFF5F7F55),
+        color: const Color(0xFF7A9A85),
       );
       expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
       expect(find.byIcon(Icons.notifications_outlined), findsOneWidget);
@@ -109,7 +109,7 @@ void main() {
         _styleOf(tester, 'Ava 8 · 3/4 tasks done'),
         weight: FontWeight.w700,
         size: 13,
-        color: const Color(0xFF5F7F55),
+        color: const Color(0xFF7A9A85),
       );
       expect(find.byType(LinearProgressIndicator), findsNothing);
       expect(find.byType(CircularProgressIndicator), findsNothing);
@@ -122,7 +122,7 @@ void main() {
         _styleOf(tester, 'Parent Review Queue'),
         weight: FontWeight.w700,
         size: 13,
-        color: const Color(0xFF5F7F55),
+        color: const Color(0xFF7A9A85),
       );
       _expectInter(
         _styleOf(tester, '3 items'),
@@ -230,7 +230,7 @@ void main() {
         _styleOf(tester, 'Home'),
         weight: FontWeight.w800,
         size: 11,
-        color: const Color(0xFF5F7F55),
+        color: const Color(0xFF7A9A85),
       );
       for (final label in ['Calendar', 'Tasks', 'Family']) {
         _expectInter(

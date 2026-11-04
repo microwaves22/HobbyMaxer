@@ -1,18 +1,25 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/network/auth_session.dart';
+import '../../core/state/account_mode.dart';
 import '../../core/state/focus_areas.dart';
 import '../../core/widgets/liquid_glass_card.dart';
+import '../../core/widgets/member_avatar.dart';
 import '../home/home_screen.dart';
 import 'family_member.dart';
 import 'models/user_profile.dart';
 
-/// Create-an-account profile setup: email, password, name, birthday,
-/// account type (Parent/Kid), and Kids/Teens/Parent mode.
+/// Create-an-account profile setup: profile photo, email, password, name,
+/// and birthday.
 ///
+/// The account type/mode chosen on [Choose Mode] is reused centrally via
+/// [AccountModeScope] and is NOT asked again here; the selectors below
+/// only appear when no mode was chosen (direct registration links).
 /// When an [AuthScope] is available above this screen, Continue registers
 /// the account with the backend (`POST /auth/register`); otherwise the
 /// profile is created locally only. Other family members are added later
@@ -42,6 +49,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _birthdayController = TextEditingController();
   FamilyRole _role = FamilyRole.parent;
   FamilyMode _mode = FamilyMode.kids;
+  Uint8List? _photoBytes;
+  final _picker = ImagePicker();
   String? _emailError;
   String? _passwordError;
   String? _confirmPasswordError;
@@ -77,6 +86,48 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         _birthdayError = null;
       });
     }
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    try {
+      // Web-safe: bytes via XFile.readAsBytes; null means the user
+      // cancelled, which is silently ignored.
+      final bytes = await pickAvatarBytes(_picker, source);
+      if (bytes != null && mounted) {
+        setState(() => _photoBytes = bytes);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open camera/gallery.')),
+      );
+    }
+  }
+
+  void _choosePhotoSource() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Profile photo'),
+        content: const Text('Take a photo or choose one from your gallery.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _pickPhoto(ImageSource.camera);
+            },
+            child: const Text('Camera'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _pickPhoto(ImageSource.gallery);
+            },
+            child: const Text('Gallery'),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Approximate birthday from an entered age, or null when unknown.
@@ -169,11 +220,18 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       }
     }
     if (!mounted) return;
+    // Prefer the centrally chosen mode; fall back to this screen's
+    // selectors only when nothing was chosen before reaching here.
+    final savedMode = AccountModeScope.maybeOf(context);
     final profile = UserProfile(
       name: name,
       birthday: tryParseBirthday(_birthdayController.text)!,
-      role: _role,
-      mode: _mode,
+      role: (savedMode != null && savedMode.hasSelection)
+          ? savedMode.role!
+          : _role,
+      mode: (savedMode != null && savedMode.hasSelection)
+          ? savedMode.mode!
+          : _mode,
     );
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
@@ -183,6 +241,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             profile: profile,
             otherProfiles: _switcherProfiles(),
             pendingMembers: widget.familyMembers,
+            avatarBytes: _photoBytes,
           ),
         ),
       ),
@@ -193,6 +252,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final savedMode = AccountModeScope.maybeOf(context);
+    final hasPersistedMode = savedMode != null && savedMode.hasSelection;
     return Scaffold(
       appBar: AppBar(title: const Text('Your profile')),
       body: SafeArea(
@@ -212,6 +273,44 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    InkWell(
+                      key: const Key('profile-photo-picker'),
+                      onTap: _choosePhotoSource,
+                      borderRadius: BorderRadius.circular(18),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            MemberAvatar(
+                              bytes: _photoBytes,
+                              name: _nameController.text.trim(),
+                              size: 56,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Profile photo',
+                                    style: text.labelSmall,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _photoBytes == null
+                                        ? 'Add a photo (optional)'
+                                        : 'Photo selected — tap to change',
+                                    style: text.bodyMedium,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.add_a_photo_outlined),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -298,46 +397,51 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                           setState(() => _birthdayError = null),
                       onSubmitted: (_) => _continue(),
                     ),
-                    const SizedBox(height: 16),
-                    Text('Account type', style: text.labelSmall),
-                    const SizedBox(height: 8),
-                    SegmentedButton<FamilyRole>(
-                      segments: const [
-                        ButtonSegment(
-                          value: FamilyRole.parent,
-                          label: Text('Parent'),
-                        ),
-                        ButtonSegment(
-                          value: FamilyRole.child,
-                          label: Text('Kid'),
-                        ),
-                      ],
-                      selected: {_role},
-                      onSelectionChanged: (selected) =>
-                          setState(() => _role = selected.first),
-                    ),
-                    const SizedBox(height: 16),
-                    Text('Mode', style: text.labelSmall),
-                    const SizedBox(height: 8),
-                    SegmentedButton<FamilyMode>(
-                      segments: const [
-                        ButtonSegment(
-                          value: FamilyMode.kids,
-                          label: Text('Kids'),
-                        ),
-                        ButtonSegment(
-                          value: FamilyMode.teen,
-                          label: Text('Teens'),
-                        ),
-                        ButtonSegment(
-                          value: FamilyMode.parent,
-                          label: Text('Parent'),
-                        ),
-                      ],
-                      selected: {_mode},
-                      onSelectionChanged: (selected) =>
-                          setState(() => _mode = selected.first),
-                    ),
+                    // Shown only when no mode was chosen earlier in setup
+                    // (direct registration links). The normal flow reuses
+                    // the centrally persisted choice instead of asking again.
+                    if (!hasPersistedMode) ...[
+                      const SizedBox(height: 16),
+                      Text('Account type', style: text.labelSmall),
+                      const SizedBox(height: 8),
+                      SegmentedButton<FamilyRole>(
+                        segments: const [
+                          ButtonSegment(
+                            value: FamilyRole.parent,
+                            label: Text('Parent'),
+                          ),
+                          ButtonSegment(
+                            value: FamilyRole.child,
+                            label: Text('Kid'),
+                          ),
+                        ],
+                        selected: {_role},
+                        onSelectionChanged: (selected) =>
+                            setState(() => _role = selected.first),
+                      ),
+                      const SizedBox(height: 16),
+                      Text('Mode', style: text.labelSmall),
+                      const SizedBox(height: 8),
+                      SegmentedButton<FamilyMode>(
+                        segments: const [
+                          ButtonSegment(
+                            value: FamilyMode.kids,
+                            label: Text('Kids'),
+                          ),
+                          ButtonSegment(
+                            value: FamilyMode.teen,
+                            label: Text('Teens'),
+                          ),
+                          ButtonSegment(
+                            value: FamilyMode.parent,
+                            label: Text('Parent'),
+                          ),
+                        ],
+                        selected: {_mode},
+                        onSelectionChanged: (selected) =>
+                            setState(() => _mode = selected.first),
+                      ),
+                    ],
                     if (_formError != null) ...[
                       const SizedBox(height: 12),
                       Text(

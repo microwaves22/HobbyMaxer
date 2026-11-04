@@ -9,7 +9,7 @@ import 'household_routes.dart';
 // them into the theme files: no other screen uses these values.
 const _ink = Color(0xFF2B3A2B);
 const _mute = Color(0xFF7C877A);
-const _sage = Color(0xFF5F7F55);
+const _sage = Color(0xFF7A9A85);
 const _sageDark = Color(0xFF4A6A41);
 const _sageLight = Color(0xFFE4EBDC);
 const _yellowLight = Color(0xFFFDF0C8);
@@ -17,7 +17,7 @@ const _peach = Color(0xFFF6D9C4);
 const _pink = Color(0xFFF4C9C9);
 const _line = Color(0xFFE8E4D8);
 const _white = Color(0xFFFFFFFF);
-const _cream = Color(0xFFFBF7EF);
+const _cream = Color(0xFFF9F8F6);
 const _cardFill = Color.fromRGBO(255, 255, 255, 0.72);
 const _cardBorder = Color.fromRGBO(255, 255, 255, 0.91);
 const _cardShadow = Color.fromRGBO(59, 77, 56, 0.07);
@@ -26,8 +26,6 @@ const _dropdownBg = Color.fromRGBO(255, 252, 245, 0.95);
 const _dropdownBorder = Color.fromRGBO(255, 255, 255, 0.94);
 const _dropdownShadow = Color.fromRGBO(38, 57, 44, 0.15);
 const _navFill = Color.fromRGBO(255, 255, 255, 0.8);
-const _darkPreview = Color(0xFF203B32);
-const _systemPreview = Color(0xFFEDEFE8);
 const _transparentFill = Color.fromRGBO(255, 255, 255, 0);
 
 /// One family summary stat (value over label).
@@ -91,47 +89,6 @@ const _navTabs = <_NavTab>[
   _NavTab(id: 'family', label: 'Family', icon: Icons.group_rounded),
 ];
 
-/// One appearance theme option. Selection styling is derived from state.
-class _ThemeOption {
-  const _ThemeOption({
-    required this.id,
-    required this.name,
-    required this.icon,
-    required this.previewBackground,
-    required this.iconColor,
-  });
-
-  final String id;
-  final String name;
-  final IconData icon;
-  final Color previewBackground;
-  final Color iconColor;
-}
-
-const _themeOptions = <_ThemeOption>[
-  _ThemeOption(
-    id: 'light',
-    name: 'Light',
-    icon: Icons.wb_sunny_rounded,
-    previewBackground: _cream,
-    iconColor: _ink,
-  ),
-  _ThemeOption(
-    id: 'dark',
-    name: 'Dark',
-    icon: Icons.nightlight_rounded,
-    previewBackground: _darkPreview,
-    iconColor: _white,
-  ),
-  _ThemeOption(
-    id: 'system',
-    name: 'System',
-    icon: Icons.monitor_rounded,
-    previewBackground: _systemPreview,
-    iconColor: _ink,
-  ),
-];
-
 /// One profile in the switcher. Selection styling is derived from state.
 class _HubProfile {
   const _HubProfile({
@@ -192,7 +149,6 @@ class ProfileHubScreen extends StatefulWidget {
     this.menuOpen = true,
     this.onToggleProfileMenu,
     this.onDismissProfileMenu,
-    this.onSelectTheme,
     this.onSwitchProfile,
     this.onAccountSettings,
     this.onNavigate,
@@ -206,9 +162,6 @@ class ProfileHubScreen extends StatefulWidget {
 
   /// Called after tapping the dimming overlay closes the menu.
   final VoidCallback? onDismissProfileMenu;
-
-  /// Called with the selected theme id. Selection is UI state only.
-  final ValueChanged<String>? onSelectTheme;
 
   /// Called with the selected profile id.
   final ValueChanged<String>? onSwitchProfile;
@@ -226,7 +179,6 @@ class ProfileHubScreen extends StatefulWidget {
 
 class _ProfileHubScreenState extends State<ProfileHubScreen> {
   late bool _menuOpen = widget.menuOpen;
-  String _selectedThemeId = 'light';
   String _selectedProfileId = 'sarah';
 
   void _toggleProfileMenu() {
@@ -237,11 +189,6 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
   void _dismissProfileMenu() {
     setState(() => _menuOpen = false);
     widget.onDismissProfileMenu?.call();
-  }
-
-  void _selectTheme(String themeId) {
-    setState(() => _selectedThemeId = themeId);
-    widget.onSelectTheme?.call(themeId);
   }
 
   void _switchProfile(String profileId) {
@@ -307,9 +254,7 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
                           right: 20,
                           width: 293,
                           child: _ProfileDropdown(
-                            selectedThemeId: _selectedThemeId,
                             selectedProfileId: _selectedProfileId,
-                            onSelectTheme: _selectTheme,
                             onSwitchProfile: _switchProfile,
                             onAccountSettings: _handleAccountSettings,
                           ),
@@ -800,16 +745,12 @@ class _CaretPainter extends CustomPainter {
 /// container so the clip does not cut it off.
 class _ProfileDropdown extends StatelessWidget {
   const _ProfileDropdown({
-    required this.selectedThemeId,
     required this.selectedProfileId,
-    required this.onSelectTheme,
     required this.onSwitchProfile,
     required this.onAccountSettings,
   });
 
-  final String selectedThemeId;
   final String selectedProfileId;
-  final ValueChanged<String> onSelectTheme;
   final ValueChanged<String> onSwitchProfile;
   final VoidCallback onAccountSettings;
 
@@ -844,13 +785,6 @@ class _ProfileDropdown extends StatelessWidget {
                 const _CurrentAccount(),
                 const SizedBox(height: 15),
                 _AccountSettingsRow(onTap: onAccountSettings),
-                const SizedBox(height: 15),
-                const _Divider(),
-                const SizedBox(height: 15),
-                _Appearance(
-                  selectedThemeId: selectedThemeId,
-                  onSelectTheme: onSelectTheme,
-                ),
                 const SizedBox(height: 15),
                 const _Divider(),
                 const SizedBox(height: 15),
@@ -983,122 +917,7 @@ class _Divider extends StatelessWidget {
   }
 }
 
-/// Dropdown block 3: appearance theme picker.
-class _Appearance extends StatelessWidget {
-  const _Appearance({
-    required this.selectedThemeId,
-    required this.onSelectTheme,
-  });
-
-  final String selectedThemeId;
-  final ValueChanged<String> onSelectTheme;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'APPEARANCE',
-          style: TextStyle(
-            fontFamily: 'Nunito',
-            fontWeight: FontWeight.w800,
-            fontSize: 11,
-            height: 1.35,
-            color: _mute,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            for (var i = 0; i < _themeOptions.length; i++) ...[
-              if (i > 0) const SizedBox(width: 6),
-              Expanded(
-                child: _ThemeOptionTile(
-                  option: _themeOptions[i],
-                  selected: _themeOptions[i].id == selectedThemeId,
-                  onTap: () => onSelectTheme(_themeOptions[i].id),
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 10),
-        const Text(
-          'Dark uses our Midnight Sage palette.',
-          style: TextStyle(
-            fontFamily: 'Nunito',
-            fontWeight: FontWeight.w500,
-            fontSize: 11,
-            height: 1.35,
-            color: _mute,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// One theme option: preview tile plus label.
-class _ThemeOptionTile extends StatelessWidget {
-  const _ThemeOptionTile({
-    required this.option,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final _ThemeOption option;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: option.name,
-      button: true,
-      selected: selected,
-      onTap: onTap,
-      excludeSemantics: true,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(13),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                height: 48,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: option.previewBackground,
-                  borderRadius: BorderRadius.circular(13),
-                  border: selected
-                      ? Border.all(color: _sage, width: 2)
-                      : Border.all(color: _white),
-                ),
-                child: Icon(option.icon, size: 20, color: option.iconColor),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                selected ? '${option.name} ✓' : option.name,
-                style: TextStyle(
-                  fontFamily: 'Nunito',
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  fontSize: 11,
-                  height: 1.35,
-                  color: _ink,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Dropdown block 4: profile switcher.
+/// Dropdown block 3: profile switcher.
 class _SwitchProfile extends StatelessWidget {
   const _SwitchProfile({
     required this.selectedProfileId,

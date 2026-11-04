@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:homesync/core/state/account_mode.dart';
 import 'package:homesync/views/onboarding/choose_mode_screen.dart';
 import 'package:homesync/views/onboarding/family_setup_screen.dart';
+import 'package:homesync/views/onboarding/models/user_profile.dart';
 
 Future<void> _pumpChooseMode(WidgetTester tester) async {
   await tester.pumpWidget(const MaterialApp(home: ChooseModeScreen()));
@@ -39,7 +41,7 @@ void main() {
 
     // Solid cream background, edge to edge (Scaffold paints it all).
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-    expect(scaffold.backgroundColor, const Color(0xFFFBF7EF));
+    expect(scaffold.backgroundColor, const Color(0xFFF9F8F6));
 
     // Intro: exact copy, Nunito, sizes, weights, colors, centered.
     final heading = _styleOf(tester, 'Welcome to HomeSync!');
@@ -95,7 +97,7 @@ void main() {
     expect(find.text('Selected'), findsOneWidget);
     final parentBorder = _cardBorder(tester, 'Parent Mode')! as Border;
     expect(parentBorder.top.width, 2);
-    expect(parentBorder.top.color, const Color(0xFF5F7F55));
+    expect(parentBorder.top.color, const Color(0xFF7A9A85));
     for (final title in ['Teen Mode', 'Kids Mode']) {
       final border = _cardBorder(tester, title)! as Border;
       expect(border.top.width, 1);
@@ -120,7 +122,7 @@ void main() {
     expect(find.text('Selected'), findsOneWidget);
     final kidsBorder = _cardBorder(tester, 'Kids Mode')! as Border;
     expect(kidsBorder.top.width, 2);
-    expect(kidsBorder.top.color, const Color(0xFF5F7F55));
+    expect(kidsBorder.top.color, const Color(0xFF7A9A85));
     final parentBorder = _cardBorder(tester, 'Parent Mode')! as Border;
     expect(parentBorder.top.width, 1);
     expect(parentBorder.top.color, const Color(0xFFE8E4D8));
@@ -128,6 +130,29 @@ void main() {
     // Continue advances to family setup.
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
+    expect(find.byType(FamilySetupScreen), findsOneWidget);
+  });
+
+  testWidgets('Continue persists the mode centrally', (tester) async {
+    final controller = AccountModeController();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AccountModeScope(
+          controller: controller,
+          child: const ChooseModeScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Teen Mode'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(controller.hasSelection, isTrue);
+    expect(controller.role, FamilyRole.child);
+    expect(controller.mode, FamilyMode.teen);
     expect(find.byType(FamilySetupScreen), findsOneWidget);
   });
 }

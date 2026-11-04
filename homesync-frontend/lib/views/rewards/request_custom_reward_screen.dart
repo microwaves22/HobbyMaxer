@@ -16,7 +16,7 @@ import 'models/custom_reward_request.dart';
 /// KidsRewardStoreScreen.
 ///
 /// NOTE: this screen's background is #F4F3EF (flat light grey-cream),
-/// NOT the usual cream #FBF7EF. Screen-only value.
+/// NOT the usual cream #F9F8F6. Screen-only value.
 ///
 /// Form state ([CustomRewardFormState]) is local to this screen, pre-filled
 /// with the design's values. Every handler is an optional placeholder
@@ -41,7 +41,7 @@ class RequestCustomRewardScreen extends StatefulWidget {
   static const Color _background = Color(0xFFF4F3EF);
   static const Color _ink = Color(0xFF2B3A2B);
   static const Color _mute = Color(0xFF7C877A);
-  static const Color _sage = Color(0xFF5F7F55);
+  static const Color _sage = Color(0xFF7A9A85);
   static const Color _sageDark = Color(0xFF4A6A41);
   static const Color _sageMid = Color(0xFFA9BE9C);
   static const Color _sageLight = Color(0xFFE4EBDC);

@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../core/state/account_mode.dart';
 import 'family_setup_screen.dart';
+import 'models/user_profile.dart';
 
 /// Figma "02 Account Setup — Choose Mode" (node 3:32): account mode picker.
 ///
@@ -35,10 +39,10 @@ class _AccountMode {
 
 class _ChooseModeScreenState extends State<ChooseModeScreen> {
   // Figma tokens (screen-only, see class doc).
-  static const Color _cream = Color(0xFFFBF7EF);
+  static const Color _cream = Color(0xFFF9F8F6);
   static const Color _ink = Color(0xFF2B3A2B);
   static const Color _mute = Color(0xFF7C877A);
-  static const Color _sage = Color(0xFF5F7F55);
+  static const Color _sage = Color(0xFF7A9A85);
   static const Color _sageLight = Color(0xFFE4EBDC);
   static const Color _sageMid = Color(0xFFA9BE9C);
   static const Color _yellowLight = Color(0xFFFDF0C8);
@@ -57,6 +61,21 @@ class _ChooseModeScreenState extends State<ChooseModeScreen> {
       'kids' => 'Kids',
       _ => 'Parent',
     };
+    // Persist centrally so the rest of setup (and the dashboard) reuse
+    // this choice without asking again.
+    final accountMode = AccountModeScope.maybeOf(context);
+    if (accountMode != null) {
+      final familyRole =
+          _selectedId == 'parent' ? FamilyRole.parent : FamilyRole.child;
+      final familyMode = switch (_selectedId) {
+        'teen' => FamilyMode.teen,
+        'kids' => FamilyMode.kids,
+        _ => FamilyMode.parent,
+      };
+      // Fire and forget: the in-memory selection applies immediately;
+      // persistence completes in the background.
+      unawaited(accountMode.select(role: familyRole, mode: familyMode));
+    }
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => FamilySetupScreen(initialRole: role)),
     );
@@ -256,7 +275,7 @@ class _ModeCard extends StatelessWidget {
 
   static const Color _ink = Color(0xFF2B3A2B);
   static const Color _mute = Color(0xFF7C877A);
-  static const Color _sage = Color(0xFF5F7F55);
+  static const Color _sage = Color(0xFF7A9A85);
   static const Color _line = Color(0xFFE8E4D8);
   static const Color _white = Color(0xFFFFFFFF);
 

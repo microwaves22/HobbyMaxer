@@ -14,13 +14,8 @@ from fastapi.staticfiles import StaticFiles
 
 from . import models  # noqa: F401 - register tables
 from .core.config import settings
-<<<<<<< HEAD
 from .core.database import Base, SessionLocal, engine, ensure_schema
-from .routers import ai, auth, calendar, families, notifications, rewards, tasks
-=======
-from .core.database import Base, SessionLocal, engine
-from .routers import auth, calendar, families, members, rewards, tasks
->>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
+from .routers import ai, auth, calendar, families, members, notifications, rewards, tasks
 from .services.cleanup_service import delete_expired_photos
 
 logger = logging.getLogger("homesync")
@@ -54,12 +49,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-<<<<<<< HEAD
-app.include_router(ai.router)
-app.include_router(auth.router)
-app.include_router(families.router)
-app.include_router(notifications.router)
-=======
 # Created at import: StaticFiles refuses a missing directory, and the
 # lifespan hook runs after mounting.
 os.makedirs(os.path.join(settings.uploads_dir, "avatars"), exist_ok=True)
@@ -69,10 +58,11 @@ app.mount(
     name="avatars",
 )
 
+app.include_router(ai.router)
 app.include_router(auth.router)
 app.include_router(families.router)
 app.include_router(members.router)
->>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
+app.include_router(notifications.router)
 app.include_router(tasks.router)
 app.include_router(rewards.router)
 app.include_router(calendar.router)

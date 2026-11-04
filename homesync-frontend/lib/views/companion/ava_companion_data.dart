@@ -22,7 +22,7 @@ const List<AvaCompanionPill> kAvaCompanionPills = [
   AvaCompanionPill(
     label: 'Care 80%',
     background: Color(0xFFE4EBDC),
-    foreground: Color(0xFF5F7F55),
+    foreground: Color(0xFF7A9A85),
   ),
   AvaCompanionPill(
     label: '😊 Happy',

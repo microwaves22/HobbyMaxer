@@ -27,7 +27,7 @@ void main() {
       await _pumpKidsHome(tester);
 
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-      expect(scaffold.backgroundColor, const Color(0xFFFBF7EF));
+      expect(scaffold.backgroundColor, const Color(0xFFF9F8F6));
 
       final greeting = _styleOf(tester, 'Hi Ava! 👋');
       expect(greeting.fontFamily, 'Nunito');
@@ -100,7 +100,7 @@ void main() {
       expect(find.text('Calendar'), findsOneWidget);
       expect(
         _styleOf(tester, 'Home').color,
-        const Color(0xFF5F7F55),
+        const Color(0xFF7A9A85),
       );
       expect(
         _styleOf(tester, 'Rewards').color,

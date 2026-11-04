@@ -104,9 +104,8 @@ Future<AuthSession> _parentSession(MockClient mock) async {
 Future<void> _pumpScreen(
   WidgetTester tester,
   AuthSession session,
-  List<String> calls, {
-  bool empty = false,
-}) async {
+  List<String> calls,
+) async {
   await tester.pumpWidget(
     AuthScope(
       session: session,

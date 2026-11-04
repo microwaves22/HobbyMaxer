@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:homesync/core/state/focus_areas.dart';
 import 'package:homesync/views/home/home_screen.dart';
 import 'package:homesync/views/onboarding/models/user_profile.dart';
+import 'package:homesync/views/tasks/tasks_controller.dart';
+import 'package:homesync/views/tasks/tasks_screen.dart';
 
 UserProfile _parent() => UserProfile(
       name: 'Mom',
@@ -30,9 +32,17 @@ void main() {
         (tester) async {
       await _pumpHome(tester);
 
-      final chores = find.text('Chore distribution');
-      await tester.ensureVisible(chores);
-      await tester.tap(chores);
+      // The dashboard chores card was removed in favor of the bottom
+      // nav; push the hub directly to exercise the title-tap pop.
+      final profile = _parent();
+      Navigator.of(tester.element(find.byType(HomeScreen))).push(
+        MaterialPageRoute(
+          builder: (_) => TasksScreen(
+            controller: TasksController.forProfile(profile),
+            profile: profile,
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(
         find.descendant(

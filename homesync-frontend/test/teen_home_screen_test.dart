@@ -91,7 +91,7 @@ void main() {
       expect(find.text('Calendar'), findsOneWidget);
       expect(
         _styleOf(tester, 'Home').color,
-        const Color(0xFF5F7F55),
+        const Color(0xFF7A9A85),
       );
     });
 

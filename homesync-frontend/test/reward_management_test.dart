@@ -47,7 +47,7 @@ void main() {
       expect(find.text('Real-world'), findsOneWidget);
       expect(
         _styleOf(tester, 'Real-world').color,
-        const Color(0xFF5F7F55),
+        const Color(0xFF7A9A85),
       );
 
       expect(
@@ -128,7 +128,7 @@ void main() {
 
       expect(
         _styleOf(tester, 'Family').color,
-        const Color(0xFF5F7F55),
+        const Color(0xFF7A9A85),
       );
       expect(
         _styleOf(tester, 'Tasks').color,
@@ -249,7 +249,7 @@ void main() {
       final cost = _styleOf(tester, '★ 80');
       expect(cost.fontSize, 11);
       expect(cost.fontWeight, FontWeight.w800);
-      expect(cost.color, const Color(0xFF5F7F55));
+      expect(cost.color, const Color(0xFF7A9A85));
       final edit = tester.widget<Text>(find.text('Edit').first).style!;
       expect(edit.fontSize, 10);
       expect(edit.fontWeight, FontWeight.w700);
@@ -270,7 +270,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(selected, 'a');
-      expect(_styleOf(tester, 'Digital').color, const Color(0xFF5F7F55));
+      expect(_styleOf(tester, 'Digital').color, const Color(0xFF7A9A85));
     });
 
     testWidgets('eligibility field opens the selector', (tester) async {

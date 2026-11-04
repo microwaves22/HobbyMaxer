@@ -39,7 +39,7 @@ void main() {
 
     // Solid cream background, edge to edge (Scaffold paints it all).
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-    expect(scaffold.backgroundColor, const Color(0xFFFBF7EF));
+    expect(scaffold.backgroundColor, const Color(0xFFF9F8F6));
 
     // Header: exact copy, Nunito, size, weight, color.
     final title = _styleOf(tester, 'Family Time');
@@ -70,7 +70,7 @@ void main() {
     expect(day.color, const Color(0xFF2B3A2B));
     final time = _styleOf(tester, '6:00 – 7:00 PM');
     expect(time.fontWeight, FontWeight.w700);
-    expect(time.color, const Color(0xFF5F7F55));
+    expect(time.color, const Color(0xFF7A9A85));
     expect(find.text('Everyone is available!'), findsOneWidget);
 
     // Activity chips with Game Night selected (white on sage).
@@ -105,7 +105,7 @@ void main() {
     expect(navFamily.fontFamily, 'Nunito');
     expect(navFamily.fontSize, 11);
     expect(navFamily.fontWeight, FontWeight.w800);
-    expect(navFamily.color, const Color(0xFF5F7F55));
+    expect(navFamily.color, const Color(0xFF7A9A85));
     expect(_styleOf(tester, 'Home').color, const Color(0xFF7C877A));
   });
 

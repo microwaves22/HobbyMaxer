@@ -4,14 +4,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:homesync/views/customization/avatar_art.dart';
 import 'package:homesync/views/customization/customization_data.dart';
 import 'package:homesync/views/customization/customization_screen.dart';
+import 'package:homesync/views/home/widgets/household_bottom_nav.dart';
 
 const Color _ink = Color(0xFF2B3A2B);
 const Color _mute = Color(0xFF7C877A);
-const Color _sage = Color(0xFF5F7F55);
+const Color _sage = Color(0xFF7A9A85);
 const Color _sageDark = Color(0xFF4A6A41);
 const Color _sageLight = Color(0xFFE4EBDC);
 const Color _white = Color(0xFFFFFFFF);
-const Color _cream = Color(0xFFFBF7EF);
+const Color _cream = Color(0xFFF9F8F6);
 const Color _pink = Color(0xFFF4C9C9);
 const Color _peach = Color(0xFFF6D9C4);
 const Color _blue = Color(0xFFCFE0EE);
@@ -62,10 +63,11 @@ void main() {
   testWidgets('Customization matches the Figma 5:248 spec', (tester) async {
     await _pump(tester);
 
-    // Cream page, scrollable full-height body, no bottom nav or inputs.
+    // Cream page, scrollable full-height body, household tab bar, no inputs.
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
     expect(scaffold.backgroundColor, _cream);
     expect(find.byType(SingleChildScrollView), findsOneWidget);
+    expect(find.byType(HouseholdBottomNav), findsOneWidget);
     expect(find.byType(BottomNavigationBar), findsNothing);
     expect(find.byType(TextField), findsNothing);
 
@@ -159,6 +161,13 @@ void main() {
     ).first);
     expect(forYouBox.width, settingsBox.width);
 
+    // For You shows the profile card only; the background card
+    // lives on the Settings tab.
+    expect(
+      find.byKey(const Key('customization-background-card')),
+      findsNothing,
+    );
+
     // Profile Card: white, radius 24, exact shadow, verbatim copy.
     final profile = _decorationOf(tester, 'customization-profile-card');
     expect(profile.color, _white);
@@ -229,6 +238,14 @@ void main() {
         expect(decoration.border, isNull, reason: '${entry.key} no border');
       }
     }
+
+    // Settings tab owns the background card; the profile card hides.
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('customization-profile-card')),
+      findsNothing,
+    );
 
     // Background Card: white, left-aligned, verbatim heading.
     final backgroundCard =
@@ -308,7 +325,7 @@ void main() {
     expect(badgeCenter.dx, greaterThan(meadowRect.center.dx));
     expect(badgeCenter.dy, lessThan(meadowRect.center.dy));
 
-    // Section order, 12px gaps, 20px sides, 6px top / 30px bottom.
+    // Section order on the Settings tab, 12px gaps, 20px sides.
     double top(String key) =>
         tester.getTopLeft(find.byKey(Key(key))).dy;
     double bottom(String key) =>
@@ -316,22 +333,31 @@ void main() {
     expect(top('customization-back'), 6);
     expect(top('customization-segments'), bottom('customization-back') + 12);
     expect(
-      top('customization-profile-card'),
+      top('customization-background-card'),
       bottom('customization-segments') + 12,
     );
+    final backgroundRect = tester.getRect(
+      find.byKey(const Key('customization-background-card')),
+    );
+    expect(backgroundRect.left, 20);
+    expect(backgroundRect.right, 390 - 20);
+    // Back on For You: the profile card takes the same slot.
+    await tester.tap(find.text('For You'));
+    await tester.pumpAndSettle();
     expect(
-      top('customization-background-card'),
-      bottom('customization-profile-card') + 12,
+      top('customization-profile-card'),
+      bottom('customization-segments') + 12,
     );
     final profileRect = tester.getRect(
       find.byKey(const Key('customization-profile-card')),
     );
     expect(profileRect.left, 20);
     expect(profileRect.right, 390 - 20);
-    // Spacer pins the button to the bottom: 30px body padding.
-    expect(bottom('customization-save'), 844 - 30);
+    // Spacer pins the button above the bottom nav: 30px body padding.
+    final navTop = tester.getTopLeft(find.byType(HouseholdBottomNav)).dy;
+    expect(bottom('customization-save'), navTop - 30);
     expect(top('customization-save'),
-        greaterThan(bottom('customization-background-card') + 12));
+        greaterThan(bottom('customization-profile-card') + 12));
 
     // Save Changes: 54px sage button, exact shadow, ExtraBold 16 white.
     final save = find.byKey(const Key('customization-save'));
@@ -408,7 +434,10 @@ void main() {
     expect(optionDecoration('fox').border, Border.all(color: _sage, width: 3));
     expect(optionDecoration('cat').border, isNull);
 
-    // Background switch moves the border + check badge.
+    // Background switch moves the border + check badge (Settings tab).
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    expect(segment, CustomizationSegment.settings);
     await tester.tap(find.byKey(const Key('background-tile-sunset')));
     await tester.pumpAndSettle();
     expect(backgroundId, 'sunset');
@@ -430,7 +459,7 @@ void main() {
     expect(
       saved,
       const CustomizationSelection(
-        segment: CustomizationSegment.forYou,
+        segment: CustomizationSegment.settings,
         avatarId: 'fox',
         backgroundId: 'sunset',
       ),

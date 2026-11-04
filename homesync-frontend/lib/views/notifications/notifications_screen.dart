@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/auth_session.dart';
 import '../../core/network/notifications_api.dart';
+import '../../core/widgets/liquid_glass_card.dart';
+import '../home/widgets/household_bottom_nav.dart';
 
 /// In-app notification inbox: unread dots, tap-to-read, mark-all-read.
 class NotificationsScreen extends StatefulWidget {
@@ -84,6 +86,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         ],
       ),
+      bottomNavigationBar:
+          const HouseholdBottomNav(activeTabId: 'home'),
       body: SafeArea(child: _body(text)),
     );
   }
@@ -107,8 +111,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       itemBuilder: (context, index) {
         final item = items[index];
         final body = item['body'] as String?;
-        return Card(
+        return LiquidGlassCard(
+          onTap: () => _markRead(item),
           child: ListTile(
+            contentPadding: EdgeInsets.zero,
             leading: item['is_read'] == true
                 ? const SizedBox(width: 10)
                 : Container(
@@ -122,7 +128,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
             title: Text(item['title'] as String? ?? ''),
             subtitle: body == null ? null : Text(body),
-            onTap: () => _markRead(item),
           ),
         );
       },

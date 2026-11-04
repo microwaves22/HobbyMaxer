@@ -97,7 +97,7 @@ void main() {
 
       expect(
         _styleOf(tester, 'Rewards').color,
-        const Color(0xFF5F7F55),
+        const Color(0xFF7A9A85),
       );
       expect(
         _styleOf(tester, 'Home').color,

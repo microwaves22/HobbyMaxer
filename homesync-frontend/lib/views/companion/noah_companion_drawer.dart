@@ -341,7 +341,7 @@ class _CareStats extends StatelessWidget {
                     key: Key('noah-stat-${kNoahCareStats[i].id}-fill'),
                     height: 7,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF5F7F55),
+                      color: const Color(0xFF7A9A85),
                       borderRadius: BorderRadius.circular(3.5),
                     ),
                   ),
@@ -379,7 +379,7 @@ class _CareActions extends StatelessWidget {
               height: 50,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: const Color(0xFF5F7F55),
+                color: const Color(0xFF7A9A85),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const FittedBox(
@@ -512,7 +512,7 @@ class _ArmorCard extends StatelessWidget {
             child: const Icon(
               Icons.shield_rounded,
               size: 27,
-              color: Color(0xFF5F7F55),
+              color: Color(0xFF7A9A85),
             ),
           ),
           const SizedBox(width: 10),
@@ -526,7 +526,7 @@ class _ArmorCard extends StatelessWidget {
                     fontFamily: _kFont,
                     fontWeight: FontWeight.w800,
                     fontSize: 10,
-                    color: Color(0xFF5F7F55),
+                    color: Color(0xFF7A9A85),
                   ),
                 ),
                 SizedBox(height: 2),
@@ -564,7 +564,7 @@ class _ArmorCard extends StatelessWidget {
                 vertical: 10,
               ),
               decoration: BoxDecoration(
-                color: const Color(0xFF5F7F55),
+                color: const Color(0xFF7A9A85),
                 borderRadius: BorderRadius.circular(13),
               ),
               child: const Text(
@@ -644,7 +644,7 @@ class _CollectionGrid extends StatelessWidget {
                         size: 24,
                         color: item.locked
                             ? const Color(0xFF7C877A)
-                            : const Color(0xFF5F7F55),
+                            : const Color(0xFF7A9A85),
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -666,7 +666,7 @@ class _CollectionGrid extends StatelessWidget {
                           height: 1.3,
                           color: item.locked
                               ? const Color(0xFF7C877A)
-                              : const Color(0xFF5F7F55),
+                              : const Color(0xFF7A9A85),
                         ),
                       ),
                     ],

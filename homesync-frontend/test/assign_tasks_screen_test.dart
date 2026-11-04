@@ -55,7 +55,7 @@ void main() {
       await _pumpScreen(tester);
 
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-      expect(scaffold.backgroundColor, const Color(0xFFFBF7EF));
+      expect(scaffold.backgroundColor, const Color(0xFFF9F8F6));
 
       // Top bar trigger + open menu.
       expect(find.text('Assign Tasks'), findsOneWidget);
@@ -135,7 +135,7 @@ void main() {
       TextStyle styleOf(String name) =>
           tester.widget<Text>(find.text(name)).style!;
 
-      expect(styleOf('Ava').color, const Color(0xFF5F7F55));
+      expect(styleOf('Ava').color, const Color(0xFF7A9A85));
       expect(styleOf('Ava').fontWeight, FontWeight.w800);
       expect(styleOf('Noah').color, const Color(0xFF7C877A));
       expect(styleOf('Noah').fontWeight, FontWeight.w600);
@@ -146,7 +146,7 @@ void main() {
       await tester.tap(find.text('Noah'));
       await tester.pumpAndSettle();
 
-      expect(styleOf('Noah').color, const Color(0xFF5F7F55));
+      expect(styleOf('Noah').color, const Color(0xFF7A9A85));
       expect(styleOf('Noah').fontWeight, FontWeight.w800);
       expect(styleOf('Ava').color, const Color(0xFF7C877A));
       expect(styleOf('Ava').fontWeight, FontWeight.w600);
@@ -255,7 +255,7 @@ void main() {
       // Parent note typography.
       expect(styleOf('Parent account').fontSize, 12);
       expect(styleOf('Parent account').fontWeight, FontWeight.w700);
-      expect(styleOf('Parent account').color, const Color(0xFF5F7F55));
+      expect(styleOf('Parent account').color, const Color(0xFF7A9A85));
       const noteBody = 'Kids submit a photo or video when done.\n'
           'You review before points are awarded.';
       expect(styleOf(noteBody).fontSize, 13);
@@ -394,7 +394,7 @@ void main() {
       expect(customFill.decoration, isNull);
       expect(styleOf('Add Custom Task').fontSize, 14);
       expect(styleOf('Add Custom Task').fontWeight, FontWeight.w700);
-      expect(styleOf('Add Custom Task').color, const Color(0xFF5F7F55));
+      expect(styleOf('Add Custom Task').color, const Color(0xFF7A9A85));
 
       // Avatars: 50px, radius 25; only Ava has the 3px sage ring.
       for (final id in ['ava', 'noah', 'both']) {
@@ -409,7 +409,7 @@ void main() {
         expect(
           decoration.border,
           id == 'ava'
-              ? Border.all(color: const Color(0xFF5F7F55), width: 3)
+              ? Border.all(color: const Color(0xFF7A9A85), width: 3)
               : isNull,
           reason: id,
         );
@@ -448,7 +448,7 @@ void main() {
       expect(tester.getSize(buttonBox).height, 54);
       final buttonDecoration =
           tester.widget<Container>(buttonBox).decoration! as BoxDecoration;
-      expect(buttonDecoration.color, const Color(0xFF5F7F55));
+      expect(buttonDecoration.color, const Color(0xFF7A9A85));
       expect(
         buttonDecoration.borderRadius,
         BorderRadius.circular(18),

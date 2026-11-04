@@ -28,12 +28,9 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(16), default="parent", index=True)
     mode: Mapped[str | None] = mapped_column(String(16), nullable=True)
     points_balance: Mapped[int] = mapped_column(Integer, default=0)
-<<<<<<< HEAD
     streak_count: Mapped[int] = mapped_column(Integer, default=0)
     streak_last_day: Mapped[date | None] = mapped_column(Date, nullable=True)
-=======
     avatar_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
->>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     @property

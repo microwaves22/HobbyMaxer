@@ -51,7 +51,7 @@ abstract final class CalendarData {
       id: 'noah',
       name: 'Noah',
       initials: 'N',
-      color: Color(0xFF5F7F55),
+      color: Color(0xFF7A9A85),
     ),
   ];
 
@@ -127,7 +127,7 @@ abstract final class CalendarData {
       date: DateTime(2026, 10, 30),
       startMinutes: 18 * 60,
       endMinutes: 20 * 60,
-      color: const Color(0xFF5F7F55),
+      color: const Color(0xFF7A9A85),
       textColor: const Color(0xFFFFFFFF),
     ),
     CalendarEvent(
@@ -136,7 +136,7 @@ abstract final class CalendarData {
       date: DateTime(2026, 10, 31),
       startMinutes: 18 * 60,
       endMinutes: 20 * 60,
-      color: const Color(0xFF5F7F55),
+      color: const Color(0xFF7A9A85),
       textColor: const Color(0xFFFFFFFF),
     ),
   ];

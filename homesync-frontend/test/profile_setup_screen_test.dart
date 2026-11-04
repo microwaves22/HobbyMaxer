@@ -10,8 +10,10 @@ import 'package:http/testing.dart';
 import 'package:homesync/core/network/api_client.dart';
 import 'package:homesync/core/network/auth_session.dart';
 import 'package:homesync/core/network/token_store.dart';
+import 'package:homesync/core/state/account_mode.dart';
 import 'package:homesync/views/home/home_screen.dart';
 import 'package:homesync/views/onboarding/family_setup_screen.dart';
+import 'package:homesync/views/onboarding/models/user_profile.dart';
 import 'package:homesync/views/onboarding/profile_setup_screen.dart';
 
 Finder _fieldWithHint(String hint) => find.byWidgetPredicate(
@@ -269,6 +271,71 @@ void main() {
       await tester.pump();
 
       expect(controller.text, '125');
+    });
+  });
+
+  group('Central mode reuse', () {
+    Future<void> pumpWithMode(
+      WidgetTester tester,
+      AccountModeController controller,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AccountModeScope(
+            controller: controller,
+            child: const ProfileSetupScreen(focusAreas: ['a']),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('skips role/mode selectors when a mode was chosen',
+        (tester) async {
+      final controller = AccountModeController();
+      await controller.select(
+        role: FamilyRole.child,
+        mode: FamilyMode.teen,
+      );
+      await pumpWithMode(tester, controller);
+
+      expect(find.text('Account type'), findsNothing);
+      expect(
+        find.text('Mode'),
+        findsNothing,
+      );
+      // The form itself still shows, photo picker included.
+      expect(_fieldWithHint('Email address'), findsOneWidget);
+      expect(
+        find.byKey(const Key('profile-photo-picker')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('created profile uses the persisted mode', (tester) async {
+      final controller = AccountModeController();
+      await controller.select(
+        role: FamilyRole.child,
+        mode: FamilyMode.teen,
+      );
+      await pumpWithMode(tester, controller);
+
+      await tester.enterText(
+          _fieldWithHint('Email address'), 'noah@x.com');
+      await tester.enterText(_fieldWithHint('Password'), 'secret123');
+      await tester.enterText(
+          _fieldWithHint('Confirm Password'), 'secret123');
+      await tester.enterText(_fieldWithHint('Enter name'), 'Noah');
+      await tester.enterText(
+          _fieldWithHint('Birthday (YYYY-MM-DD)'), '2012-09-14');
+      await tester.ensureVisible(find.text('Continue'));
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      final home = tester.widget<HomeScreen>(find.byType(HomeScreen));
+      expect(home.profile.role, FamilyRole.child);
+      expect(home.profile.mode, FamilyMode.teen);
+      expect(find.text('Hello, Noah!'), findsOneWidget);
     });
   });
 }

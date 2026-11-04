@@ -7,7 +7,7 @@ import 'package:homesync/views/home/profile_hub_screen.dart';
 import 'package:homesync/views/settings/account_settings_screen.dart';
 import 'package:homesync/views/tasks/tasks_screen.dart';
 
-const _sage = Color(0xFF5F7F55);
+const _sage = Color(0xFF7A9A85);
 
 /// True when the [label] tab renders in the active color. Labels are
 /// screen-unique except for screen titles, which never use sage.

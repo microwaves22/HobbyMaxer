@@ -8,11 +8,11 @@ import 'models/interest_option.dart';
 // them into the theme files: no other screen uses these values.
 const _ink = Color(0xFF2B3A2B);
 const _mute = Color(0xFF7C877A);
-const _sage = Color(0xFF5F7F55);
+const _sage = Color(0xFF7A9A85);
 const _sageLight = Color(0xFFE4EBDC);
 const _sageMid = Color(0xFFA9BE9C);
 const _line = Color(0xFFE8E4D8);
-const _cream = Color(0xFFFBF7EF);
+const _cream = Color(0xFFF9F8F6);
 const _white = Color(0xFFFFFFFF);
 const _unselectedRowFill = Color.fromRGBO(255, 255, 255, 0.66);
 const _rowShadow = Color.fromRGBO(59, 77, 56, 0.07);

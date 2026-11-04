@@ -29,19 +29,19 @@ class TasksScreen extends StatefulWidget {
     super.key,
     required this.controller,
     required this.profile,
-<<<<<<< HEAD
     this.initialSegment = TasksSegment.chores,
-=======
     this.onNavigate,
->>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
   });
 
   final TasksController controller;
   final UserProfile profile;
 
-<<<<<<< HEAD
   /// Segment selected on open. Dashboard cards preselect their side.
   final TasksSegment initialSegment;
+
+  /// Called with the tapped bottom-nav tab id. When null, tabs switch
+  /// with replacement (no-op for the tasks tab itself).
+  final ValueChanged<String>? onNavigate;
 
   @override
   State<TasksScreen> createState() => _TasksScreenState();
@@ -49,20 +49,15 @@ class TasksScreen extends StatefulWidget {
 
 class _TasksScreenState extends State<TasksScreen> {
   late TasksSegment _segment = widget.initialSegment;
-=======
-  /// Called with the tapped bottom-nav tab id. When null, tabs switch
-  /// with replacement (no-op for the tasks tab itself).
-  final ValueChanged<String>? onNavigate;
 
   void _handleNavigate(BuildContext context, String tabId) {
-    if (onNavigate != null) {
-      onNavigate!(tabId);
+    if (widget.onNavigate != null) {
+      widget.onNavigate!(tabId);
       return;
     }
     if (tabId == 'tasks') return; // Already on Tasks.
     HouseholdRoutes.openTab(context, tabId);
   }
->>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
 
   Future<void> _openSubmission(BuildContext context, ChoreTask task) async {
     final submitted =
@@ -109,7 +104,10 @@ class _TasksScreenState extends State<TasksScreen> {
             .toList();
         return Scaffold(
           appBar: AppBar(title: const HomeTitle(label: 'Tasks')),
-<<<<<<< HEAD
+          bottomNavigationBar: _BottomNav(
+            activeTabId: 'tasks',
+            onNavigate: (tabId) => _handleNavigate(context, tabId),
+          ),
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -146,45 +144,6 @@ class _TasksScreenState extends State<TasksScreen> {
                         itemCount: tasks.length,
                         separatorBuilder: (_, __) =>
                             const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final task = tasks[index];
-                          final submittable =
-                              task.state == TaskState.pending ||
-                                  task.state == TaskState.changesRequested;
-                          final feedback = task.feedback;
-                          return LiquidGlassCard(
-                            onTap: submittable
-                                ? () => _openSubmission(context, task)
-                                : null,
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(task.title,
-                                          style: text.titleLarge),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        profile.isParent
-                                            ? '${task.childName} · ${task.details}'
-                                            : task.details,
-                                        style: text.bodyMedium,
-=======
-          bottomNavigationBar: _BottomNav(
-            activeTabId: 'tasks',
-            onNavigate: (tabId) => _handleNavigate(context, tabId),
-          ),
-          body: tasks.isEmpty
-              ? Center(
-                  child: Text('No tasks yet.', style: text.bodyMedium),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(24),
-                  itemCount: tasks.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final task = tasks[index];
                     final submittable = task.state == TaskState.pending ||
@@ -225,49 +184,32 @@ class _TasksScreenState extends State<TasksScreen> {
                                       const Icon(
                                         Icons.photo_outlined,
                                         size: 16,
->>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
                                       ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          _StateChip(state: task.state),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            '${task.points} pts',
-                                            style: text.labelSmall,
-                                          ),
-                                          if (task.photoPath != null ||
-                                              task.remotePhoto != null) ...[
-                                            const SizedBox(width: 8),
-                                            const Icon(
-                                              Icons.photo_outlined,
-                                              size: 16,
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                      if (feedback != null &&
-                                          feedback.isNotEmpty) ...[
-                                        const SizedBox(height: 8),
-                                        Container(
-                                          width: double.infinity,
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .secondaryContainer,
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            'Feedback: $feedback',
-                                            style: text.bodySmall,
-                                          ),
-                                        ),
-                                      ],
                                     ],
-                                  ),
+                                  ],
                                 ),
+                                if (feedback != null &&
+                                    feedback.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .secondaryContainer,
+                                      borderRadius:
+                                          BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      'Feedback: $feedback',
+                                      style: text.bodySmall,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                                 if (profile.isParent)
                                   IconButton(
                                     tooltip: 'Edit chore',
@@ -300,7 +242,7 @@ class _TasksScreenState extends State<TasksScreen> {
 }
 
 const _navFill = Color.fromRGBO(255, 255, 255, 0.8);
-const _navActive = Color(0xFF5F7F55);
+const _navActive = Color(0xFF7A9A85);
 const _navMuted = Color(0xFF7C877A);
 
 class _NavTab {

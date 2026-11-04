@@ -9,7 +9,7 @@ import '../calendar/models/calendar_event.dart' show FamilyMember;
 /// - Member colors: Sarah's sage reuses the Figma sage used across sibling
 ///   screens; Ava's peach has no precedent and is an estimate.
 /// - Noah's avatar is dark ink in this reference, which MISMATCHES 06
-///   Calendar's Noah (sage #5F7F55). The reference value is kept here; the
+///   Calendar's Noah (sage #7A9A85). The reference value is kept here; the
 ///   mismatch is flagged in the delivery report instead of changing either.
 /// - Roles ("Parent"/"Child") are design copy; 06's [FamilyMember] carries no
 ///   role, so they live in [memberRoles] without touching that class.
@@ -23,7 +23,7 @@ const List<FamilyMember> familyCalendarMembers = <FamilyMember>[
   FamilyMember(id: 'noah', name: 'Noah', initials: 'N', color: _ink),
 ];
 
-const Color _sage = Color(0xFF5F7F55);
+const Color _sage = Color(0xFF7A9A85);
 const Color _ink = Color(0xFF2B3A2B);
 const Color _avaPeach = Color(0xFFE8A06F);
 

@@ -70,7 +70,7 @@ void main() {
 
     // Solid cream background, edge to edge (Scaffold paints it all).
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-    expect(scaffold.backgroundColor, const Color(0xFFFBF7EF));
+    expect(scaffold.backgroundColor, const Color(0xFFF9F8F6));
 
     // Back row: 18px chevron + sage label.
     expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
@@ -78,12 +78,12 @@ void main() {
       Icons.chevron_left_rounded,
     ));
     expect(backIcon.size, 18);
-    expect(backIcon.color, const Color(0xFF5F7F55));
+    expect(backIcon.color, const Color(0xFF7A9A85));
     final backLabel = _styleOf(tester, 'Manage Family');
     expect(backLabel.fontFamily, 'Nunito');
     expect(backLabel.fontSize, 14);
     expect(backLabel.fontWeight, FontWeight.w700);
-    expect(backLabel.color, const Color(0xFF5F7F55));
+    expect(backLabel.color, const Color(0xFF7A9A85));
 
     // Introduction: exact copy, sizes, line heights, colors.
     final title = _styleOf(tester, 'Link your kids');
@@ -215,7 +215,7 @@ void main() {
     final kidsCount = _styleOf(tester, '1 of 2 linked');
     expect(kidsCount.fontSize, 12);
     expect(kidsCount.fontWeight, FontWeight.w700);
-    expect(kidsCount.color, const Color(0xFF5F7F55));
+    expect(kidsCount.color, const Color(0xFF7A9A85));
 
     // Ava: pink avatar, verbatim detail, Linked pill with check icon.
     expect(find.text('Ava'), findsOneWidget);

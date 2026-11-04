@@ -27,7 +27,7 @@ void main() {
       await _pumpSettings(tester);
 
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-      expect(scaffold.backgroundColor, const Color(0xFFFBF7EF));
+      expect(scaffold.backgroundColor, const Color(0xFFF9F8F6));
 
       final title = _styleOf(tester, 'Settings');
       expect(title.fontFamily, 'Nunito');

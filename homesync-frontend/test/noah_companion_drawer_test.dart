@@ -183,7 +183,7 @@ void main() {
         );
         expect(
           _styleOf(tester, kNoahCompanionPills[i].label).color,
-          const Color(0xFF5F7F55),
+          const Color(0xFF7A9A85),
         );
       }
 
@@ -200,7 +200,7 @@ void main() {
         expect(
           (tester.widget<Container>(fill).decoration! as BoxDecoration)
               .color,
-          const Color(0xFF5F7F55),
+          const Color(0xFF7A9A85),
         );
         expect(
           tester.getSize(fill).width,
@@ -225,7 +225,7 @@ void main() {
         ((tester.widget<GestureDetector>(feed).child! as Container)
                     .decoration! as BoxDecoration)
                 .color,
-        const Color(0xFF5F7F55),
+        const Color(0xFF7A9A85),
       );
       expect(
         ((tester.widget<GestureDetector>(interact).child!
@@ -270,7 +270,7 @@ void main() {
       );
       final equipBox = equip.child! as Container;
       final equipDecoration = equipBox.decoration! as BoxDecoration;
-      expect(equipDecoration.color, const Color(0xFF5F7F55));
+      expect(equipDecoration.color, const Color(0xFF7A9A85));
       expect(
         equipDecoration.borderRadius,
         BorderRadius.circular(13),
@@ -303,7 +303,7 @@ void main() {
           stateStyle.color,
           item.locked
               ? const Color(0xFF7C877A)
-              : const Color(0xFF5F7F55),
+              : const Color(0xFF7A9A85),
         );
       }
     });

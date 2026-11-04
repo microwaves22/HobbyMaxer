@@ -4,9 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:homesync/core/state/focus_areas.dart';
 import 'package:homesync/views/calendar/calendar_screen.dart';
 import 'package:homesync/views/home/home_screen.dart';
+import 'package:homesync/views/home/household_routes.dart';
 import 'package:homesync/views/onboarding/models/user_profile.dart';
 import 'package:homesync/views/rewards/kids_reward_store_screen.dart';
 import 'package:homesync/views/rewards/request_custom_reward_screen.dart';
+import 'package:homesync/views/tasks/tasks_controller.dart';
 import 'package:homesync/views/tasks/teen_todo_list_screen.dart';
 
 UserProfile _kids() => UserProfile(
@@ -42,10 +44,21 @@ Future<void> _openRewards(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _openChores(WidgetTester tester) async {
-  final chores = find.text('Chore distribution');
-  await tester.ensureVisible(chores);
-  await tester.tap(chores);
+// The dashboard chores card was removed in favor of the bottom nav;
+// push the teen list directly with the dashboard's old wiring.
+Future<void> _openTeenTodo(WidgetTester tester, UserProfile profile) async {
+  final context = tester.element(find.byType(HomeScreen));
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => TeenTodoListScreen(
+        controller: TasksController.forProfile(profile),
+        profile: profile,
+        onNavigateHome: () => Navigator.of(context).pop(),
+        onNavigateCalendar: () =>
+            HouseholdRoutes.openTab(context, 'calendar'),
+      ),
+    ),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -97,7 +110,7 @@ void main() {
 
     testWidgets('teen todo Home returns to the dashboard', (tester) async {
       await _pumpHome(tester, _teen());
-      await _openChores(tester);
+      await _openTeenTodo(tester, _teen());
       expect(find.byType(TeenTodoListScreen), findsOneWidget);
 
       await tester.ensureVisible(find.byKey(const ValueKey('teen-nav-home')));
@@ -110,7 +123,7 @@ void main() {
 
     testWidgets('teen todo Calendar opens the Calendar view', (tester) async {
       await _pumpHome(tester, _teen());
-      await _openChores(tester);
+      await _openTeenTodo(tester, _teen());
       expect(find.byType(TeenTodoListScreen), findsOneWidget);
 
       await tester
