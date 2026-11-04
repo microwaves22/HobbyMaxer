@@ -34,7 +34,7 @@ void main() {
       expect(find.text('N'), findsOneWidget);
 
       expect(find.text('NOAH\u2019S AVAILABLE BALANCE'), findsOneWidget);
-      expect(find.text('120 points'), findsOneWidget);
+      expect(find.text('0 points'), findsOneWidget);
       expect(find.text('Earned, not bought'), findsOneWidget);
 
       expect(find.text('Digital'), findsOneWidget);
@@ -75,9 +75,10 @@ void main() {
       // Prices render as star text; locked gaps are computed.
       expect(find.text('★ 80 pts'), findsOneWidget);
       expect(find.text('★ 120 pts'), findsOneWidget);
-      expect(find.text('Redeem'), findsNWidgets(2));
-      expect(find.text('Save 30 more'), findsOneWidget);
       expect(find.text('Save 80 more'), findsOneWidget);
+      expect(find.text('Save 120 more'), findsOneWidget);
+      expect(find.text('Save 150 more'), findsOneWidget);
+      expect(find.text('Save 200 more'), findsOneWidget);
 
       expect(
         find.text(
@@ -104,6 +105,7 @@ void main() {
       await _pumpStore(
         tester,
         build: () => TeenRewardStoreScreen(
+          availablePoints: 120,
           onRedeemReward: (id) => redeemed = id,
           onSaveUpForReward: (id) => saved = id,
           onRequestCustomReward: () => custom++,

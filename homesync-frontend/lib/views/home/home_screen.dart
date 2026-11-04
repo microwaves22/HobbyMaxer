@@ -23,6 +23,7 @@ import '../tasks/widgets/parent_todo_section.dart';
 import '../tasks/tasks_screen.dart';
 import '../tasks/teen_todo_list_screen.dart';
 import '../tasks/widgets/review_queue_section.dart';
+import 'household_routes.dart';
 
 /// Dashboard landing after onboarding or login.
 ///
@@ -128,6 +129,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ? TeenTodoListScreen(
                 controller: _tasks,
                 profile: widget.profile,
+                onNavigateHome: () => Navigator.of(context).pop(),
+                onNavigateRewards: () =>
+                    RewardsRoutes.openTeenStore(context),
+                onNavigateCalendar: () =>
+                    HouseholdRoutes.openTab(context, 'calendar'),
               )
             : TasksScreen(
                 controller: _tasks,
@@ -160,6 +166,8 @@ class _HomeScreenState extends State<HomeScreen> {
             onRequestCustomReward: () =>
                 RewardsRoutes.openRequestCustomReward(context),
             onNavigateHome: () => Navigator.of(context).pop(),
+            onNavigateCalendar: () =>
+                HouseholdRoutes.openTab(context, 'calendar'),
           ),
         ),
       );
@@ -232,6 +240,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 20),
                 ParentTodoSection(controller: _tasks),
                 const SizedBox(height: 20),
+                // Parents manage rewards; the child-facing storefront
+                // preview stays out of the parent view entirely.
                 LiquidGlassCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -253,15 +263,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             RewardsRoutes.openManagement(context),
                         icon: const Icon(Icons.storefront_rounded),
                         label: const Text('Manage store perks'),
-                      ),
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: () =>
-                            RewardsRoutes.openStoreShell(context),
-                        icon: const Icon(Icons.preview_rounded),
-                        label: const Text(
-                          'Rewards store shell (placeholder preview)',
-                        ),
                       ),
                     ],
                   ),
