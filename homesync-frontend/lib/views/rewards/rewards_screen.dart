@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/network/api_client.dart';
 import '../../core/widgets/home_title.dart';
 import '../../core/widgets/liquid_glass_card.dart';
+import '../home/household_routes.dart';
 import '../onboarding/models/user_profile.dart';
 import 'models/reward_item.dart';
 import 'rewards_controller.dart';
@@ -16,11 +17,13 @@ class RewardsScreen extends StatefulWidget {
     super.key,
     required this.controller,
     required this.profile,
+    this.onNavigate,
   });
 
   final RewardsController controller;
   final UserProfile profile;
 
+<<<<<<< HEAD
   @override
   State<RewardsScreen> createState() => _RewardsScreenState();
 }
@@ -60,6 +63,22 @@ class _RewardsScreenState extends State<RewardsScreen> {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
       return;
     }
+=======
+  /// Called with the tapped bottom-nav tab id. When null, tabs switch
+  /// with replacement navigation.
+  final ValueChanged<String>? onNavigate;
+
+  void _handleNavigate(BuildContext context, String tabId) {
+    if (onNavigate != null) {
+      onNavigate!(tabId);
+      return;
+    }
+    HouseholdRoutes.openTab(context, tabId);
+  }
+
+  void _redeem(BuildContext context, RewardItem reward) {
+    final result = controller.redeem(profile.name, reward.id);
+>>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
     final message = switch (result) {
       RedeemResult.success => 'Redeemed ${reward.title}!',
       RedeemResult.insufficient =>
@@ -101,6 +120,9 @@ class _RewardsScreenState extends State<RewardsScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        bottomNavigationBar: _BottomNav(
+          onNavigate: (tabId) => _handleNavigate(context, tabId),
+        ),
         appBar: AppBar(
           title: const HomeTitle(label: 'Reward Store'),
           bottom: const TabBar(
@@ -174,6 +196,91 @@ class _RewardsScreenState extends State<RewardsScreen> {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+const _navFill = Color.fromRGBO(255, 255, 255, 0.8);
+const _navMuted = Color(0xFF7C877A);
+
+class _NavTab {
+  const _NavTab({required this.id, required this.label, required this.icon});
+
+  final String id;
+  final String label;
+  final IconData icon;
+}
+
+const _navTabs = <_NavTab>[
+  _NavTab(id: 'home', label: 'Home', icon: Icons.home_rounded),
+  _NavTab(
+      id: 'calendar', label: 'Calendar', icon: Icons.calendar_month_rounded),
+  _NavTab(id: 'tasks', label: 'Tasks', icon: Icons.checklist_rounded),
+  _NavTab(id: 'family', label: 'Family', icon: Icons.group_rounded),
+];
+
+/// Household bottom navigation (Home / Calendar / Tasks / Family),
+/// matching the calendar, family-time, and hub bars. No tab is active:
+/// Rewards is not a household destination.
+class _BottomNav extends StatelessWidget {
+  const _BottomNav({required this.onNavigate});
+
+  final ValueChanged<String> onNavigate;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        color: _navFill,
+        padding:
+            const EdgeInsets.only(top: 12, left: 20, right: 20, bottom: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            for (final tab in _navTabs)
+              _NavTabButton(
+                tab: tab,
+                onTap: () => onNavigate(tab.id),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One bottom-navigation tab: 64px wide, icon over label.
+class _NavTabButton extends StatelessWidget {
+  const _NavTabButton({required this.tab, required this.onTap});
+
+  final _NavTab tab;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 64,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(tab.icon, size: 23, color: _navMuted),
+            const SizedBox(height: 4),
+            Text(
+              tab.label,
+              style: const TextStyle(
+                fontFamily: 'Nunito',
+                fontWeight: FontWeight.w600,
+                fontSize: 11,
+                color: _navMuted,
+              ),
+            ),
+          ],
         ),
       ),
     );

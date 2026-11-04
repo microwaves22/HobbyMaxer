@@ -74,6 +74,7 @@ void main() {
 
       expect(_fieldWithHint('Email address'), findsOneWidget);
       expect(_fieldWithHint('Password'), findsOneWidget);
+      expect(_fieldWithHint('Confirm Password'), findsOneWidget);
       expect(_fieldWithHint('Enter name'), findsOneWidget);
       expect(_fieldWithHint('Birthday (YYYY-MM-DD)'), findsOneWidget);
       expect(find.text('Account type'), findsOneWidget);
@@ -108,6 +109,8 @@ void main() {
       await tester.enterText(
           _fieldWithHint('Email address'), 'mom@x.com');
       await tester.enterText(_fieldWithHint('Password'), 'secret123');
+      await tester.enterText(
+          _fieldWithHint('Confirm Password'), 'secret123');
       await tester.enterText(_fieldWithHint('Enter name'), 'Mom');
       await tester.enterText(
           _fieldWithHint('Birthday (YYYY-MM-DD)'), '1990-01-01');
@@ -129,6 +132,8 @@ void main() {
       await tester.enterText(
           _fieldWithHint('Email address'), 'new@x.com');
       await tester.enterText(_fieldWithHint('Password'), 'secret123');
+      await tester.enterText(
+          _fieldWithHint('Confirm Password'), 'secret123');
       await tester.enterText(_fieldWithHint('Enter name'), 'New Mom');
       await tester.enterText(
           _fieldWithHint('Birthday (YYYY-MM-DD)'), '1990-01-01');
@@ -251,7 +256,7 @@ void main() {
         (w) =>
             w is TextField &&
             w.decoration?.hintText == null &&
-            (w.controller?.text ?? '') == '12',
+            (w.controller?.text ?? '') == '',
       );
       expect(ageField, findsOneWidget);
       expect(

@@ -1,13 +1,13 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/state/focus_areas.dart';
+import '../../core/widgets/member_avatar.dart';
 
 import 'family_member.dart';
 import 'member_detail_screen.dart';
+import 'members_api.dart';
 import 'profile_setup_screen.dart';
 
 /// Figma "03 Set Up Family" (node 3:63): member list plus add-member form.
@@ -20,11 +20,19 @@ import 'profile_setup_screen.dart';
 /// theme (`AppColors` cream/sage/ink predate this design). Do not move
 /// them into the theme files: no other screen uses these values.
 class FamilySetupScreen extends StatefulWidget {
+<<<<<<< HEAD
   const FamilySetupScreen({super.key, this.initialRole});
 
   /// Default role for the add-member form, carried from the
   /// Choose Mode screen. Defaults to the first option when null.
   final String? initialRole;
+=======
+  const FamilySetupScreen({super.key, this.membersApi});
+
+  /// Avatar upload client, forwarded to the member editor. Null in
+  /// offline onboarding: photos stay as in-memory previews.
+  final MembersApi? membersApi;
+>>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
 
   @override
   State<FamilySetupScreen> createState() => _FamilySetupScreenState();
@@ -41,6 +49,7 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
   static const Color _pink = Color(0xFFF4C9C9);
   static const Color _blue = Color(0xFFCFE0EE);
   static const Color _white = Color(0xFFFFFFFF);
+  static const Color _error = Color(0xFFB3261E);
 
   static const List<BoxShadow> _cardShadow = [
     BoxShadow(
@@ -64,7 +73,9 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
 
   /// Clean slate: no pre-populated members for new Parent Mode users.
   final List<FamilySetupMember> _members = [];
+  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+<<<<<<< HEAD
   final _ageController = TextEditingController(text: '12');
   late String _role;
 
@@ -75,7 +86,17 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
   }
   String _gender = FamilySetupOptions.genders.first;
   String? _photoPath;
+=======
+  final _ageController = TextEditingController();
+  String? _role;
+  String? _gender;
+  Uint8List? _photoBytes;
+>>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
   final _picker = ImagePicker();
+
+  /// Bumped after each successful add so the dropdown fields are rebuilt
+  /// fresh (unselected) instead of keeping the previous member's values.
+  int _fieldResetId = 0;
 
   @override
   void dispose() {
@@ -89,7 +110,10 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
     if (index == -1) return;
     final result = await Navigator.of(context).push<MemberEditResult>(
       MaterialPageRoute(
-        builder: (_) => MemberDetailScreen(member: _members[index]),
+        builder: (_) => MemberDetailScreen(
+          member: _members[index],
+          membersApi: widget.membersApi,
+        ),
       ),
     );
     if (!mounted || result == null) return;
@@ -124,36 +148,52 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
   }
 
   /// Appends the entered member to the local list only. No API call.
+  ///
+  /// Name, age, gender, and role are required: invalid input blocks the
+  /// add and shows an error under each missing field.
   void _onAddMember() {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     final name = _nameController.text.trim();
     final age = _ageController.text.trim();
-    final isParent = _role == 'Parent';
+    final gender = _gender!;
+    final role = _role!;
+    final isParent = role == 'Parent';
     const avatarColors = [_peach, _pink, _blue];
     _nameController.clear();
+    _ageController.clear();
     setState(() {
       _members.add(
         FamilySetupMember(
           id: 'custom-${DateTime.now().microsecondsSinceEpoch}',
-          name: name.isEmpty ? 'New member' : name,
+          name: name,
           age: age,
-          gender: _gender,
-          role: _role,
+          gender: gender,
+          role: role,
           avatarColor: avatarColors[_members.length % avatarColors.length],
-          glyph: _glyphFor(gender: _gender, isParent: isParent),
-          photoPath: _photoPath,
+          glyph: _glyphFor(gender: gender, isParent: isParent),
+          photoBytes: _photoBytes,
         ),
       );
+<<<<<<< HEAD
       _photoPath = null;
       _role = widget.initialRole ?? FamilySetupOptions.roles.first;
       _gender = FamilySetupOptions.genders.first;
+=======
+      _photoBytes = null;
+      _gender = null;
+      _role = null;
+      _fieldResetId++;
+>>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
     });
   }
 
   Future<void> _pickPhoto(ImageSource source) async {
     try {
-      final file = await _picker.pickImage(source: source, maxWidth: 1600);
-      if (file != null && mounted) {
-        setState(() => _photoPath = file.path);
+      // Web-safe: bytes via XFile.readAsBytes; null means the user
+      // cancelled, which is silently ignored.
+      final bytes = await pickAvatarBytes(_picker, source);
+      if (bytes != null && mounted) {
+        setState(() => _photoBytes = bytes);
       }
     } catch (_) {
       if (!mounted) return;
@@ -217,6 +257,10 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
       borderRadius: BorderRadius.circular(18),
       borderSide: _cardBorderSide,
     );
+    final errorBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(18),
+      borderSide: const BorderSide(color: _error),
+    );
     return InputDecoration(
       hintText: hintText,
       hintStyle: _inputTextStyle,
@@ -230,6 +274,14 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
       enabledBorder: border,
       focusedBorder: border,
       disabledBorder: border,
+      errorBorder: errorBorder,
+      focusedErrorBorder: errorBorder,
+      errorStyle: const TextStyle(
+        fontFamily: 'Nunito',
+        fontWeight: FontWeight.w600,
+        fontSize: 12,
+        color: _error,
+      ),
     );
   }
 
@@ -264,21 +316,23 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
   }
 
   Widget _dropdownField({
-    required String value,
+    required String? value,
     required List<String> options,
-    required ValueChanged<String> onChanged,
+    required ValueChanged<String?> onChanged,
+    required String hintText,
+    required FormFieldValidator<String> validator,
   }) {
     return _shadowedInput(
       DropdownButtonFormField<String>(
+        key: ValueKey('$hintText-$_fieldResetId'),
         initialValue: value,
         isExpanded: true,
         items: [
           for (final option in options)
             DropdownMenuItem(value: option, child: Text(option)),
         ],
-        onChanged: (selected) {
-          if (selected != null) onChanged(selected);
-        },
+        onChanged: onChanged,
+        validator: validator,
         icon: const Icon(
           Icons.keyboard_arrow_down_rounded,
           size: 20,
@@ -286,7 +340,7 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
         ),
         style: _inputTextStyle,
         dropdownColor: _white,
-        decoration: _inputDecoration(),
+        decoration: _inputDecoration(hintText: hintText),
       ),
     );
   }
@@ -386,61 +440,79 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
   }
 
   Widget _buildAddMemberForm() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Add member',
-          style: TextStyle(
-            fontFamily: 'Nunito',
-            fontWeight: FontWeight.w700,
-            fontSize: 13,
-            color: _mute,
-          ),
-        ),
-        const SizedBox(height: 12),
-        _labeledField(
-          label: 'Name',
-          input: _shadowedInput(
-            TextField(
-              controller: _nameController,
-              textCapitalization: TextCapitalization.words,
-              style: _inputTextStyle,
-              decoration: _inputDecoration(hintText: 'Enter name'),
+    return Form(
+      key: _formKey,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Add member',
+            style: TextStyle(
+              fontFamily: 'Nunito',
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: _mute,
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        _labeledField(
-          label: 'Age',
-          input: _shadowedInput(
-            TextField(
-              controller: _ageController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              style: _inputTextStyle,
-              decoration: _inputDecoration(),
+          const SizedBox(height: 12),
+          _labeledField(
+            label: 'Name',
+            input: _shadowedInput(
+              TextFormField(
+                controller: _nameController,
+                textCapitalization: TextCapitalization.words,
+                style: _inputTextStyle,
+                decoration: _inputDecoration(hintText: 'Enter name'),
+                validator: (value) =>
+                    value == null || value.trim().isEmpty
+                        ? 'Name is required'
+                        : null,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        _labeledField(
-          label: 'Gender',
-          input: _dropdownField(
-            value: _gender,
-            options: FamilySetupOptions.genders,
-            onChanged: (value) => setState(() => _gender = value),
+          const SizedBox(height: 12),
+          _labeledField(
+            label: 'Age',
+            input: _shadowedInput(
+              TextFormField(
+                controller: _ageController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                style: _inputTextStyle,
+                decoration: _inputDecoration(),
+                validator: (value) =>
+                    value == null || value.trim().isEmpty
+                        ? 'Enter an age'
+                        : null,
+              ),
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        _labeledField(
-          label: 'Role',
-          input: _dropdownField(
-            value: _role,
-            options: FamilySetupOptions.roles,
-            onChanged: (value) => setState(() => _role = value),
+          const SizedBox(height: 12),
+          _labeledField(
+            label: 'Gender',
+            input: _dropdownField(
+              value: _gender,
+              options: FamilySetupOptions.genders,
+              onChanged: (value) => setState(() => _gender = value),
+              hintText: 'Select gender',
+              validator: (value) => value == null || value.isEmpty
+                  ? 'Select a gender'
+                  : null,
+            ),
           ),
-        ),
+          const SizedBox(height: 12),
+          _labeledField(
+            label: 'Role',
+            input: _dropdownField(
+              value: _role,
+              options: FamilySetupOptions.roles,
+              onChanged: (value) => setState(() => _role = value),
+              hintText: 'Select role',
+              validator: (value) =>
+                  value == null || value.isEmpty ? 'Choose a role' : null,
+            ),
+          ),
         const SizedBox(height: 12),
         _labeledField(
           label: 'Profile picture',
@@ -459,19 +531,16 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
                   ),
                   child: Row(
                     children: [
-                      _PhotoPreview(
-                        photoPath: _photoPath,
-                        size: 40,
-                        glyph: _glyphFor(
-                          gender: _gender,
-                          isParent: _role == 'Parent',
-                        ),
+                      MemberAvatar(
+                        bytes: _photoBytes,
+                        name: _nameController.text.trim(),
                         background: _peach,
+                        size: 40,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          _photoPath == null
+                          _photoBytes == null
                               ? 'Choose a photo (optional)'
                               : 'Photo selected — tap to change',
                           style: _inputTextStyle,
@@ -489,7 +558,8 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
             ),
           ),
         ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -581,64 +651,6 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
   }
 }
 
-/// Round avatar preview: picked photo when set, glyph tile otherwise.
-class _PhotoPreview extends StatelessWidget {
-  const _PhotoPreview({
-    required this.photoPath,
-    required this.size,
-    required this.glyph,
-    required this.background,
-  });
-
-  final String? photoPath;
-  final double size;
-  final String glyph;
-  final Color background;
-
-  static const Color _ink = Color(0xFF2B3A2B);
-
-  @override
-  Widget build(BuildContext context) {
-    final path = photoPath;
-    if (path != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(size / 2),
-        child: Image.file(
-          File(path),
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            width: size,
-            height: size,
-            color: background,
-            alignment: Alignment.center,
-            child: const Icon(Icons.broken_image_outlined, color: _ink),
-          ),
-        ),
-      );
-    }
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(size / 2),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        glyph,
-        style: const TextStyle(
-          fontFamily: 'Nunito',
-          fontWeight: FontWeight.w400,
-          fontSize: 31,
-          color: _ink,
-        ),
-      ),
-    );
-  }
-}
-
 /// One existing-member row: avatar, name/detail block, trailing.
 class _MemberCard extends StatelessWidget {
   const _MemberCard({required this.member, required this.onTap});
@@ -709,11 +721,12 @@ class _MemberCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                _PhotoPreview(
-                  photoPath: member.photoPath,
-                  size: 40,
-                  glyph: member.glyph,
+                MemberAvatar(
+                  bytes: member.photoBytes,
+                  imageUrl: member.avatarUrl,
+                  name: member.name,
                   background: member.avatarColor,
+                  size: 40,
                 ),
                 const SizedBox(width: 14),
                 Expanded(

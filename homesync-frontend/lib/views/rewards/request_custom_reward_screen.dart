@@ -448,8 +448,10 @@ class _RequestCustomRewardScreenState extends State<RequestCustomRewardScreen> {
                 fontSize: 14,
                 color: RequestCustomRewardScreen._ink,
               ),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 isDense: true,
+                filled: true,
+                fillColor: Color.fromRGBO(255, 255, 255, 0.91),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
               ),

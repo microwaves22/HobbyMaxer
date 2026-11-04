@@ -8,6 +8,7 @@ import '../../core/network/families_api.dart';
 import '../../core/state/focus_areas.dart';
 import '../../core/widgets/home_title.dart';
 import '../../core/widgets/liquid_glass_card.dart';
+import '../../core/widgets/member_avatar.dart';
 import '../../core/widgets/profile_avatar_dropdown.dart';
 import '../ai/quick_add_screen.dart';
 import '../calendar/calendar_screen.dart';
@@ -29,9 +30,13 @@ import '../tasks/widgets/parent_todo_section.dart';
 import '../tasks/tasks_screen.dart';
 import '../tasks/teen_todo_list_screen.dart';
 import '../tasks/widgets/review_queue_section.dart';
+<<<<<<< HEAD
 import 'widgets/load_balance_section.dart';
 import 'household_routes.dart';
 import 'widgets/notification_bell.dart';
+=======
+import 'household_routes.dart';
+>>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
 
 /// Dashboard landing after onboarding or login.
 ///
@@ -96,6 +101,17 @@ class _HomeScreenState extends State<HomeScreen> {
     if (session == null || !session.isAuthenticated) return;
     _backendAttached = true;
     final user = session.user!;
+    final headerAvatar =
+        resolveAvatarUrl(user.avatarUrl, session.client.baseUrl);
+    if (headerAvatar != null) {
+      _active = ProfileOption(
+        name: _active.name,
+        roleLabel: _active.roleLabel,
+        avatarColor: _active.avatarColor,
+        isParent: _active.isParent,
+        avatarUrl: headerAvatar,
+      );
+    }
     _tasks.attachBackend(TasksApi(session.client));
     _rewards.attachBackend(RewardsApi(session.client));
     _tasks.setBalance(user.displayName, user.pointsBalance);
@@ -213,8 +229,16 @@ class _HomeScreenState extends State<HomeScreen> {
             ? TeenTodoListScreen(
                 controller: _tasks,
                 profile: widget.profile,
+<<<<<<< HEAD
                 onNavigateHome: () => HouseholdRoutes.goHome(context),
                 onNavigateCalendar: () => HouseholdRoutes.goCalendar(context),
+=======
+                onNavigateHome: () => Navigator.of(context).pop(),
+                onNavigateRewards: () =>
+                    RewardsRoutes.openTeenStore(context),
+                onNavigateCalendar: () =>
+                    HouseholdRoutes.openTab(context, 'calendar'),
+>>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
               )
             : TasksScreen(
                 controller: _tasks,
@@ -247,6 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (widget.profile.mode == FamilyMode.kids) {
       Navigator.of(context).push(
         MaterialPageRoute(
+<<<<<<< HEAD
           builder: (_) => Builder(
             builder: (storeContext) => KidsRewardStoreScreen(
               availablePoints: _rewards.balanceFor(widget.profile.name),
@@ -265,6 +290,17 @@ class _HomeScreenState extends State<HomeScreen> {
               onNavigateCalendar: () =>
                   HouseholdRoutes.goCalendar(context),
             ),
+=======
+          // Mock-only storefront (node 100:4854): placeholder handlers,
+          // fixed mock balance. Back/Home return to the dashboard.
+          builder: (_) => KidsRewardStoreScreen(
+            onBack: () => Navigator.of(context).pop(),
+            onRequestCustomReward: () =>
+                RewardsRoutes.openRequestCustomReward(context),
+            onNavigateHome: () => Navigator.of(context).pop(),
+            onNavigateCalendar: () =>
+                HouseholdRoutes.openTab(context, 'calendar'),
+>>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
           ),
         ),
       );
@@ -380,8 +416,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 20),
                 ParentTodoSection(controller: _tasks),
                 const SizedBox(height: 20),
+<<<<<<< HEAD
                 LoadBalanceSection(refreshTrigger: _tasks),
                 const SizedBox(height: 20),
+=======
+                // Parents manage rewards; the child-facing storefront
+                // preview stays out of the parent view entirely.
+>>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
                 LiquidGlassCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -409,15 +450,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                         icon: const Icon(Icons.storefront_rounded),
                         label: const Text('Manage store perks'),
-                      ),
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: () =>
-                            RewardsRoutes.openStoreShell(context),
-                        icon: const Icon(Icons.preview_rounded),
-                        label: const Text(
-                          'Rewards store shell (placeholder preview)',
-                        ),
                       ),
                     ],
                   ),

@@ -10,6 +10,11 @@ import 'models/store_section.dart';
 /// Rewards active. Real-world items live in the sibling Real-World view
 /// ([TeenRewardStoreScreen]) and are never shown here.
 ///
+/// Locked state is computed per card: rewards costing more than the
+/// balance render grayed out with a lock glyph, mirroring the
+/// Real-world view. At the 0 starting balance only the 0-point reward
+/// is green and redeemable.
+///
 /// No Figma image assets exist in this repo, so Material icons stand in
 /// for artwork — never emoji. This screen makes no API calls and moves
 /// no points.
@@ -39,6 +44,7 @@ class RewardsStoreScreen extends StatelessWidget {
   static const Color _sageLight = Color(0xFFE4EBDC);
   static const Color _line = Color(0xFFE8E4D8);
   static const Color _white = Color(0xFFFFFFFF);
+  static const Color _lockedFill = Color(0xFFE4E8DF);
 
   static const String _font = 'Nunito';
 
@@ -264,7 +270,7 @@ class RewardsStoreScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: _white,
+        color: affordable ? _white : _lockedFill,
         border: Border.all(color: _line),
         borderRadius: BorderRadius.circular(20),
         boxShadow: _cardShadow,
@@ -276,42 +282,42 @@ class RewardsStoreScreen extends StatelessWidget {
             height: 76,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: reward.previewBackground,
+              color: affordable ? reward.previewBackground : _white,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
-              reward.previewIcon,
+              affordable ? reward.previewIcon : Icons.lock_outline_rounded,
               size: 38,
-              color: _ink,
+              color: affordable ? _ink : _mute,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             reward.name,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: _font,
               fontWeight: FontWeight.w700,
               fontSize: 13,
-              color: _ink,
+              color: affordable ? _ink : _mute,
             ),
           ),
           const SizedBox(height: 4),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.star_rounded,
                 size: 13,
-                color: _sage,
+                color: affordable ? _sage : _mute,
               ),
               const SizedBox(width: 4),
               Text(
                 '${reward.points} pts',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: _font,
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
-                  color: _sage,
+                  color: affordable ? _sage : _mute,
                 ),
               ),
             ],

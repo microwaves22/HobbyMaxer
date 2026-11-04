@@ -1,10 +1,11 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/widgets/member_avatar.dart';
+
 import 'family_member.dart';
+import 'members_api.dart';
 
 /// Member editor for the 03 Set Up Family flow (parent side).
 ///
@@ -17,6 +18,7 @@ class MemberDetailScreen extends StatefulWidget {
     super.key,
     required this.member,
     this.onBack,
+    this.membersApi,
   });
 
   /// The member being edited (a copy is edited; the original is untouched
@@ -25,6 +27,9 @@ class MemberDetailScreen extends StatefulWidget {
 
   /// Back button placeholder. Falls back to [Navigator.maybePop].
   final VoidCallback? onBack;
+
+  /// Avatar upload client. Null keeps photos as in-memory previews.
+  final MembersApi? membersApi;
 
   @override
   State<MemberDetailScreen> createState() => _MemberDetailScreenState();
@@ -46,11 +51,13 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
     color: _ink,
   );
 
+  final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _ageController;
-  late String _gender;
-  late String _role;
-  String? _photoPath;
+  String? _gender;
+  String? _role;
+  Uint8List? _photoBytes;
+  String? _avatarUrl;
   final _picker = ImagePicker();
 
   @override
@@ -58,9 +65,14 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
     super.initState();
     _nameController = TextEditingController(text: widget.member.name);
     _ageController = TextEditingController(text: widget.member.age);
-    _gender = widget.member.gender;
-    _role = widget.member.role;
-    _photoPath = widget.member.photoPath;
+    _gender = FamilySetupOptions.genders.contains(widget.member.gender)
+        ? widget.member.gender
+        : null;
+    _role = FamilySetupOptions.roles.contains(widget.member.role)
+        ? widget.member.role
+        : null;
+    _photoBytes = widget.member.photoBytes;
+    _avatarUrl = widget.member.avatarUrl;
   }
 
   @override
@@ -71,16 +83,17 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
   }
 
   void _onSave() {
-    final name = _nameController.text.trim();
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     Navigator.of(context).pop<MemberEditResult>(
       MemberUpdated(
         widget.member.copyWith(
-          name: name.isEmpty ? widget.member.name : name,
+          name: _nameController.text.trim(),
           age: _ageController.text.trim(),
-          gender: _gender,
-          role: _role,
-          photoPath: _photoPath,
-          clearPhoto: _photoPath == null,
+          gender: _gender!,
+          role: _role!,
+          photoBytes: _photoBytes,
+          avatarUrl: _avatarUrl,
+          clearPhoto: _photoBytes == null && _avatarUrl == null,
         ),
       ),
     );
@@ -115,15 +128,37 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
   }
 
   Future<void> _pickPhoto(ImageSource source) async {
+    Uint8List? bytes;
     try {
-      final file = await _picker.pickImage(source: source, maxWidth: 1600);
-      if (file != null && mounted) {
-        setState(() => _photoPath = file.path);
-      }
+      // Web-safe: bytes via XFile.readAsBytes; null means the user
+      // cancelled, which is silently ignored.
+      bytes = await pickAvatarBytes(_picker, source);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open camera/gallery.')),
+      );
+      return;
+    }
+    if (bytes == null || !mounted) return;
+    setState(() => _photoBytes = bytes);
+    await _uploadAvatar(bytes);
+  }
+
+  /// Persists freshly picked bytes via `POST /members/{id}/avatar` when
+  /// the member is backend-synced. Failures keep the bytes preview and
+  /// tell the user the picture is not saved yet.
+  Future<void> _uploadAvatar(Uint8List bytes) async {
+    final api = widget.membersApi;
+    final serverId = widget.member.serverId;
+    if (api == null || serverId == null) return;
+    try {
+      final url = await api.uploadAvatarUrl(serverId, bytes);
+      if (url != null && mounted) setState(() => _avatarUrl = url);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Photo picked, but upload failed.')),
       );
     }
   }
@@ -160,11 +195,14 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
               ],
             ),
           ),
-          if (_photoPath != null)
+          if (_photoBytes != null || _avatarUrl != null)
             SimpleDialogOption(
               onPressed: () {
                 Navigator.of(dialogContext).pop();
-                setState(() => _photoPath = null);
+                setState(() {
+                  _photoBytes = null;
+                  _avatarUrl = null;
+                });
               },
               child: const Row(
                 children: [
@@ -184,6 +222,10 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
       borderRadius: BorderRadius.all(Radius.circular(18)),
       borderSide: BorderSide(color: Color(0xF2FFFFFF)),
     );
+    const errorBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(18)),
+      borderSide: BorderSide(color: _danger),
+    );
     return InputDecoration(
       hintText: hintText,
       hintStyle: _inputTextStyle,
@@ -197,6 +239,14 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
       enabledBorder: border,
       focusedBorder: border,
       disabledBorder: border,
+      errorBorder: errorBorder,
+      focusedErrorBorder: errorBorder,
+      errorStyle: const TextStyle(
+        fontFamily: 'Nunito',
+        fontWeight: FontWeight.w600,
+        fontSize: 12,
+        color: _danger,
+      ),
     );
   }
 
@@ -221,9 +271,11 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
   }
 
   Widget _dropdownField({
-    required String value,
+    required String? value,
     required List<String> options,
-    required ValueChanged<String> onChanged,
+    required ValueChanged<String?> onChanged,
+    required String hintText,
+    required FormFieldValidator<String> validator,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -244,9 +296,8 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
           for (final option in options)
             DropdownMenuItem(value: option, child: Text(option)),
         ],
-        onChanged: (selected) {
-          if (selected != null) onChanged(selected);
-        },
+        onChanged: onChanged,
+        validator: validator,
         icon: const Icon(
           Icons.keyboard_arrow_down_rounded,
           size: 20,
@@ -254,7 +305,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
         ),
         style: _inputTextStyle,
         dropdownColor: _white,
-        decoration: _inputDecoration(),
+        decoration: _inputDecoration(hintText: hintText),
       ),
     );
   }
@@ -317,55 +368,76 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                     ),
                   ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(child: _buildAvatar()),
-                    const SizedBox(height: 16),
-                    _labeledField(
-                      label: 'Name',
-                      input: TextField(
-                        controller: _nameController,
-                        textCapitalization: TextCapitalization.words,
-                        style: _inputTextStyle,
-                        decoration:
-                            _inputDecoration(hintText: 'Enter name'),
+                child: Form(
+                  key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(child: _buildAvatar()),
+                      const SizedBox(height: 16),
+                      _labeledField(
+                        label: 'Name',
+                        input: TextFormField(
+                          controller: _nameController,
+                          textCapitalization: TextCapitalization.words,
+                          style: _inputTextStyle,
+                          decoration:
+                              _inputDecoration(hintText: 'Enter name'),
+                          validator: (value) =>
+                              value == null || value.trim().isEmpty
+                                  ? 'Name is required'
+                                  : null,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    _labeledField(
-                      label: 'Age',
-                      input: TextField(
-                        controller: _ageController,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        style: _inputTextStyle,
-                        decoration: _inputDecoration(),
+                      const SizedBox(height: 12),
+                      _labeledField(
+                        label: 'Age',
+                        input: TextFormField(
+                          controller: _ageController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          style: _inputTextStyle,
+                          decoration: _inputDecoration(),
+                          validator: (value) =>
+                              value == null || value.trim().isEmpty
+                                  ? 'Enter an age'
+                                  : null,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    _labeledField(
-                      label: 'Gender',
-                      input: _dropdownField(
-                        value: _gender,
-                        options: FamilySetupOptions.genders,
-                        onChanged: (value) =>
-                            setState(() => _gender = value),
+                      const SizedBox(height: 12),
+                      _labeledField(
+                        label: 'Gender',
+                        input: _dropdownField(
+                          value: _gender,
+                          options: FamilySetupOptions.genders,
+                          onChanged: (value) =>
+                              setState(() => _gender = value),
+                          hintText: 'Select gender',
+                          validator: (value) =>
+                              value == null || value.isEmpty
+                                  ? 'Select a gender'
+                                  : null,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    _labeledField(
-                      label: 'Account Role',
-                      input: _dropdownField(
-                        value: _role,
-                        options: FamilySetupOptions.roles,
-                        onChanged: (value) =>
-                            setState(() => _role = value),
+                      const SizedBox(height: 12),
+                      _labeledField(
+                        label: 'Account Role',
+                        input: _dropdownField(
+                          value: _role,
+                          options: FamilySetupOptions.roles,
+                          onChanged: (value) =>
+                              setState(() => _role = value),
+                          hintText: 'Select role',
+                          validator: (value) => value == null || value.isEmpty
+                              ? 'Choose a role'
+                              : null,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -446,7 +518,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
   }
 
   Widget _buildAvatar() {
-    final path = _photoPath;
+    final name = _nameController.text.trim();
     return GestureDetector(
       key: const Key('member-detail-photo'),
       onTap: _choosePhotoSource,
@@ -454,45 +526,13 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (path != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(32),
-              child: Image.file(
-                File(path),
-                width: 64,
-                height: 64,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 64,
-                  height: 64,
-                  color: widget.member.avatarColor,
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.broken_image_outlined,
-                    color: _ink,
-                  ),
-                ),
-              ),
-            )
-          else
-            Container(
-              width: 64,
-              height: 64,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: widget.member.avatarColor,
-                borderRadius: BorderRadius.circular(32),
-              ),
-              child: Text(
-                widget.member.glyph,
-                style: const TextStyle(
-                  fontFamily: 'Nunito',
-                  fontWeight: FontWeight.w400,
-                  fontSize: 31,
-                  color: _ink,
-                ),
-              ),
-            ),
+          MemberAvatar(
+            bytes: _photoBytes,
+            imageUrl: _avatarUrl,
+            name: name.isEmpty ? widget.member.name : name,
+            background: widget.member.avatarColor,
+            size: 64,
+          ),
           const SizedBox(height: 8),
           const Row(
             mainAxisSize: MainAxisSize.min,

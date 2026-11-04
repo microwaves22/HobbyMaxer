@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+
+import 'network_error.dart';
 
 /// Default base URL of the HomeSync FastAPI backend.
 ///
@@ -24,6 +26,8 @@ class ApiException implements Exception {
 /// Thin JSON HTTP client with automatic `Authorization: Bearer` injection.
 ///
 /// Pass an `http.Client` (e.g. `MockClient`) to test without a server.
+/// Web-safe: no `dart:io` import (`SocketException` mapping lives behind
+/// the [isConnectionError] conditional import).
 class ApiClient {
   ApiClient({
     http.Client? inner,
@@ -70,12 +74,18 @@ class ApiClient {
     late final http.Response response;
     try {
       response = await call();
-    } on SocketException {
+    } on http.ClientException {
       throw ApiException('Could not reach the server at $baseUrl.');
     } on http.ClientException {
       throw ApiException('Could not reach the server at $baseUrl.');
     } on TimeoutException {
       throw ApiException('The server took too long to respond.');
+    } on Exception catch (e) {
+      // Native transport failures (e.g. SocketException) on IO platforms.
+      if (isConnectionError(e)) {
+        throw ApiException('Could not reach the server at $baseUrl.');
+      }
+      rethrow;
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       _throwStatus(response);
@@ -145,12 +155,17 @@ class ApiClient {
     );
   }
 
-  /// Multipart POST with one optional file (for photo submissions).
+  /// Multipart POST with one optional file (photo submissions, avatars).
+  ///
+  /// Prefer [fileBytes] (web-safe, from `XFile.readAsBytes`); [filePath]
+  /// remains for native-platform callers holding legacy paths.
   Future<dynamic> postMultipart(
     String path, {
     Map<String, String>? fields,
     String? fileField,
     String? filePath,
+    Uint8List? fileBytes,
+    String? filename,
   }) async {
     final request = http.MultipartRequest('POST', Uri.parse('$baseUrl$path'));
     final token = tokenProvider?.call();
@@ -158,8 +173,18 @@ class ApiClient {
       request.headers['Authorization'] = 'Bearer $token';
     }
     if (fields != null) request.fields.addAll(fields);
-    if (fileField != null && filePath != null) {
-      request.files.add(await http.MultipartFile.fromPath(fileField, filePath));
+    if (fileField != null) {
+      if (fileBytes != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            fileField,
+            fileBytes,
+            filename: filename ?? 'upload.jpg',
+          ),
+        );
+      } else if (filePath != null) {
+        request.files.add(await http.MultipartFile.fromPath(fileField, filePath));
+      }
     }
     return _send(() async {
       final streamed = await _inner.send(request).timeout(_timeout);

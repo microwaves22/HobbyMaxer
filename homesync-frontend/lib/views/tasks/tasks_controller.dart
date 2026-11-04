@@ -111,6 +111,7 @@ class TasksController extends ChangeNotifier {
 
   List<ChoreTask> _tasks = [];
   Map<String, int> _balances = {};
+  Map<String, String> _avatars = {};
   TasksApi? _backend;
   int _todoSeq = 0;
 
@@ -130,6 +131,9 @@ class TasksController extends ChangeNotifier {
       _tasks.where((t) => t.state == TaskState.changesRequested).toList();
 
   int balanceFor(String childName) => _balances[childName] ?? 0;
+
+  /// Display-ready avatar URL for [childName], if the roster provided one.
+  String? avatarFor(String childName) => _avatars[childName];
 
   ChoreTask? byId(String id) {
     for (final task in _tasks) {
@@ -188,11 +192,18 @@ class TasksController extends ChangeNotifier {
     if (snapshot.balances.isNotEmpty) {
       _balances = Map.of(snapshot.balances);
     }
+    if (snapshot.avatars.isNotEmpty) {
+      _avatars = Map.of(snapshot.avatars);
+    }
     notifyListeners();
   }
 
   /// Child submits [taskId] for review, moving it to "Pending Review".
-  Future<void> submitPhoto(String taskId, String? photoPath) async {
+  Future<void> submitPhoto(
+    String taskId,
+    String? photoPath, {
+    Uint8List? photoBytes,
+  }) async {
     final task = byId(taskId);
     if (task == null) return;
     final backend = _backend;
@@ -200,18 +211,24 @@ class TasksController extends ChangeNotifier {
       final submission = await backend.submitTask(
         task.serverId!,
         photoPath: photoPath,
+        photoBytes: photoBytes,
       );
       _replace(
         task.copyWith(
           state: _submissionState(submission['status'] as String?),
           photoPath: photoPath,
+          photoBytes: photoBytes,
           remotePhoto: submission['photo_path'] as String?,
         ),
       );
       return;
     }
     _replace(
-      task.copyWith(state: TaskState.pendingReview, photoPath: photoPath),
+      task.copyWith(
+        state: TaskState.pendingReview,
+        photoPath: photoPath,
+        photoBytes: photoBytes,
+      ),
     );
   }
 

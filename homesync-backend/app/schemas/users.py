@@ -35,6 +35,10 @@ class UserRead(_FromORM):
     role: str
     mode: str | None
     points_balance: int
+<<<<<<< HEAD
     streak_count: int
     has_child_pin: bool = False
+=======
+    avatar_url: str | None = None
+>>>>>>> 48e512845754349ab492b180d4e531d2082a5fd4
     created_at: datetime

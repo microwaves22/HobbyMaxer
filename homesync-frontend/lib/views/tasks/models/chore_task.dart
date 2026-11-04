@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 /// A chore/homework task assigned to a child.
 class ChoreTask {
   ChoreTask({
@@ -10,6 +12,7 @@ class ChoreTask {
     this.state = TaskState.pending,
     this.feedback,
     this.photoPath,
+    this.photoBytes,
     this.serverId,
     this.remotePhoto,
     this.isParentTodo = false,
@@ -29,7 +32,13 @@ class ChoreTask {
   final String? feedback;
 
   /// Local path of the submitted evidence photo, if any.
+  ///
+  /// Legacy (native-only): new picks store [photoBytes] instead, which
+  /// is the only previewable form on Flutter Web.
   final String? photoPath;
+
+  /// Submitted evidence photo bytes (web-safe preview + upload).
+  final Uint8List? photoBytes;
 
   /// Backend task id once synced; null for local-only demo tasks.
   final int? serverId;
@@ -56,6 +65,7 @@ class ChoreTask {
     String? details,
     TaskState? state,
     String? photoPath,
+    Uint8List? photoBytes,
     String? remotePhoto,
     int? points,
     bool? requiresPhoto,
@@ -70,6 +80,7 @@ class ChoreTask {
       requiresPhoto: requiresPhoto ?? this.requiresPhoto,
       state: state ?? this.state,
       photoPath: photoPath ?? this.photoPath,
+      photoBytes: photoBytes ?? this.photoBytes,
       serverId: serverId,
       remotePhoto: remotePhoto ?? this.remotePhoto,
       isParentTodo: isParentTodo,
