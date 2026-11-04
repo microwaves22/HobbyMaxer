@@ -92,14 +92,15 @@ void main() {
       expect(pressed, 'manage-family');
     });
 
-    testWidgets('bottom nav has no active tab', (tester) async {
+    testWidgets('has no bottom navigation bar', (tester) async {
       await _pumpSettings(tester);
 
-      for (final label in ['Home', 'Rewards', 'Calendar']) {
-        final style = _styleOf(tester, label);
-        expect(style.fontWeight, FontWeight.w600);
-        expect(style.color, const Color(0xFF7C877A));
-      }
+      // Settings is the one page outside the tab flow.
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+      expect(scaffold.bottomNavigationBar, isNull);
+      expect(find.text('Home'), findsNothing);
+      expect(find.text('Rewards'), findsNothing);
+      expect(find.text('Calendar'), findsNothing);
     });
 
     testWidgets('matches the Figma measurements', (tester) async {
@@ -225,30 +226,6 @@ void main() {
       expect(
         tester.getTopLeft(knob).dx,
         tester.getTopLeft(track).dx + 3,
-      );
-
-      // Bottom bar: top shadow, 24px bottom padding, no indicator.
-      final bar = find.byWidgetPredicate(
-        (w) =>
-            w is Container &&
-            w.decoration is BoxDecoration &&
-            (w.decoration! as BoxDecoration).boxShadow != null,
-      );
-      expect(bar, findsOneWidget);
-      final barWidget = tester.widget<Container>(bar);
-      expect(
-        barWidget.padding,
-        const EdgeInsets.only(top: 12, left: 20, right: 20, bottom: 24),
-      );
-      expect(
-        (barWidget.decoration! as BoxDecoration).boxShadow,
-        const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.05),
-            offset: Offset(0, -3),
-            blurRadius: 12,
-          ),
-        ],
       );
     });
   });

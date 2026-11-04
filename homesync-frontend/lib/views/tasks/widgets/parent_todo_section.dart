@@ -67,15 +67,22 @@ class ParentTodoSection extends StatelessWidget {
               ReorderableListView(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
+                // Default drag handles overlay the trailing edge of each
+                // tile, on top of the delete button. Disable them and use
+                // the explicit in-flow handle in [_TodoTile] instead.
+                buildDefaultDragHandles: false,
                 onReorderItem: controller.moveParentTodo,
                 children: [
-                  for (final todo in todos)
+                  for (var i = 0; i < todos.length; i++)
                     _TodoTile(
-                      key: ValueKey(todo.id),
-                      todo: todo,
-                      onToggle: () => controller.toggleParentTodo(todo.id),
-                      onEdit: () => _editTodo(context, todo),
-                      onDelete: () => controller.removeParentTodo(todo.id),
+                      key: ValueKey(todos[i].id),
+                      index: i,
+                      todo: todos[i],
+                      onToggle: () =>
+                          controller.toggleParentTodo(todos[i].id),
+                      onEdit: () => _editTodo(context, todos[i]),
+                      onDelete: () =>
+                          controller.removeParentTodo(todos[i].id),
                     ),
                 ],
               ),
@@ -89,12 +96,14 @@ class ParentTodoSection extends StatelessWidget {
 class _TodoTile extends StatelessWidget {
   const _TodoTile({
     super.key,
+    required this.index,
     required this.todo,
     required this.onToggle,
     required this.onEdit,
     required this.onDelete,
   });
 
+  final int index;
   final ChoreTask todo;
   final VoidCallback onToggle;
   final VoidCallback onEdit;
@@ -110,6 +119,18 @@ class _TodoTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Row(
           children: [
+            // In-flow drag handle at the leading edge: part of the Row
+            // layout, so it can never overlap the trailing action buttons.
+            ReorderableDelayedDragStartListener(
+              index: index,
+              child: const Tooltip(
+                message: 'Reorder to-do',
+                child: Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Icon(Icons.drag_handle_rounded),
+                ),
+              ),
+            ),
             Checkbox(value: done, onChanged: (_) => onToggle()),
             Expanded(
               child: Column(

@@ -40,6 +40,7 @@ class ProfileAvatarDropdown extends StatelessWidget {
     required this.active,
     this.profiles = const [],
     this.parentPin = '1234',
+    this.avatar,
     this.onSwitchProfile,
     this.onAccountSettings,
     this.onManageFamily,
@@ -47,6 +48,10 @@ class ProfileAvatarDropdown extends StatelessWidget {
 
   final ProfileOption active;
   final List<ProfileOption> profiles;
+
+  /// Optional custom trigger widget (e.g. a screen's own avatar artwork).
+  /// When null, the default initial-based avatar is used.
+  final Widget? avatar;
 
   /// Demo Parent PIN. Wire to the backend (`POST /auth/switch-profile`)
   /// once API integration lands.
@@ -76,6 +81,7 @@ class ProfileAvatarDropdown extends StatelessWidget {
     return PopupMenuButton<_MenuAction>(
       tooltip: 'Profile',
       offset: const Offset(0, 48),
+      padding: avatar != null ? EdgeInsets.zero : const EdgeInsets.all(8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
@@ -150,7 +156,8 @@ class ProfileAvatarDropdown extends StatelessWidget {
           ),
         ),
       ],
-      child: Padding(
+      child: avatar ??
+          Padding(
         padding: const EdgeInsets.only(right: 12),
         child: _Avatar(option: active, radius: 18),
       ),
