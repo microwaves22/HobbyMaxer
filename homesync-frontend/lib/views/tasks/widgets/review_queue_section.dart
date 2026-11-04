@@ -133,15 +133,11 @@ class ReviewQueueSection extends StatelessWidget {
                 _ReviewCard(
                   task: task,
                   balance: controller.balanceFor(task.childName),
-<<<<<<< HEAD
                   avatarUrl: controller.avatarFor(task.childName),
                   onZoomPhoto: task.photoBytes == null
                       ? null
                       : () => _zoomPhoto(context, task.photoBytes!),
-=======
-                  onZoomPhoto: () => _zoomPhoto(context, task.photoPath!),
                   onEditPoints: () => _editChore(context, task),
->>>>>>> 479e20acd7b9ac101a56b6c9d241712520a7d31c
                   onApprove: () async {
                     final messenger = ScaffoldMessenger.of(context);
                     try {
@@ -223,13 +219,9 @@ class _ReviewCard extends StatelessWidget {
 
   final ChoreTask task;
   final int balance;
-<<<<<<< HEAD
   final String? avatarUrl;
   final VoidCallback? onZoomPhoto;
-=======
-  final VoidCallback onZoomPhoto;
   final VoidCallback onEditPoints;
->>>>>>> 479e20acd7b9ac101a56b6c9d241712520a7d31c
   final VoidCallback onApprove;
   final VoidCallback onRequestChanges;
 
