@@ -27,6 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _passwordError;
   String? _formError;
   bool _busy = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -178,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 16),
                       TextField(
                         controller: _passwordController,
-                        obscureText: true,
+                        obscureText: _obscurePassword,
                         style: const TextStyle(color: Color(0xFF2C3E35)),
                         decoration: InputDecoration(
                           hintText: 'Password',
@@ -193,6 +194,19 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           prefixIcon: const Icon(Icons.lock_outline,
                               color: Color(0xFF2C5E3B)),
+                          suffixIcon: IconButton(
+                            tooltip: _obscurePassword
+                                ? 'Show password'
+                                : 'Hide password',
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: const Color(0xFF2C5E3B),
+                            ),
+                            onPressed: () => setState(() =>
+                                _obscurePassword = !_obscurePassword),
+                          ),
                         ),
                         onChanged: (_) => setState(() => _passwordError = null),
                         onSubmitted: (_) => _login(),
