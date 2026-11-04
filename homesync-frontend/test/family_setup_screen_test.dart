@@ -34,8 +34,39 @@ BoxDecoration _nearestDecoration(WidgetTester tester, String text) {
   return decoration! as BoxDecoration;
 }
 
+Finder _nameField() => find.byWidgetPredicate(
+      (w) => w is TextField && w.decoration?.hintText == 'Enter name',
+    );
+
+/// Adds one member through the form with the given [name] (defaults kept).
+Future<void> _addMember(WidgetTester tester, String name) async {
+  await tester.enterText(_nameField(), name);
+  await tester.pump();
+  await tester.ensureVisible(find.text('Add Member'));
+  await tester.tap(find.text('Add Member'));
+  await tester.pumpAndSettle();
+}
+
+/// Opens the role/account-role dropdown (the second dropdown on both the
+/// setup and edit screens) and picks [option].
+Future<void> _pickDropdownOption(
+  WidgetTester tester,
+  int dropdownIndex,
+  String option,
+) async {
+  await tester.ensureVisible(
+    find.byType(DropdownButtonFormField<String>).at(dropdownIndex),
+  );
+  await tester.tap(
+    find.byType(DropdownButtonFormField<String>).at(dropdownIndex),
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(option).last);
+  await tester.pumpAndSettle();
+}
+
 void main() {
-  testWidgets('Family Setup matches the Figma 03 spec', (tester) async {
+  testWidgets('new users start with a clean slate', (tester) async {
     await _pumpFamilySetup(tester);
 
     expect(find.byType(SingleChildScrollView), findsOneWidget);
@@ -65,69 +96,17 @@ void main() {
       expect(style.color, const Color(0xFF7C877A));
     }
 
-    // Exactly three members with verbatim names and details.
-    for (final name in ['Sarah', 'Ava', 'Noah']) {
-      expect(find.text(name), findsOneWidget);
-      final style = _styleOf(tester, name);
-      expect(style.fontFamily, 'Nunito');
-      expect(style.fontSize, 18);
-      expect(style.fontWeight, FontWeight.w700);
-      expect(style.color, const Color(0xFF2B3A2B));
-    }
-    for (final detail in [
-      'Mom · Parent',
-      'Child · Age 8',
-      'Child · Age 14',
-    ]) {
-      expect(find.text(detail), findsOneWidget);
-      final style = _styleOf(tester, detail);
-      expect(style.fontFamily, 'Nunito');
-      expect(style.fontSize, 13);
-      expect(style.fontWeight, FontWeight.w500);
-      expect(style.color, const Color(0xFF7C877A));
-    }
-
-    // Avatar glyphs at 31px.
-    for (final glyph in ['👩', '👧', '👦']) {
-      expect(find.text(glyph), findsOneWidget);
-      final style = _styleOf(tester, glyph);
-      expect(style.fontSize, 31);
-      expect(style.fontWeight, FontWeight.w400);
-      expect(style.color, const Color(0xFF2B3A2B));
-    }
-
-    // Sarah ends with a chevron and no pill; Ava/Noah have mode pills.
+    // No pre-populated members: empty-state hint instead of cards.
     expect(
-      find.byIcon(Icons.chevron_right_rounded),
+      find.text('No members yet. Add your first member below.'),
       findsOneWidget,
     );
-    expect(find.text('Kids Mode'), findsOneWidget);
-    expect(find.text('Teen Mode'), findsOneWidget);
-    final kidsPill = _styleOf(tester, 'Kids Mode');
-    expect(kidsPill.fontSize, 11);
-    expect(kidsPill.fontWeight, FontWeight.w700);
-    expect(kidsPill.color, const Color(0xFF2B3A2B));
-    expect(
-      _nearestDecoration(tester, 'Kids Mode').color,
-      const Color(0xFFFDF0C8),
-    );
-    expect(
-      _nearestDecoration(tester, 'Teen Mode').color,
-      const Color(0xFFDDD5EE),
-    );
-
-    // Member card shape: white, radius 22, specified shadow.
-    final card = _nearestDecoration(tester, 'Sarah');
-    expect(card.color, const Color(0xFFFFFFFF));
-    expect(
-      card.borderRadius,
-      BorderRadius.circular(22),
-    );
-    expect(card.boxShadow, hasLength(1));
-    expect(card.boxShadow!.single.blurRadius, 16);
+    expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
+    expect(find.text('Kids Mode'), findsNothing);
+    expect(find.text('Teen Mode'), findsNothing);
 
     // Form labels.
-    for (final label in ['Name', 'Age', 'Role']) {
+    for (final label in ['Name', 'Age', 'Gender', 'Role', 'Profile picture']) {
       expect(find.text(label), findsOneWidget);
       final style = _styleOf(tester, label);
       expect(style.fontFamily, 'Nunito');
@@ -160,17 +139,22 @@ void main() {
     expect(ageDecoration.errorText, isNull);
     expect(ageDecoration.helperText, isNull);
 
-    // Role is a real select showing "Child".
-    expect(find.text('Child'), findsOneWidget);
-    final roleField = tester.widget<DropdownButtonFormField<String>>(
-      find.byType(DropdownButtonFormField<String>),
-    );
-    final roleState = tester.state<FormFieldState<String>>(
-      find.byType(DropdownButtonFormField<String>),
-    );
-    expect(roleState.value, 'Child');
-    expect(roleField.decoration.errorText, isNull);
-    expect(roleField.decoration.helperText, isNull);
+    // Gender and Role are real selects with defaults.
+    expect(find.text('Female'), findsOneWidget);
+    expect(find.text('Kids'), findsOneWidget);
+    final dropdowns = tester
+        .widgetList<DropdownButtonFormField<String>>(
+          find.byType(DropdownButtonFormField<String>),
+        )
+        .toList();
+    expect(dropdowns, hasLength(2));
+    for (final dropdown in dropdowns) {
+      expect(dropdown.decoration.errorText, isNull);
+      expect(dropdown.decoration.helperText, isNull);
+    }
+
+    // Optional photo row.
+    expect(find.text('Choose a photo (optional)'), findsOneWidget);
 
     // Buttons: exact labels and styles.
     expect(find.widgetWithText(ElevatedButton, 'Add Member'), findsOneWidget);
@@ -188,74 +172,44 @@ void main() {
     expect(secondary.fontWeight, FontWeight.w800);
   });
 
-  testWidgets('each member opens its own detail', (tester) async {
-    await _pumpFamilySetup(tester);
-
-    const details = {
-      'Sarah': 'Mom · Parent',
-      'Ava': 'Child · Age 8',
-      'Noah': 'Child · Age 14',
-    };
-    for (final entry in details.entries) {
-      await tester.ensureVisible(find.text(entry.key));
-      await tester.tap(find.text(entry.key));
-      await tester.pumpAndSettle();
-
-      final detailScreen = find.byType(MemberDetailScreen);
-      expect(detailScreen, findsOneWidget);
-      expect(
-        find.descendant(of: detailScreen, matching: find.text(entry.key)),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(of: detailScreen, matching: find.text(entry.value)),
-        findsOneWidget,
-      );
-
-      await tester.tap(find.byKey(const Key('member-detail-back')));
-      await tester.pumpAndSettle();
-      expect(find.byType(MemberDetailScreen), findsNothing);
-      expect(find.byType(FamilySetupScreen), findsOneWidget);
-    }
-  });
-
   testWidgets('Add Member appends the entered member locally', (tester) async {
     await _pumpFamilySetup(tester);
 
-    await tester.enterText(
-      find.byWidgetPredicate(
-        (w) => w is TextField && w.decoration?.hintText == 'Enter name',
-      ),
-      'Liam',
-    );
-    await tester.pump();
-    await tester.ensureVisible(find.text('Add Member'));
-    await tester.tap(find.text('Add Member'));
-    await tester.pumpAndSettle();
+    await _addMember(tester, 'Liam');
 
-    // New card appears with the entered name; existing cards stay.
+    // New card appears with the entered name and default Kids role.
     expect(find.text('Liam'), findsOneWidget);
-    expect(find.text('Child · Age 12'), findsOneWidget);
-    for (final name in ['Sarah', 'Ava', 'Noah']) {
-      expect(find.text(name), findsOneWidget);
-    }
-
-    // Member taps open that member's detail; back returns with state kept.
-    await tester.ensureVisible(find.text('Sarah'));
-    await tester.tap(find.text('Sarah'));
-    await tester.pumpAndSettle();
-    expect(find.byType(MemberDetailScreen), findsOneWidget);
+    expect(find.text('Kids · Age 12'), findsOneWidget);
     expect(
-      find.descendant(
-        of: find.byType(MemberDetailScreen),
-        matching: find.text('Sarah'),
-      ),
-      findsOneWidget,
+      find.text('No members yet. Add your first member below.'),
+      findsNothing,
     );
-    await tester.tap(find.byKey(const Key('member-detail-back')));
-    await tester.pumpAndSettle();
-    expect(find.byType(FamilySetupScreen), findsOneWidget);
+
+    // Member card shape: white, radius 22, specified shadow.
+    final card = _nearestDecoration(tester, 'Liam');
+    expect(card.color, const Color(0xFFFFFFFF));
+    expect(
+      card.borderRadius,
+      BorderRadius.circular(22),
+    );
+    expect(card.boxShadow, hasLength(1));
+    expect(card.boxShadow!.single.blurRadius, 16);
+
+    // Kids role shows the Kids Mode pill.
+    expect(find.text('Kids Mode'), findsOneWidget);
+    final kidsPill = _styleOf(tester, 'Kids Mode');
+    expect(kidsPill.fontSize, 11);
+    expect(kidsPill.fontWeight, FontWeight.w700);
+    expect(kidsPill.color, const Color(0xFF2B3A2B));
+    expect(
+      _nearestDecoration(tester, 'Kids Mode').color,
+      const Color(0xFFFDF0C8),
+    );
+
+    // A second member can be added; both cards stay.
+    await _addMember(tester, 'Mia');
     expect(find.text('Liam'), findsOneWidget);
+    expect(find.text('Mia'), findsOneWidget);
 
     // Done / Later goes straight to profile setup (focus picker shelved).
     await tester.ensureVisible(find.text('Done / Later'));
@@ -263,5 +217,187 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(ProfileSetupScreen), findsOneWidget);
     expect(find.byType(FocusAreasScreen), findsNothing);
+  });
+
+  testWidgets('role trailing matches Kids, Teen, and Parent', (tester) async {
+    await _pumpFamilySetup(tester);
+
+    // Teen member shows the Teen Mode pill.
+    await tester.enterText(_nameField(), 'Noah');
+    await tester.pump();
+    await _pickDropdownOption(tester, 1, 'Teen');
+    await tester.ensureVisible(find.text('Add Member'));
+    await tester.tap(find.text('Add Member'));
+    await tester.pumpAndSettle();
+    expect(find.text('Teen · Age 12'), findsOneWidget);
+    expect(find.text('Teen Mode'), findsOneWidget);
+    expect(
+      _nearestDecoration(tester, 'Teen Mode').color,
+      const Color(0xFFDDD5EE),
+    );
+
+    // Parent member shows a chevron and a bare "Parent" detail.
+    await tester.enterText(_nameField(), 'Sarah');
+    await tester.pump();
+    await _pickDropdownOption(tester, 1, 'Parent');
+    await tester.ensureVisible(find.text('Add Member'));
+    await tester.tap(find.text('Add Member'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sarah'), findsOneWidget);
+    expect(find.text('Parent'), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
+  });
+
+  testWidgets('tapping a member opens the editor with every field',
+      (tester) async {
+    await _pumpFamilySetup(tester);
+    await _addMember(tester, 'Liam');
+
+    await tester.ensureVisible(find.text('Liam'));
+    await tester.tap(find.text('Liam'));
+    await tester.pumpAndSettle();
+
+    final detailScreen = find.byType(MemberDetailScreen);
+    expect(detailScreen, findsOneWidget);
+
+    // Every editable field is present and prefilled.
+    final nameField = tester.widget<TextField>(
+      find.descendant(of: detailScreen, matching: _nameField()),
+    );
+    expect(nameField.controller?.text, 'Liam');
+    final ageField = tester.widget<TextField>(
+      find.descendant(
+        of: detailScreen,
+        matching: find.byWidgetPredicate(
+          (w) => w is TextField && w.decoration?.hintText == null,
+        ),
+      ),
+    );
+    expect(ageField.controller?.text, '12');
+    expect(ageField.keyboardType, TextInputType.number);
+    expect(
+      find.descendant(of: detailScreen, matching: find.text('Gender')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: detailScreen, matching: find.text('Account Role')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: detailScreen, matching: find.text('Change photo')),
+      findsOneWidget,
+    );
+
+    // Save and Delete actions.
+    expect(
+      find.descendant(
+        of: detailScreen,
+        matching: find.widgetWithText(ElevatedButton, 'Save Changes'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: detailScreen,
+        matching: find.widgetWithText(OutlinedButton, 'Delete Member'),
+      ),
+      findsOneWidget,
+    );
+
+    // Back returns with state kept and no toast.
+    await tester.tap(find.byKey(const Key('member-detail-back')));
+    await tester.pumpAndSettle();
+    expect(find.byType(MemberDetailScreen), findsNothing);
+    expect(find.byType(FamilySetupScreen), findsOneWidget);
+    expect(find.text('Liam'), findsOneWidget);
+    expect(find.text('Member updated'), findsNothing);
+  });
+
+  testWidgets('editing a member updates the card', (tester) async {
+    await _pumpFamilySetup(tester);
+    await _addMember(tester, 'Liam');
+
+    await tester.ensureVisible(find.text('Liam'));
+    await tester.tap(find.text('Liam'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(_nameField(), 'Liam Jr');
+    await tester.pump();
+    await _pickDropdownOption(tester, 1, 'Parent');
+    await tester.ensureVisible(find.text('Save Changes'));
+    await tester.tap(find.text('Save Changes'));
+    await tester.pumpAndSettle();
+
+    // Editor closed; card shows the new name and Parent detail.
+    expect(find.byType(MemberDetailScreen), findsNothing);
+    expect(find.text('Liam Jr'), findsOneWidget);
+    expect(find.text('Liam'), findsNothing);
+    expect(find.text('Parent'), findsOneWidget);
+    expect(find.text('Member updated'), findsOneWidget);
+  });
+
+  testWidgets('deleting a member removes the card', (tester) async {
+    await _pumpFamilySetup(tester);
+    await _addMember(tester, 'Liam');
+
+    await tester.ensureVisible(find.text('Liam'));
+    await tester.tap(find.text('Liam'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Delete Member'));
+    await tester.tap(find.text('Delete Member'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete member?'), findsOneWidget);
+
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    // Editor closed; empty state is back with a confirmation toast.
+    expect(find.byType(MemberDetailScreen), findsNothing);
+    expect(find.text('Liam'), findsNothing);
+    expect(
+      find.text('No members yet. Add your first member below.'),
+      findsOneWidget,
+    );
+    expect(find.text('Member deleted'), findsOneWidget);
+  });
+
+  testWidgets('delete can be cancelled', (tester) async {
+    await _pumpFamilySetup(tester);
+    await _addMember(tester, 'Liam');
+
+    await tester.ensureVisible(find.text('Liam'));
+    await tester.tap(find.text('Liam'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Delete Member'));
+    await tester.tap(find.text('Delete Member'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    // Still editing; member kept.
+    expect(find.byType(MemberDetailScreen), findsOneWidget);
+    await tester.tap(find.byKey(const Key('member-detail-back')));
+    await tester.pumpAndSettle();
+    expect(find.text('Liam'), findsOneWidget);
+    expect(find.text('Member deleted'), findsNothing);
+  });
+
+  testWidgets('photo picker degrades gracefully without the plugin',
+      (tester) async {
+    await _pumpFamilySetup(tester);
+
+    await tester.ensureVisible(find.byKey(const Key('add-member-photo')));
+    await tester.tap(find.byKey(const Key('add-member-photo')));
+    await tester.pumpAndSettle();
+    expect(find.text('Profile picture'), findsOneWidget);
+
+    await tester.tap(find.text('Choose from gallery'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Could not open camera/gallery.'),
+      findsOneWidget,
+    );
   });
 }

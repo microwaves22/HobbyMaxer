@@ -1,37 +1,263 @@
-import 'package:flutter/material.dart';
+import 'dart:io';
 
-/// Minimal member detail for the 03 Set Up Family flow.
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+
+import 'family_member.dart';
+
+/// Member editor for the 03 Set Up Family flow (parent side).
 ///
-/// Shows the tapped member's avatar glyph, name, and detail line from the
-/// family setup list, plus a back button. No member features yet — this
-/// only resolves the setup screen's member navigation gap.
-class MemberDetailScreen extends StatelessWidget {
+/// Every field of [member] is editable here: name, age, gender, profile
+/// picture, and account role (Kids / Teen / Parent). Saving pops a
+/// [MemberUpdated]; the Delete button confirms, then pops a [MemberDeleted].
+/// The back button pops nothing (no change).
+class MemberDetailScreen extends StatefulWidget {
   const MemberDetailScreen({
     super.key,
-    required this.memberId,
-    required this.name,
-    required this.detail,
-    required this.avatarColor,
-    required this.glyph,
+    required this.member,
     this.onBack,
   });
 
-  /// Id of the member tapped on the family setup screen.
-  final String memberId;
-
-  final String name;
-  final String detail;
-  final Color avatarColor;
-  final String glyph;
+  /// The member being edited (a copy is edited; the original is untouched
+  /// until Save).
+  final FamilySetupMember member;
 
   /// Back button placeholder. Falls back to [Navigator.maybePop].
   final VoidCallback? onBack;
 
+  @override
+  State<MemberDetailScreen> createState() => _MemberDetailScreenState();
+}
+
+class _MemberDetailScreenState extends State<MemberDetailScreen> {
   // Screen-only tokens matching family_setup_screen.dart.
   static const Color _cream = Color(0xFFFBF7EF);
   static const Color _ink = Color(0xFF2B3A2B);
   static const Color _mute = Color(0xFF7C877A);
+  static const Color _sage = Color(0xFF5F7F55);
   static const Color _white = Color(0xFFFFFFFF);
+  static const Color _danger = Color(0xFFB3261E);
+
+  static const TextStyle _inputTextStyle = TextStyle(
+    fontFamily: 'Nunito',
+    fontWeight: FontWeight.w600,
+    fontSize: 16,
+    color: _ink,
+  );
+
+  late final TextEditingController _nameController;
+  late final TextEditingController _ageController;
+  late String _gender;
+  late String _role;
+  String? _photoPath;
+  final _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.member.name);
+    _ageController = TextEditingController(text: widget.member.age);
+    _gender = widget.member.gender;
+    _role = widget.member.role;
+    _photoPath = widget.member.photoPath;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _ageController.dispose();
+    super.dispose();
+  }
+
+  void _onSave() {
+    final name = _nameController.text.trim();
+    Navigator.of(context).pop<MemberEditResult>(
+      MemberUpdated(
+        widget.member.copyWith(
+          name: name.isEmpty ? widget.member.name : name,
+          age: _ageController.text.trim(),
+          gender: _gender,
+          role: _role,
+          photoPath: _photoPath,
+          clearPhoto: _photoPath == null,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _onDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete member?'),
+        content: Text(
+          '${widget.member.name} will be removed from your family.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: _danger),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      Navigator.of(context).pop<MemberEditResult>(
+        MemberDeleted(widget.member.id),
+      );
+    }
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    try {
+      final file = await _picker.pickImage(source: source, maxWidth: 1600);
+      if (file != null && mounted) {
+        setState(() => _photoPath = file.path);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open camera/gallery.')),
+      );
+    }
+  }
+
+  void _choosePhotoSource() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('Profile picture'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _pickPhoto(ImageSource.camera);
+            },
+            child: const Row(
+              children: [
+                Icon(Icons.photo_camera_outlined),
+                SizedBox(width: 12),
+                Text('Take a photo'),
+              ],
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _pickPhoto(ImageSource.gallery);
+            },
+            child: const Row(
+              children: [
+                Icon(Icons.photo_library_outlined),
+                SizedBox(width: 12),
+                Text('Choose from gallery'),
+              ],
+            ),
+          ),
+          if (_photoPath != null)
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                setState(() => _photoPath = null);
+              },
+              child: const Row(
+                children: [
+                  Icon(Icons.delete_outline_rounded),
+                  SizedBox(width: 12),
+                  Text('Remove photo'),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration({String? hintText}) {
+    const border = OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(18)),
+      borderSide: BorderSide(color: Color(0xF2FFFFFF)),
+    );
+    return InputDecoration(
+      hintText: hintText,
+      hintStyle: _inputTextStyle,
+      filled: true,
+      fillColor: _white,
+      contentPadding: const EdgeInsets.symmetric(
+        vertical: 14,
+        horizontal: 16,
+      ),
+      border: border,
+      enabledBorder: border,
+      focusedBorder: border,
+      disabledBorder: border,
+    );
+  }
+
+  Widget _labeledField({required String label, required Widget input}) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'Nunito',
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+            color: _mute,
+          ),
+        ),
+        const SizedBox(height: 8),
+        input,
+      ],
+    );
+  }
+
+  Widget _dropdownField({
+    required String value,
+    required List<String> options,
+    required ValueChanged<String> onChanged,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x173B4D38),
+            offset: Offset(0, 5),
+            blurRadius: 16,
+            spreadRadius: -4,
+          ),
+        ],
+      ),
+      child: DropdownButtonFormField<String>(
+        initialValue: value,
+        isExpanded: true,
+        items: [
+          for (final option in options)
+            DropdownMenuItem(value: option, child: Text(option)),
+        ],
+        onChanged: (selected) {
+          if (selected != null) onChanged(selected);
+        },
+        icon: const Icon(
+          Icons.keyboard_arrow_down_rounded,
+          size: 20,
+          color: _mute,
+        ),
+        style: _inputTextStyle,
+        dropdownColor: _white,
+        decoration: _inputDecoration(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +273,8 @@ class MemberDetailScreen extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: GestureDetector(
                   key: const Key('member-detail-back'),
-                  onTap: onBack ?? () => Navigator.of(context).maybePop(),
+                  onTap: widget.onBack ??
+                      () => Navigator.of(context).maybePop(),
                   behavior: HitTestBehavior.opaque,
                   child: Container(
                     width: 38,
@@ -91,53 +318,203 @@ class MemberDetailScreen extends StatelessWidget {
                   ],
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: avatarColor,
-                        borderRadius: BorderRadius.circular(32),
-                      ),
-                      child: Text(
-                        glyph,
-                        style: const TextStyle(
-                          fontFamily: 'Nunito',
-                          fontWeight: FontWeight.w400,
-                          fontSize: 31,
-                          color: _ink,
-                        ),
+                    Center(child: _buildAvatar()),
+                    const SizedBox(height: 16),
+                    _labeledField(
+                      label: 'Name',
+                      input: TextField(
+                        controller: _nameController,
+                        textCapitalization: TextCapitalization.words,
+                        style: _inputTextStyle,
+                        decoration:
+                            _inputDecoration(hintText: 'Enter name'),
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Text(
-                      name,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 18,
-                        color: _ink,
+                    _labeledField(
+                      label: 'Age',
+                      input: TextField(
+                        controller: _ageController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        style: _inputTextStyle,
+                        decoration: _inputDecoration(),
                       ),
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      detail,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontFamily: 'Nunito',
-                        fontWeight: FontWeight.w500,
-                        fontSize: 13,
-                        color: _mute,
+                    const SizedBox(height: 12),
+                    _labeledField(
+                      label: 'Gender',
+                      input: _dropdownField(
+                        value: _gender,
+                        options: FamilySetupOptions.genders,
+                        onChanged: (value) =>
+                            setState(() => _gender = value),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _labeledField(
+                      label: 'Account Role',
+                      input: _dropdownField(
+                        value: _role,
+                        options: FamilySetupOptions.roles,
+                        onChanged: (value) =>
+                            setState(() => _role = value),
                       ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 54,
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _onSave,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _sage,
+                    foregroundColor: _white,
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                    minimumSize: const Size.fromHeight(54),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 20,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    textStyle: const TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                  child: const Text(
+                    'Save Changes',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      color: _white,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 54,
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: _onDelete,
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: _white,
+                    foregroundColor: _danger,
+                    side: const BorderSide(color: _danger),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 20,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    textStyle: const TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                  child: const Text(
+                    'Delete Member',
+                    style: TextStyle(
+                      fontFamily: 'Nunito',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      color: _danger,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildAvatar() {
+    final path = _photoPath;
+    return GestureDetector(
+      key: const Key('member-detail-photo'),
+      onTap: _choosePhotoSource,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (path != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(32),
+              child: Image.file(
+                File(path),
+                width: 64,
+                height: 64,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 64,
+                  height: 64,
+                  color: widget.member.avatarColor,
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.broken_image_outlined,
+                    color: _ink,
+                  ),
+                ),
+              ),
+            )
+          else
+            Container(
+              width: 64,
+              height: 64,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: widget.member.avatarColor,
+                borderRadius: BorderRadius.circular(32),
+              ),
+              child: Text(
+                widget.member.glyph,
+                style: const TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w400,
+                  fontSize: 31,
+                  color: _ink,
+                ),
+              ),
+            ),
+          const SizedBox(height: 8),
+          const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.add_a_photo_outlined,
+                size: 14,
+                color: _mute,
+              ),
+              SizedBox(width: 6),
+              Text(
+                'Change photo',
+                style: TextStyle(
+                  fontFamily: 'Nunito',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                  color: _mute,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

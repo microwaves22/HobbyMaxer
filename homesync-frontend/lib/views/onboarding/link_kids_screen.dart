@@ -147,8 +147,11 @@ class _LinkKidsScreenBody extends StatelessWidget {
   Future<void> _onShareInviteCode() async {
     if (familyInviteCode.isEmpty) return;
     try {
+      // Native share sheet (Messages, Email, WhatsApp, …) with the
+      // invite text pre-filled; subject populates the email subject.
       await Share.share(
         'Join our family on HomeSync! Use invite code: $familyInviteCode',
+        subject: 'Join our family on HomeSync',
       );
     } catch (_) {
       // Share sheet unavailable; nothing to show.
@@ -297,35 +300,38 @@ class _LinkKidsScreenBody extends StatelessWidget {
                     color: _sageDark,
                   ),
                 ),
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => _onCopyCode(context),
-                  child: Container(
-                    width: 44,
-                    height: 49,
-                    decoration: BoxDecoration(
-                      color: _glassCard,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.content_copy_rounded,
-                          size: 18,
-                          color: _sageDark,
-                        ),
-                        SizedBox(height: 3),
-                        Text(
-                          'Copy',
-                          style: TextStyle(
-                            fontFamily: 'Nunito',
-                            fontWeight: FontWeight.w800,
-                            fontSize: 10,
+                Tooltip(
+                  message: 'Copy invite code',
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _onCopyCode(context),
+                    child: Container(
+                      width: 44,
+                      height: 49,
+                      decoration: BoxDecoration(
+                        color: _glassCard,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.content_copy_rounded,
+                            size: 18,
                             color: _sageDark,
                           ),
-                        ),
-                      ],
+                          SizedBox(height: 3),
+                          Text(
+                            'Copy',
+                            style: TextStyle(
+                              fontFamily: 'Nunito',
+                              fontWeight: FontWeight.w800,
+                              fontSize: 10,
+                              color: _sageDark,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
