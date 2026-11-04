@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/state/focus_areas.dart';
 
+import 'member_detail_screen.dart';
 import 'profile_setup_screen.dart';
 
 
@@ -117,7 +118,18 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
   }
 
   void _onPressMember(String memberId) {
-    // TODO: navigate to the member detail route once it exists.
+    final member = _members.firstWhere((m) => m.id == memberId);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MemberDetailScreen(
+          memberId: member.id,
+          name: member.name,
+          detail: member.detail,
+          avatarColor: member.avatarColor,
+          glyph: member.glyph,
+        ),
+      ),
+    );
   }
 
   /// Appends the entered member to the local list only. No API call.

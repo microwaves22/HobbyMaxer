@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:homesync/views/onboarding/link_kids_screen.dart';
@@ -258,16 +259,49 @@ void main() {
     expect(find.byType(ElevatedButton), findsOneWidget);
   });
 
+  testWidgets('copy writes the exact code and confirms', (tester) async {
+    String? clipboardText;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') {
+        clipboardText = (call.arguments as Map)['text'] as String?;
+      }
+      return null;
+    });
+    addTearDown(() => TestDefaultBinaryMessengerBinding
+        .instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, null));
+
+    await _pumpLinkKids(tester);
+
+    await tester.tap(find.text('Copy'));
+    await tester.pumpAndSettle();
+
+    expect(clipboardText, familyInviteCode);
+    expect(clipboardText, 'H7K 2M9');
+    expect(find.text('Invite code copied'), findsOneWidget);
+  });
+
+  testWidgets('share button is wired to the invite action', (tester) async {
+    await _pumpLinkKids(tester);
+
+    // The native sheet needs a device; here we only prove the wiring.
+    final button = tester.widget<ElevatedButton>(
+      find.widgetWithText(ElevatedButton, 'Share invite code'),
+    );
+    expect(button.onPressed, isNotNull);
+  });
+
   testWidgets('Back, copy, and share taps are safe', (tester) async {
     await _pumpLinkKids(tester);
 
-    // Copy is a no-op placeholder: no crash, label unchanged.
+    // Copy without a clipboard plugin fails silently: no crash.
     await tester.tap(find.text('Copy'));
     await tester.pumpAndSettle();
     expect(find.text('Copy'), findsOneWidget);
     expect(find.text('H7K 2M9'), findsOneWidget);
 
-    // Share is a no-op placeholder: no route is pushed.
+    // Share without the plugin fails silently: no route is pushed.
     await tester.ensureVisible(find.text('Share invite code'));
     await tester.tap(find.text('Share invite code'));
     await tester.pumpAndSettle();

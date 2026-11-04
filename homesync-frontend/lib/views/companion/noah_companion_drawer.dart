@@ -6,6 +6,11 @@ import 'noah_companion_data.dart';
 
 const String _kFont = 'Nunito';
 
+/// Expected Ember dragon art (Figma export). Drop the PNG at exactly this
+/// path — already covered by the `assets/` bundle entry in pubspec.yaml —
+/// and it renders in the habitat with no code change.
+const String _emberAsset = 'assets/ember_dragon.png';
+
 /// Figma "Noah Companion Drawer" (node 62:5907): Ember the baby dragon's
 /// care drawer over the teen home screen.
 ///
@@ -219,10 +224,7 @@ class _HeaderRow extends StatelessWidget {
 }
 
 /// Habitat panel: 167px tall, radius 22, sageLight behind the Ember art.
-///
-/// TODO(asset): no Ember dragon PNG exists in `assets/` yet — the paw
-/// glyph below is a stand-in. Drop the export in and render it here
-/// (fit + alignment from the frame).
+/// Renders [_emberAsset] when present; otherwise the paw placeholder.
 class _HabitatPanel extends StatelessWidget {
   const _HabitatPanel();
 
@@ -236,10 +238,17 @@ class _HabitatPanel extends StatelessWidget {
         color: const Color(0xFFE4EBDC),
         borderRadius: BorderRadius.circular(22),
       ),
-      child: const Icon(
-        Icons.pets_rounded,
-        size: 48,
-        color: Color(0xFF4A6A41),
+      clipBehavior: Clip.antiAlias,
+      child: Image.asset(
+        _emberAsset,
+        width: double.infinity,
+        height: 167,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => const Icon(
+          Icons.pets_rounded,
+          size: 48,
+          color: Color.fromRGBO(95, 127, 85, 0.5),
+        ),
       ),
     );
   }

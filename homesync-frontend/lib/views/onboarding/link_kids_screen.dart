@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 /// Sample invite code shown on [LinkKidsScreen] (UI build only, no backend).
 ///
@@ -127,13 +129,30 @@ class _LinkKidsScreenBody extends StatelessWidget {
     Navigator.of(context).maybePop();
   }
 
-  void _onCopyCode() {
-    // TODO: copy [familyInviteCode] to the clipboard once the project
-    // adopts a clipboard pattern. No feedback state: none is in the design.
+  Future<void> _onCopyCode(BuildContext context) async {
+    if (familyInviteCode.isEmpty) return;
+    try {
+      await Clipboard.setData(
+        const ClipboardData(text: familyInviteCode),
+      );
+    } catch (_) {
+      return;
+    }
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Invite code copied')),
+    );
   }
 
-  void _onShareInviteCode() {
-    // TODO: share [familyInviteCode] once the project has a share pattern.
+  Future<void> _onShareInviteCode() async {
+    if (familyInviteCode.isEmpty) return;
+    try {
+      await Share.share(
+        'Join our family on HomeSync! Use invite code: $familyInviteCode',
+      );
+    } catch (_) {
+      // Share sheet unavailable; nothing to show.
+    }
   }
 
   @override
@@ -145,7 +164,7 @@ class _LinkKidsScreenBody extends StatelessWidget {
         const SizedBox(height: 14),
         _buildIntroduction(),
         const SizedBox(height: 14),
-        _buildInviteCard(),
+        _buildInviteCard(context),
         const SizedBox(height: 14),
         _buildInstructionsCard(),
         const SizedBox(height: 14),
@@ -216,7 +235,7 @@ class _LinkKidsScreenBody extends StatelessWidget {
     );
   }
 
-  Widget _buildInviteCard() {
+  Widget _buildInviteCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -280,7 +299,7 @@ class _LinkKidsScreenBody extends StatelessWidget {
                 ),
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: _onCopyCode,
+                  onTap: () => _onCopyCode(context),
                   child: Container(
                     width: 44,
                     height: 49,

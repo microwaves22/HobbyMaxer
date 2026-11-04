@@ -13,8 +13,9 @@ import 'teen_reward_store_screen.dart';
 /// `HomeScreen._openRewards`) — the project uses no named-route table.
 /// Back/home/nav handlers pop back to the dashboard hub; submit-style
 /// actions (`onSendRequest`, approve/decline, create, unlock/redeem) are
-/// intentionally left null: the screen specs define them as placeholders
-/// with no post-submit route, no backend, and no points movement.
+/// intentionally left null: the specs define them as placeholders
+/// with no backend and no points movement; the request screen pops back
+/// to the store with confirmation on send.
 abstract final class RewardsRoutes {
   /// Request Custom Reward (Noah, teen). Reached from the kids store's
   /// "+ Request Custom Reward" button.

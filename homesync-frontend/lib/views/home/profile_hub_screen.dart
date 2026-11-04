@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import 'household_routes.dart';
+
 // Figma tokens (screen-only): hard-coded here because they differ from the
 // shared theme (`AppColors` cream/sage/ink predate this design). Do not move
 // them into the theme files: no other screen uses these values.
@@ -211,11 +213,11 @@ class ProfileHubScreen extends StatefulWidget {
   /// Called with the selected profile id.
   final ValueChanged<String>? onSwitchProfile;
 
-  /// Called from the Account settings row. Defaults to a no-op placeholder.
+  /// Called from the Account settings row. Defaults to opening Account settings.
   final VoidCallback? onAccountSettings;
 
-  /// Called with the tapped tab id. Defaults to a no-op for Home and a
-  /// placeholder for tabs whose routes do not exist yet.
+  /// Called with the tapped tab id. When null, tabs switch with
+  /// replacement (no-op for the home tab itself).
   final ValueChanged<String>? onNavigate;
 
   @override
@@ -251,7 +253,7 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
     if (widget.onAccountSettings != null) {
       widget.onAccountSettings!();
     } else {
-      // TODO: navigate to Account settings once that route exists.
+      HouseholdRoutes.openAccountSettings(context);
     }
   }
 
@@ -261,7 +263,7 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
       return;
     }
     if (tabId == 'home') return; // Already on Home.
-    // TODO: push the Calendar/Tasks/Family screen once its route exists.
+    HouseholdRoutes.openTab(context, tabId);
   }
 
   @override

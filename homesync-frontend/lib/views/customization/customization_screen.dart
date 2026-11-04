@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/theme/figma_tokens.dart';
 import 'avatar_art.dart';
 import 'customization_data.dart';
+import 'customization_store.dart';
 
 /// Figma "10 Customization" (node 5:248): the "For You" segment content.
 ///
@@ -18,7 +21,7 @@ import 'customization_data.dart';
 ///
 /// Local state only: [CustomizationSegment], avatar id, and background
 /// id. Every handler is an optional placeholder callback — this screen
-/// makes no API calls and persists nothing.
+/// makes no API calls; selections persist locally via [CustomizationStore].
 class CustomizationScreen extends StatefulWidget {
   const CustomizationScreen({
     super.key,
@@ -27,6 +30,7 @@ class CustomizationScreen extends StatefulWidget {
     this.onSelectAvatar,
     this.onSelectBackground,
     this.onSaveChanges,
+    this.store,
   });
 
   /// Back button placeholder. Falls back to [Navigator.maybePop].
@@ -44,6 +48,10 @@ class CustomizationScreen extends StatefulWidget {
   /// Fires with the current [CustomizationSelection] placeholder.
   final ValueChanged<CustomizationSelection>? onSaveChanges;
 
+  /// Local persistence. Defaults to [PrefsCustomizationStore]; inject
+  /// [InMemoryCustomizationStore] in tests to avoid the prefs plugin.
+  final CustomizationStore? store;
+
   @override
   State<CustomizationScreen> createState() => _CustomizationScreenState();
 }
@@ -51,12 +59,49 @@ class CustomizationScreen extends StatefulWidget {
 class _CustomizationScreenState extends State<CustomizationScreen> {
   static const String _font = 'Nunito';
 
+  late final CustomizationStore _store;
+
   CustomizationSegment _segment = CustomizationSegment.forYou;
   String _avatarId =
       avatarOptions.firstWhere((o) => o.selected, orElse: () => avatarOptions.first).id;
   String _backgroundId = backgroundOptions
       .firstWhere((o) => o.selected, orElse: () => backgroundOptions.first)
       .id;
+
+  @override
+  void initState() {
+    super.initState();
+    _store = widget.store ?? PrefsCustomizationStore();
+    unawaited(_restore());
+  }
+
+  /// Applies the saved selection over the design defaults. Missing or
+  /// corrupt data resolves to null and silently keeps the defaults.
+  Future<void> _restore() async {
+    final saved = await _store.load();
+    if (!mounted || saved == null) return;
+    setState(() {
+      _segment = saved.segment;
+      _avatarId = saved.avatarId;
+      _backgroundId = saved.backgroundId;
+    });
+  }
+
+  CustomizationSelection get _currentSelection => CustomizationSelection(
+        segment: _segment,
+        avatarId: _avatarId,
+        backgroundId: _backgroundId,
+      );
+
+  /// Saves on every change without blocking the UI; failures are silent
+  /// (the screen stays fully usable without persistence).
+  Future<void> _persist() async {
+    try {
+      await _store.save(_currentSelection);
+    } catch (_) {
+      // Silent: the live defaults remain for this session.
+    }
+  }
 
   void _handleBack() {
     if (widget.onBack != null) {
@@ -68,16 +113,19 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
 
   void _handleSegmentChange(CustomizationSegment segment) {
     setState(() => _segment = segment);
+    unawaited(_persist());
     widget.onSegmentChange?.call(segment);
   }
 
   void _handleSelectAvatar(String avatarId) {
     setState(() => _avatarId = avatarId);
+    unawaited(_persist());
     widget.onSelectAvatar?.call(avatarId);
   }
 
   void _handleSelectBackground(String backgroundId) {
     setState(() => _backgroundId = backgroundId);
+    unawaited(_persist());
     widget.onSelectBackground?.call(backgroundId);
   }
 
@@ -90,8 +138,8 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
     if (widget.onSaveChanges != null) {
       widget.onSaveChanges!(selection);
     } else {
-      // TODO: persist the selection once a save endpoint exists.
-      debugPrint('Customization save (placeholder): $selection');
+      unawaited(_persist());
+      // Saved locally; a remote endpoint can replace the store later.
     }
   }
 

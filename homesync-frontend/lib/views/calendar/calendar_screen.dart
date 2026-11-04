@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../home/household_routes.dart';
 import 'calendar_data.dart';
 import 'models/calendar_event.dart';
 
@@ -65,8 +66,8 @@ class CalendarScreen extends StatefulWidget {
   /// Called from the header "+" button. No event form exists yet.
   final VoidCallback? onAddEvent;
 
-  /// Called with the tapped bottom-nav tab id. Defaults to a no-op for
-  /// the calendar tab and a placeholder for the other tabs.
+  /// Called with the tapped bottom-nav tab id. When null, tabs switch
+  /// with replacement (no-op for the calendar tab itself).
   final ValueChanged<String>? onNavigate;
 
   @override
@@ -104,7 +105,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       return;
     }
     if (tabId == 'calendar') return; // Already on Calendar.
-    // TODO: push the Home/Tasks/Family screen once wired from here.
+    HouseholdRoutes.openTab(context, tabId);
   }
 
   @override

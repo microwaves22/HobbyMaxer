@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -20,7 +21,7 @@ import 'models/custom_reward_request.dart';
 /// Form state ([CustomRewardFormState]) is local to this screen, pre-filled
 /// with the design's values. Every handler is an optional placeholder
 /// callback — this screen makes no API calls, deducts no points, and
-/// navigates nowhere on send.
+/// pops back to the reward store with confirmation on send.
 class RequestCustomRewardScreen extends StatefulWidget {
   const RequestCustomRewardScreen({
     super.key,
@@ -29,6 +30,7 @@ class RequestCustomRewardScreen extends StatefulWidget {
     this.initialForm = kInitialCustomRewardForm,
     this.onBack,
     this.onSendRequest,
+    this.submitRequest,
     this.onCancel,
     this.onNavigateHome,
     this.onNavigateRewards,
@@ -82,6 +84,11 @@ class RequestCustomRewardScreen extends StatefulWidget {
   /// Called with the current form state. Placeholder only — no network
   /// call, no points deducted, no navigation.
   final ValueChanged<CustomRewardFormState>? onSendRequest;
+
+  /// Submit hook. Completing normally — or null, the mock success path —
+  /// pops back to the reward store with confirmation; throwing keeps the
+  /// form open with the error shown. Never deducts points.
+  final Future<void> Function(CustomRewardFormState form)? submitRequest;
   final VoidCallback? onCancel;
 
   final VoidCallback? onNavigateHome;
@@ -136,6 +143,35 @@ class _RequestCustomRewardScreenState extends State<RequestCustomRewardScreen> {
     }
   }
 
+  /// Double-submit guard: while a send is in flight, taps are ignored
+  /// so the post-submit navigation fires at most once.
+  bool _sending = false;
+
+  /// Runs the submit: success pops back to the reward store with
+  /// confirmation; failure re-arms the form and shows the error.
+  Future<void> _send() async {
+    _sending = true;
+    final form = _currentForm;
+    try {
+      await widget.submitRequest?.call(form);
+    } catch (e) {
+      _sending = false;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not send request. $e')),
+      );
+      return;
+    }
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.of(context).pop();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('Request sent — ${widget.recipient} will review it'),
+      ),
+    );
+  }
+
   CustomRewardFormState get _currentForm => CustomRewardFormState(
         requestedPerk: _perkController.text,
         proposedCost: _proposedCost,
@@ -143,8 +179,8 @@ class _RequestCustomRewardScreenState extends State<RequestCustomRewardScreen> {
       );
 
   void _handleSend() {
-    // TODO: no post-submit route is defined in the project yet — navigate
-    // only once one exists. Sending deducts no points and calls no API.
+    if (_sending) return;
+    unawaited(_send());
     widget.onSendRequest?.call(_currentForm);
   }
 

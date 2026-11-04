@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../home/household_routes.dart';
 import 'family_time_data.dart';
 import 'models/family_time_option.dart';
 
@@ -64,8 +65,8 @@ class FamilyTimeScreen extends StatefulWidget {
   /// Called with the tapped option id. Updates the selected radio.
   final ValueChanged<String>? onOptionSelect;
 
-  /// Called with the tapped bottom-nav tab id. Defaults to a no-op for
-  /// the family tab and a placeholder for the other tabs.
+  /// Called with the tapped bottom-nav tab id. When null, tabs switch
+  /// with replacement (no-op for the family tab itself).
   final ValueChanged<String>? onNavigate;
 
   @override
@@ -92,7 +93,7 @@ class _FamilyTimeScreenState extends State<FamilyTimeScreen> {
       return;
     }
     if (tabId == 'family') return; // Already on Family Time.
-    // TODO: push the Home/Calendar/Tasks screen once wired from here.
+    HouseholdRoutes.openTab(context, tabId);
   }
 
   @override

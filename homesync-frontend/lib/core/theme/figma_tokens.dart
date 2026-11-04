@@ -4,11 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 /// Shared design tokens for HomeSync Figma file `EBU3PSoyzYehUshVKn4APt`,
 /// section 03 (Tasks & Chores).
 ///
-/// Values below are copied exactly from the prompt header — do not
-/// "improve", paraphrase, or round them. Anything the header does not
-/// pin down (radii, spacing, type sizes) is a best-effort default marked
-/// with a TODO pointing at the Figma node that must be re-pulled
-/// (Teen My To-Do List, node 100:4622, HTTP 429 in the last pass).
+/// Values below are copied exactly from the verified Figma re-pull of
+/// Teen My To-Do List (node 100:4622) — do not "improve", paraphrase,
+/// or round them. Re-pull DONE: the four open items from the HTTP 429
+/// pass (header note, tile colors, corner radius, sizes/line-heights)
+/// are resolved against the full node below.
 abstract final class FigmaColors {
   static const Color ink = Color(0xFF2B3A2B);
   static const Color mute = Color(0xFF7C877A);
@@ -59,16 +59,42 @@ abstract final class FigmaColors {
   static const Color frostedReview = Color.fromRGBO(255, 255, 255, 0.72);
   static const Color frostedNavReview = Color.fromRGBO(255, 255, 255, 0.8);
 
-  /// Rotation for task tiles when Figma gives no per-task color.
-  /// TODO(figma 100:4622): replace round-robin with the exact tile
-  /// color + glyph mapping from the re-pulled node.
-  static const List<Color> tileRotation = [
-    pastelBlue,
-    pastelLavender,
-    pastelPeach,
-    pastelPink,
-    pastelYellow,
-  ];
+  // Teen My To-Do List (node 100:4622) per-state colors. Every
+  // tile/row/chip color on that node is FIXED BY STATE — nothing is
+  // assigned by rotation or index.
+
+  /// Frosted tile surface (destination, new-task, created-by-me,
+  /// parent-tasks cards): `rgba(255,255,255,0.79)`, 9px backdrop blur,
+  /// 1px [frostedCardBorder], [FigmaShadows.frostedCard].
+  static const Color frostedCardFill = frostedFill;
+  static const Color frostedCardBorder = white;
+
+  /// Destination row, CURRENT state background.
+  static const Color tileCurrentBg = sageLight;
+
+  /// Destination row, LOCKED state: no fill (transparent on the
+  /// frosted card); all text renders in [mute].
+  static const Color tileLockedText = mute;
+
+  /// Category chip, SELECTED ("Homework").
+  static const Color chipSelectedBg = sage;
+  static const Color chipSelectedText = white;
+
+  /// Category chip, UNSELECTED ("Personal goal", "Task").
+  static const Color chipUnselectedBg = white;
+  static const Color chipUnselectedText = sage;
+
+  /// Completion circle, INCOMPLETE: translucent fill, sageMid ring.
+  static const Color completionIncompleteFill = frostedStrong;
+  static const Color completionIncompleteBorder = sageMid;
+
+  /// Completion circle, COMPLETE: solid sage with a white check.
+  static const Color completionCompleteFill = sage;
+  static const Color completionCompleteBorder = sage;
+  static const Color completionCompleteIcon = white;
+
+  /// Text-input fill: `rgba(255,255,255,0.91)`.
+  static const Color inputFill = frostedStrong;
 }
 
 /// Shadows copied exactly from the prompt header.
@@ -77,6 +103,15 @@ abstract final class FigmaShadows {
   /// Alpha is a range in Figma; 0.08 is the midpoint.
   static const BoxShadow card = BoxShadow(
     color: Color.fromRGBO(59, 77, 56, 0.08),
+    offset: Offset(0, 5),
+    blurRadius: 16,
+    spreadRadius: -4,
+  );
+
+  /// Frosted card on Teen My To-Do List (node 100:4622):
+  /// `0px 5px 16px -4px rgba(59,77,56,0.07)`.
+  static const BoxShadow frostedCard = BoxShadow(
+    color: Color.fromRGBO(59, 77, 56, 0.07),
     offset: Offset(0, 5),
     blurRadius: 16,
     spreadRadius: -4,
@@ -107,13 +142,36 @@ abstract final class FigmaShadows {
   );
 }
 
+/// Corner-radius scale confirmed from Teen My To-Do List (node 100:4622).
+abstract final class FigmaRadii {
+  /// Frosted / standard card.
+  static const double card = 22;
+
+  /// Primary button.
+  static const double primaryButton = 18;
+
+  /// Dropdown trigger.
+  static const double dropdownTrigger = 18;
+
+  /// Destination row.
+  static const double destinationRow = 14;
+
+  /// Text inputs.
+  static const double textInput = 14;
+
+  /// Category chip.
+  static const double chip = 12;
+
+  /// Pills and circles (progress pill, "Current" pill, avatar,
+  /// back button, completion circle): fully round.
+  static const double pill = 999;
+}
+
 /// Standard white card: white background, 1px border
 /// `rgba(255,255,255,0.95)`, standard card shadow.
 abstract final class FigmaCards {
   static BoxDecoration whiteCard({
-    // TODO(figma 100:4622): confirm corner radius from the re-pulled
-    // node. 16 is a best-effort default, not a Figma value.
-    double radius = 16,
+    double radius = FigmaRadii.card,
   }) {
     return BoxDecoration(
       color: FigmaColors.white,
@@ -129,9 +187,8 @@ abstract final class FigmaCards {
 
 /// Nunito type helpers (Medium 500, SemiBold 600, Bold 700, ExtraBold 800).
 ///
-/// Sizes are best-effort defaults: the shared header pins the family and
-/// weights but the per-screen sizes live in node 100:4622, which has not
-/// been retrieved yet.
+/// Sizes and line heights below are the verified node 100:4622 values:
+/// 1.35 line height for all text on that screen.
 abstract final class FigmaType {
   static TextStyle _nunito({
     required double size,
@@ -149,46 +206,51 @@ abstract final class FigmaType {
     );
   }
 
-  // TODO(figma 100:4622): confirm all sizes/line-heights below.
+  /// Screen title: 26 ExtraBold (node 100:4622 "My To-Do List").
   static TextStyle screenTitle({Color color = FigmaColors.ink}) => _nunito(
-        size: 24,
+        size: 26,
         weight: FontWeight.w800,
         color: color,
-        height: 1.25,
+        height: 1.35,
       );
 
+  /// Card headings: 17 ExtraBold ("New personal task", "Created by me").
   static TextStyle cardTitle({Color color = FigmaColors.ink}) => _nunito(
-        size: 16,
-        weight: FontWeight.w700,
+        size: 17,
+        weight: FontWeight.w800,
         color: color,
-        height: 1.3,
+        height: 1.35,
       );
 
+  /// Description line: 13 Medium.
   static TextStyle body({Color color = FigmaColors.mute}) => _nunito(
-        size: 14,
+        size: 13,
         weight: FontWeight.w500,
         color: color,
-        height: 1.45,
+        height: 1.35,
       );
 
+  /// Field labels: 12 ExtraBold.
   static TextStyle label({Color color = FigmaColors.ink}) => _nunito(
-        size: 13,
-        weight: FontWeight.w600,
-        color: color,
-        height: 1.3,
-      );
-
-  static TextStyle points({Color color = FigmaColors.sageDark}) => _nunito(
-        size: 13,
+        size: 12,
         weight: FontWeight.w800,
         color: color,
-        height: 1.3,
+        height: 1.35,
       );
 
-  static TextStyle button({Color color = FigmaColors.white}) => _nunito(
-        size: 16,
-        weight: FontWeight.w700,
+  /// Pills / progress: 11 ExtraBold.
+  static TextStyle points({Color color = FigmaColors.sageDark}) => _nunito(
+        size: 11,
+        weight: FontWeight.w800,
         color: color,
-        height: 1.25,
+        height: 1.35,
+      );
+
+  /// Primary button / dropdown trigger text: 15 ExtraBold.
+  static TextStyle button({Color color = FigmaColors.white}) => _nunito(
+        size: 15,
+        weight: FontWeight.w800,
+        color: color,
+        height: 1.35,
       );
 }

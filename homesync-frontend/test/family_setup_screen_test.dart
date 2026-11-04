@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:homesync/views/onboarding/family_setup_screen.dart';
+import 'package:homesync/views/onboarding/member_detail_screen.dart';
 import 'package:homesync/views/onboarding/focus_areas_screen.dart';
 import 'package:homesync/views/onboarding/profile_setup_screen.dart';
 
@@ -187,6 +188,37 @@ void main() {
     expect(secondary.fontWeight, FontWeight.w800);
   });
 
+  testWidgets('each member opens its own detail', (tester) async {
+    await _pumpFamilySetup(tester);
+
+    const details = {
+      'Sarah': 'Mom · Parent',
+      'Ava': 'Child · Age 8',
+      'Noah': 'Child · Age 14',
+    };
+    for (final entry in details.entries) {
+      await tester.ensureVisible(find.text(entry.key));
+      await tester.tap(find.text(entry.key));
+      await tester.pumpAndSettle();
+
+      final detailScreen = find.byType(MemberDetailScreen);
+      expect(detailScreen, findsOneWidget);
+      expect(
+        find.descendant(of: detailScreen, matching: find.text(entry.key)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: detailScreen, matching: find.text(entry.value)),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('member-detail-back')));
+      await tester.pumpAndSettle();
+      expect(find.byType(MemberDetailScreen), findsNothing);
+      expect(find.byType(FamilySetupScreen), findsOneWidget);
+    }
+  });
+
   testWidgets('Add Member appends the entered member locally', (tester) async {
     await _pumpFamilySetup(tester);
 
@@ -208,10 +240,22 @@ void main() {
       expect(find.text(name), findsOneWidget);
     }
 
-    // Member taps are safe no-ops: still on this screen.
+    // Member taps open that member's detail; back returns with state kept.
+    await tester.ensureVisible(find.text('Sarah'));
     await tester.tap(find.text('Sarah'));
     await tester.pumpAndSettle();
+    expect(find.byType(MemberDetailScreen), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(MemberDetailScreen),
+        matching: find.text('Sarah'),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('member-detail-back')));
+    await tester.pumpAndSettle();
     expect(find.byType(FamilySetupScreen), findsOneWidget);
+    expect(find.text('Liam'), findsOneWidget);
 
     // Done / Later goes straight to profile setup (focus picker shelved).
     await tester.ensureVisible(find.text('Done / Later'));

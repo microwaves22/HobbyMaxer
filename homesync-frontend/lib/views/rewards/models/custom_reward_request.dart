@@ -1,7 +1,7 @@
 /// Request Custom Reward (Figma node 100:4945) form + mock data.
 ///
 /// MOCK DATA — the design's values only. This screen makes no API calls,
-/// deducts no points, and navigates nowhere on send.
+/// deducts no points; submit pops back to the store with confirmation.
 class CustomRewardFormState {
   const CustomRewardFormState({
     required this.requestedPerk,
