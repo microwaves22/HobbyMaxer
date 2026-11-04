@@ -99,10 +99,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static ProfileOption _toOption(UserProfile profile) {
     final age = profile.age();
+    final role = profile.role.label;
+    final mode = profile.mode.label;
+    // Role and mode can share a label (Parent/Parent): show it once.
+    final head = role == mode ? role : '$role · $mode';
     return ProfileOption(
       name: profile.name,
       roleLabel:
-          '${profile.role.label} · ${profile.mode.label} · ${age == null ? 'Age –' : 'Age $age'}',
+          '$head · ${age == null ? 'Age –' : 'Age $age'}',
       isParent: profile.isParent,
     );
   }
