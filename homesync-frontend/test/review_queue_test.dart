@@ -51,6 +51,11 @@ ElevatedButton _batchButton(WidgetTester tester) =>
       find.widgetWithText(ElevatedButton, 'Approve All Simple Tasks'),
     );
 
+/// TextField inside the revision dialogs, found by its label.
+Finder _dialogField(String label) => find.byWidgetPredicate(
+      (w) => w is TextField && w.decoration?.labelText == label,
+    );
+
 void main() {
   group('Parent review queue', () {
     testWidgets('shows pending tasks with review actions', (tester) async {
@@ -83,14 +88,21 @@ void main() {
       expect(find.text('Approved — +10 pts to Maya.'), findsOneWidget);
     });
 
-    testWidgets('request changes removes the task from the queue',
+    testWidgets('request changes sends feedback through the popup',
         (tester) async {
       await _pumpHome(tester, _parent());
 
+      await tester.ensureVisible(find.text('Request Changes').first);
       await tester.tap(find.text('Request Changes').first);
       await tester.pumpAndSettle();
 
+      expect(find.text('Request changes'), findsOneWidget);
+      await tester.enterText(_dialogField('Feedback'), 'Try again.');
+      await tester.tap(find.text('Send feedback'));
+      await tester.pumpAndSettle();
+
       expect(find.text('Review queue (1)'), findsOneWidget);
+      expect(find.text('Needs revision (1)'), findsOneWidget);
     });
 
     testWidgets('child dashboard hides the review queue', (tester) async {

@@ -12,6 +12,7 @@ class RemoteUser {
     required this.role,
     required this.mode,
     required this.pointsBalance,
+    this.avatarUrl,
   });
 
   factory RemoteUser.fromJson(Map<String, dynamic> json) {
@@ -21,6 +22,7 @@ class RemoteUser {
       role: json['role'] as String? ?? 'child',
       mode: json['mode'] as String?,
       pointsBalance: json['points_balance'] as int? ?? 0,
+      avatarUrl: json['avatar_url'] as String?,
     );
   }
 
@@ -29,6 +31,9 @@ class RemoteUser {
   final String role;
   final String? mode;
   final int pointsBalance;
+
+  /// Backend avatar reference (`/avatars/...`), if the member set one.
+  final String? avatarUrl;
 
   bool get isParent => role == 'parent';
 }

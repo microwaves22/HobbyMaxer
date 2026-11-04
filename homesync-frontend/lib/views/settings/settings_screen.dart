@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 ///
 /// All values below are the real design: title-only header, two group
 /// cards (Parent + App) with 10 rows in order, exact tile colors, the
-/// Family-calendars sublabel, the Dark Mode toggle (default OFF,
-/// local-state only), and the bottom nav with NO active tab.
+/// Family-calendars sublabel, and the Dark Mode toggle (default OFF,
+/// local-state only).
 ///
-/// This screen makes no API calls and persists nothing.
+/// This screen intentionally has NO bottom navigation bar: Settings is
+/// the one page outside the tab flow, reached and left via the AppBar
+/// back affordance. This screen makes no API calls and persists nothing.
 class SettingsRowData {
   const SettingsRowData({
     required this.id,
@@ -104,9 +106,6 @@ class SettingsScreen extends StatefulWidget {
     this.initialDarkMode = false,
     this.onRowPress,
     this.onDarkModeChange,
-    this.onNavigateHome,
-    this.onNavigateRewards,
-    this.onNavigateCalendar,
   });
 
   static const Color _cream = Color(0xFFFBF7EF);
@@ -135,10 +134,6 @@ class SettingsScreen extends StatefulWidget {
   /// Called with the new toggle value. Local-state only — no dark
   /// theme is wired in this design.
   final ValueChanged<bool>? onDarkModeChange;
-
-  final VoidCallback? onNavigateHome;
-  final VoidCallback? onNavigateRewards;
-  final VoidCallback? onNavigateCalendar;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -190,7 +185,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -312,82 +306,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               shape: BoxShape.circle,
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomNav() {
-    return Container(
-      padding: const EdgeInsets.only(
-        top: 12,
-        left: 20,
-        right: 20,
-        bottom: 24,
-      ),
-      decoration: const BoxDecoration(
-        color: SettingsScreen._white,
-        boxShadow: [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.05),
-            offset: Offset(0, -3),
-            blurRadius: 12,
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildTab(
-            label: 'Home',
-            icon: Icons.home_rounded,
-            onTap: widget.onNavigateHome,
-          ),
-          _buildTab(
-            label: 'Rewards',
-            icon: Icons.card_giftcard_rounded,
-            onTap: widget.onNavigateRewards,
-          ),
-          _buildTab(
-            label: 'Calendar',
-            icon: Icons.calendar_month_rounded,
-            onTap: widget.onNavigateCalendar,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTab({
-    required String label,
-    required IconData icon,
-    required VoidCallback? onTap,
-  }) {
-    // No active tab on this screen: every tab is mute.
-    return GestureDetector(
-      onTap: onTap,
-      child: SizedBox(
-        width: 64,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 23,
-              color: SettingsScreen._mute,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                fontFamily: SettingsScreen._font,
-                fontWeight: FontWeight.w600,
-                fontSize: 11,
-                color: SettingsScreen._mute,
-              ),
-            ),
-          ],
         ),
       ),
     );

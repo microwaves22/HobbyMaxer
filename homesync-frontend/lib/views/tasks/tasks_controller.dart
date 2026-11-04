@@ -109,6 +109,7 @@ class TasksController extends ChangeNotifier {
 
   List<ChoreTask> _tasks = [];
   Map<String, int> _balances = {};
+  Map<String, String> _avatars = {};
   TasksApi? _backend;
   int _todoSeq = 0;
 
@@ -123,7 +124,14 @@ class TasksController extends ChangeNotifier {
   List<ChoreTask> get pendingReview =>
       _tasks.where((t) => t.state == TaskState.pendingReview).toList();
 
+  /// Tasks the parent sent back for revision (with feedback attached).
+  List<ChoreTask> get needsRevision =>
+      _tasks.where((t) => t.state == TaskState.changesRequested).toList();
+
   int balanceFor(String childName) => _balances[childName] ?? 0;
+
+  /// Display-ready avatar URL for [childName], if the roster provided one.
+  String? avatarFor(String childName) => _avatars[childName];
 
   ChoreTask? byId(String id) {
     for (final task in _tasks) {
@@ -153,6 +161,12 @@ class TasksController extends ChangeNotifier {
         _ => TaskState.pendingReview,
       };
 
+  /// Trims [note] to a storable feedback string, or null when empty.
+  static String? _cleanFeedback(String? note) {
+    final trimmed = note?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
   /// Attaches the backend API. Later calls hit the network for tasks
   /// that carry a [ChoreTask.serverId]; local-only tasks keep working
   /// offline against the in-memory ledger.
@@ -176,11 +190,18 @@ class TasksController extends ChangeNotifier {
     if (snapshot.balances.isNotEmpty) {
       _balances = Map.of(snapshot.balances);
     }
+    if (snapshot.avatars.isNotEmpty) {
+      _avatars = Map.of(snapshot.avatars);
+    }
     notifyListeners();
   }
 
   /// Child submits [taskId] for review, moving it to "Pending Review".
-  Future<void> submitPhoto(String taskId, String? photoPath) async {
+  Future<void> submitPhoto(
+    String taskId,
+    String? photoPath, {
+    Uint8List? photoBytes,
+  }) async {
     final task = byId(taskId);
     if (task == null) return;
     final backend = _backend;
@@ -188,18 +209,24 @@ class TasksController extends ChangeNotifier {
       final submission = await backend.submitTask(
         task.serverId!,
         photoPath: photoPath,
+        photoBytes: photoBytes,
       );
       _replace(
         task.copyWith(
           state: _submissionState(submission['status'] as String?),
           photoPath: photoPath,
+          photoBytes: photoBytes,
           remotePhoto: submission['photo_path'] as String?,
         ),
       );
       return;
     }
     _replace(
-      task.copyWith(state: TaskState.pendingReview, photoPath: photoPath),
+      task.copyWith(
+        state: TaskState.pendingReview,
+        photoPath: photoPath,
+        photoBytes: photoBytes,
+      ),
     );
   }
 
@@ -220,22 +247,60 @@ class TasksController extends ChangeNotifier {
     _replace(task.copyWith(state: TaskState.approved));
   }
 
-  /// Parent sends [taskId] back for changes.
-  Future<void> requestChanges(String taskId) async {
+  /// Parent sends [taskId] back for changes, attaching [note] as the
+  /// child's feedback. The note also syncs through the backend review.
+  Future<void> requestChanges(String taskId, {String? note}) async {
     final task = byId(taskId);
     if (task == null || task.state != TaskState.pendingReview) return;
+    final feedback = _cleanFeedback(note);
     final backend = _backend;
     if (backend != null && task.serverId != null) {
-      final submission =
-          await backend.reviewTask(task.serverId!, 'request_changes');
+      final submission = await backend.reviewTask(
+        task.serverId!,
+        'request_changes',
+        note: feedback,
+      );
       _replace(
         task.copyWith(
           state: _submissionState(submission['status'] as String?),
+          feedback: feedback,
         ),
       );
       return;
     }
-    _replace(task.copyWith(state: TaskState.changesRequested));
+    _replace(
+      task.copyWith(
+        state: TaskState.changesRequested,
+        feedback: feedback,
+      ),
+    );
+  }
+
+  /// Parent edits a child chore's [points], [details], and/or photo
+  /// requirement. Parent to-dos have their own editor and are ignored;
+  /// negative points are rejected. Chore edits are local-first: synced
+  /// tasks keep the edit on-device (the backend has no task-update
+  /// endpoint yet). Returns false when nothing was updated.
+  bool updateChore(
+    String taskId, {
+    int? points,
+    String? details,
+    bool? requiresPhoto,
+  }) {
+    final task = byId(taskId);
+    if (task == null || task.isParentTodo) return false;
+    if (points != null && points < 0) return false;
+    if (points == null && details == null && requiresPhoto == null) {
+      return false;
+    }
+    _replace(
+      task.copyWith(
+        points: points,
+        details: details,
+        requiresPhoto: requiresPhoto,
+      ),
+    );
+    return true;
   }
 
   /// Parent's personal to-dos, kept separate from child-assigned

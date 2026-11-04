@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 /// Teen real-world reward store (Figma node 62:6146) data layer.
 ///
-/// All values below are the real design: Noah's store, balance 120,
+/// All values below are the real design: Noah's store (Figma shows a
+/// 120 balance; the product starts teens at 0 so costly perks lock),
 /// Real-world category selected, the 4 real perks matching Sarah's
 /// managed set. This screen makes no API calls, deducts no points, and
 /// books/purchases nothing.
@@ -54,8 +55,10 @@ const String kTeenStoreTitle = 'Teen Rewards';
 /// Identity subtitle shape: "Noah · 14 · Teen Mode".
 String get kTeenStoreSubtitle => '$kTeenStoreName · 14 · Teen Mode';
 
-/// Real balance (Figma 62:6146): one shared availablePoints = 120.
-const int kTeenStoreAvailablePoints = 120;
+/// Starting balance: teens begin at 0 points, so every perk costing
+/// more than 0 starts Locked (grayed out) until points are earned.
+/// (Figma 62:6146 illustrates the same screen with a 120 balance.)
+const int kTeenStoreAvailablePoints = 0;
 
 /// Real balance-card eyebrow (Figma 62:6146, all caps, curly apostrophe).
 const String kTeenStoreBalanceLabel = 'NOAH\u2019S AVAILABLE BALANCE';
@@ -76,7 +79,7 @@ const String kTeenStoreFooter =
 const List<String> kTeenStoreCategories = ['Digital', 'Real-world'];
 
 /// The 4 real perks (Figma 62:6146), in design order. Locked state is
-/// computed from cost vs the 120 balance (movie + purchase are locked).
+/// computed from cost vs the balance (at the 0 start, all are locked).
 const List<TeenStoreReward> kTeenStoreRewards = [
   TeenStoreReward(
     id: 'extended-curfew',

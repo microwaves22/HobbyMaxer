@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import 'member_avatar.dart';
 
 /// A family profile entry shown in the avatar dropdown.
 class ProfileOption {
@@ -9,11 +12,19 @@ class ProfileOption {
     required this.roleLabel,
     this.avatarColor = AppColors.sage,
     this.isParent = false,
+    this.avatarUrl,
+    this.avatarBytes,
   });
 
   final String name;
   final String roleLabel;
   final Color avatarColor;
+
+  /// Persisted avatar URL (backend `/avatars/...` resolved to full URL).
+  final String? avatarUrl;
+
+  /// Freshly picked avatar bytes (transient preview).
+  final Uint8List? avatarBytes;
 
   /// Whether this profile has parent privileges. Switching *to* a parent
   /// profile from a child/teen profile requires the Parent PIN.
@@ -40,6 +51,7 @@ class ProfileAvatarDropdown extends StatelessWidget {
     required this.active,
     this.profiles = const [],
     this.parentPin = '1234',
+    this.avatar,
     this.onSwitchProfile,
     this.onAccountSettings,
     this.onManageFamily,
@@ -47,6 +59,10 @@ class ProfileAvatarDropdown extends StatelessWidget {
 
   final ProfileOption active;
   final List<ProfileOption> profiles;
+
+  /// Optional custom trigger widget (e.g. a screen's own avatar artwork).
+  /// When null, the default initial-based avatar is used.
+  final Widget? avatar;
 
   /// Demo Parent PIN. Wire to the backend (`POST /auth/switch-profile`)
   /// once API integration lands.
@@ -76,6 +92,7 @@ class ProfileAvatarDropdown extends StatelessWidget {
     return PopupMenuButton<_MenuAction>(
       tooltip: 'Profile',
       offset: const Offset(0, 48),
+      padding: avatar != null ? EdgeInsets.zero : const EdgeInsets.all(8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
@@ -150,7 +167,8 @@ class ProfileAvatarDropdown extends StatelessWidget {
           ),
         ),
       ],
-      child: Padding(
+      child: avatar ??
+          Padding(
         padding: const EdgeInsets.only(right: 12),
         child: _Avatar(option: active, radius: 18),
       ),
@@ -234,17 +252,12 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: option.avatarColor,
-      child: Text(
-        option.initials,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: radius * 0.8,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+    return MemberAvatar(
+      bytes: option.avatarBytes,
+      imageUrl: option.avatarUrl,
+      name: option.name,
+      background: option.avatarColor,
+      size: radius * 2,
     );
   }
 }

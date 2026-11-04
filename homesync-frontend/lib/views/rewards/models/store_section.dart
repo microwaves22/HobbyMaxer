@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 /// 09 Rewards Store (Figma node 5:139) data layer.
 ///
 /// Teen Rewards, Digital category view. All values below are the real
-/// design: 6 rewards in order, balance 120, categories Digital (selected)
-/// and Real-world. This screen makes no API calls and moves no points.
+/// design: 6 rewards in order, categories Digital (selected) and
+/// Real-world. Figma shows a 120 balance; the product starts at 0.
+/// This screen makes no API calls and moves no points.
 class StoreReward {
   const StoreReward({
     required this.id,
@@ -70,8 +71,10 @@ class StoreSection {
   final List<StoreReward> rewards;
 }
 
-/// Real balance for this view (Figma 5:139).
-const int kStoreAvailablePoints = 120;
+/// Starting balance for this view: 0, so every reward costing more
+/// than 0 starts Locked (grayed out). The 0-point reward starts green.
+/// (Figma 5:139 illustrates the same view with a 120 balance.)
+const int kStoreAvailablePoints = 0;
 
 /// Real screen title (Figma 5:139).
 const String kStoreTitle = 'Teen Rewards';

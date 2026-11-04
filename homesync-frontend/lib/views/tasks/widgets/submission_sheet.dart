@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -43,18 +43,27 @@ class SubmissionSheet extends StatefulWidget {
 class _SubmissionSheetState extends State<SubmissionSheet> {
   final _picker = ImagePicker();
   String? _photoPath;
+  Uint8List? _photoBytes;
 
   @override
   void initState() {
     super.initState();
     _photoPath = widget.task.photoPath;
+    _photoBytes = widget.task.photoBytes;
   }
 
   Future<void> _pick(ImageSource source) async {
     try {
       final file = await _picker.pickImage(source: source, maxWidth: 1600);
-      if (file != null && mounted) {
-        setState(() => _photoPath = file.path);
+      // Cancelled picks return null and are silently ignored.
+      if (file == null) return;
+      // Web-safe: keep bytes, never a dart:io File.
+      final bytes = await file.readAsBytes();
+      if (mounted) {
+        setState(() {
+          _photoBytes = bytes;
+          _photoPath = null;
+        });
       }
     } catch (_) {
       if (!mounted) return;
@@ -103,7 +112,11 @@ class _SubmissionSheetState extends State<SubmissionSheet> {
 
   Future<void> _submit() async {
     try {
-      await widget.controller.submitPhoto(widget.task.id, _photoPath);
+      await widget.controller.submitPhoto(
+        widget.task.id,
+        _photoPath,
+        photoBytes: _photoBytes,
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -119,7 +132,8 @@ class _SubmissionSheetState extends State<SubmissionSheet> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final task = widget.task;
-    final canSubmit = !task.requiresPhoto || _photoPath != null;
+    final canSubmit =
+        !task.requiresPhoto || _photoBytes != null || _photoPath != null;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -146,6 +160,21 @@ class _SubmissionSheetState extends State<SubmissionSheet> {
             Text(task.title, style: text.headlineMedium),
             const SizedBox(height: 4),
             Text(task.details, style: text.bodyMedium),
+            if (task.feedback != null && task.feedback!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Parent feedback: ${task.feedback!}',
+                  style: text.bodyMedium,
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             Text(
               '${task.points} points'
@@ -153,7 +182,7 @@ class _SubmissionSheetState extends State<SubmissionSheet> {
               style: text.labelSmall,
             ),
             const SizedBox(height: 16),
-            if (_photoPath == null)
+            if (_photoBytes == null && _photoPath == null)
               OutlinedButton.icon(
                 onPressed: _chooseSource,
                 icon: const Icon(Icons.add_a_photo_outlined),
@@ -164,18 +193,26 @@ class _SubmissionSheetState extends State<SubmissionSheet> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.file(
-                      File(_photoPath!),
-                      width: 96,
-                      height: 96,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        width: 96,
-                        height: 96,
-                        color: Theme.of(context).disabledColor,
-                        child: const Icon(Icons.broken_image_outlined),
-                      ),
-                    ),
+                    child: _photoBytes != null
+                        ? Image.memory(
+                            _photoBytes!,
+                            width: 96,
+                            height: 96,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: 96,
+                              height: 96,
+                              color: Theme.of(context).disabledColor,
+                              child: const Icon(
+                                  Icons.broken_image_outlined),
+                            ),
+                          )
+                        : Container(
+                            width: 96,
+                            height: 96,
+                            color: Theme.of(context).disabledColor,
+                            child: const Icon(Icons.photo_outlined),
+                          ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -189,7 +226,10 @@ class _SubmissionSheetState extends State<SubmissionSheet> {
                         TextButton(
                           onPressed: task.requiresPhoto
                               ? null
-                              : () => setState(() => _photoPath = null),
+                              : () => setState(() {
+                                    _photoPath = null;
+                                    _photoBytes = null;
+                                  }),
                           child: const Text('Remove'),
                         ),
                       ],
@@ -200,7 +240,11 @@ class _SubmissionSheetState extends State<SubmissionSheet> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: canSubmit ? _submit : null,
-              child: const Text('Submit for review'),
+              child: Text(
+                task.state == TaskState.changesRequested
+                    ? 'Resubmit for review'
+                    : 'Submit for review',
+              ),
             ),
           ],
         ),

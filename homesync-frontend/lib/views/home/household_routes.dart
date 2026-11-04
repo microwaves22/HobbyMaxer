@@ -24,6 +24,13 @@ abstract final class HouseholdRoutes {
     mode: FamilyMode.parent,
   );
 
+  /// Demo profile backing Account Settings arrivals from the hub.
+  static final UserProfile _settingsProfile = UserProfile(
+    name: 'Sarah',
+    role: FamilyRole.parent,
+    mode: FamilyMode.parent,
+  );
+
   static void openTab(BuildContext context, String tabId) {
     final Widget screen;
     switch (tabId) {
@@ -49,7 +56,9 @@ abstract final class HouseholdRoutes {
 
   static void openAccountSettings(BuildContext context) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const AccountSettingsScreen()),
+      MaterialPageRoute(
+        builder: (_) => AccountSettingsScreen(profile: _settingsProfile),
+      ),
     );
   }
 }

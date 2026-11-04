@@ -1,13 +1,13 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/state/focus_areas.dart';
+import '../../core/widgets/member_avatar.dart';
 
 import 'family_member.dart';
 import 'member_detail_screen.dart';
+import 'members_api.dart';
 import 'profile_setup_screen.dart';
 
 /// Figma "03 Set Up Family" (node 3:63): member list plus add-member form.
@@ -20,7 +20,11 @@ import 'profile_setup_screen.dart';
 /// theme (`AppColors` cream/sage/ink predate this design). Do not move
 /// them into the theme files: no other screen uses these values.
 class FamilySetupScreen extends StatefulWidget {
-  const FamilySetupScreen({super.key});
+  const FamilySetupScreen({super.key, this.membersApi});
+
+  /// Avatar upload client, forwarded to the member editor. Null in
+  /// offline onboarding: photos stay as in-memory previews.
+  final MembersApi? membersApi;
 
   @override
   State<FamilySetupScreen> createState() => _FamilySetupScreenState();
@@ -64,7 +68,7 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
   final _ageController = TextEditingController(text: '12');
   String _role = FamilySetupOptions.roles.first;
   String _gender = FamilySetupOptions.genders.first;
-  String? _photoPath;
+  Uint8List? _photoBytes;
   final _picker = ImagePicker();
 
   @override
@@ -79,7 +83,10 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
     if (index == -1) return;
     final result = await Navigator.of(context).push<MemberEditResult>(
       MaterialPageRoute(
-        builder: (_) => MemberDetailScreen(member: _members[index]),
+        builder: (_) => MemberDetailScreen(
+          member: _members[index],
+          membersApi: widget.membersApi,
+        ),
       ),
     );
     if (!mounted || result == null) return;
@@ -130,18 +137,20 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
           role: _role,
           avatarColor: avatarColors[_members.length % avatarColors.length],
           glyph: _glyphFor(gender: _gender, isParent: isParent),
-          photoPath: _photoPath,
+          photoBytes: _photoBytes,
         ),
       );
-      _photoPath = null;
+      _photoBytes = null;
     });
   }
 
   Future<void> _pickPhoto(ImageSource source) async {
     try {
-      final file = await _picker.pickImage(source: source, maxWidth: 1600);
-      if (file != null && mounted) {
-        setState(() => _photoPath = file.path);
+      // Web-safe: bytes via XFile.readAsBytes; null means the user
+      // cancelled, which is silently ignored.
+      final bytes = await pickAvatarBytes(_picker, source);
+      if (bytes != null && mounted) {
+        setState(() => _photoBytes = bytes);
       }
     } catch (_) {
       if (!mounted) return;
@@ -444,19 +453,16 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
                   ),
                   child: Row(
                     children: [
-                      _PhotoPreview(
-                        photoPath: _photoPath,
-                        size: 40,
-                        glyph: _glyphFor(
-                          gender: _gender,
-                          isParent: _role == 'Parent',
-                        ),
+                      MemberAvatar(
+                        bytes: _photoBytes,
+                        name: _nameController.text.trim(),
                         background: _peach,
+                        size: 40,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          _photoPath == null
+                          _photoBytes == null
                               ? 'Choose a photo (optional)'
                               : 'Photo selected — tap to change',
                           style: _inputTextStyle,
@@ -566,64 +572,6 @@ class _FamilySetupScreenState extends State<FamilySetupScreen> {
   }
 }
 
-/// Round avatar preview: picked photo when set, glyph tile otherwise.
-class _PhotoPreview extends StatelessWidget {
-  const _PhotoPreview({
-    required this.photoPath,
-    required this.size,
-    required this.glyph,
-    required this.background,
-  });
-
-  final String? photoPath;
-  final double size;
-  final String glyph;
-  final Color background;
-
-  static const Color _ink = Color(0xFF2B3A2B);
-
-  @override
-  Widget build(BuildContext context) {
-    final path = photoPath;
-    if (path != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(size / 2),
-        child: Image.file(
-          File(path),
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            width: size,
-            height: size,
-            color: background,
-            alignment: Alignment.center,
-            child: const Icon(Icons.broken_image_outlined, color: _ink),
-          ),
-        ),
-      );
-    }
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(size / 2),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        glyph,
-        style: const TextStyle(
-          fontFamily: 'Nunito',
-          fontWeight: FontWeight.w400,
-          fontSize: 31,
-          color: _ink,
-        ),
-      ),
-    );
-  }
-}
-
 /// One existing-member row: avatar, name/detail block, trailing.
 class _MemberCard extends StatelessWidget {
   const _MemberCard({required this.member, required this.onTap});
@@ -694,11 +642,12 @@ class _MemberCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                _PhotoPreview(
-                  photoPath: member.photoPath,
-                  size: 40,
-                  glyph: member.glyph,
+                MemberAvatar(
+                  bytes: member.photoBytes,
+                  imageUrl: member.avatarUrl,
+                  name: member.name,
                   background: member.avatarColor,
+                  size: 40,
                 ),
                 const SizedBox(width: 14),
                 Expanded(

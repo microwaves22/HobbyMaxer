@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../core/widgets/profile_avatar_dropdown.dart';
 import 'models/reward_management_data.dart';
 
 /// Figma "Sarah reward management" (node 62:6235): the parent screen for
@@ -21,6 +22,12 @@ import 'models/reward_management_data.dart';
 /// No back button and no centered brand text — the structure has neither.
 /// Creating or editing a perk calls no API and persists nothing: edits
 /// update the on-screen list only.
+
+///
+/// The header avatar opens the shared profile dropdown (account
+/// settings, family management, profile switching). The creation
+/// heading carries no plus affordance: the inline fields below already
+/// add consecutive perks.
 class RewardManagementScreen extends StatefulWidget {
   const RewardManagementScreen({
     super.key,
@@ -34,6 +41,16 @@ class RewardManagementScreen extends StatefulWidget {
     this.onNavigateCalendar,
     this.onNavigateTasks,
     this.onNavigateFamily,
+    this.activeProfile = const ProfileOption(
+      name: 'Sarah',
+      roleLabel: 'Parent',
+      isParent: true,
+    ),
+    this.profiles = const [],
+    this.parentPin = '1234',
+    this.onSwitchProfile,
+    this.onAccountSettings,
+    this.onManageFamily,
   });
 
   // App-wide pattern tokens (screen-only copies, sibling precedent).
@@ -100,6 +117,19 @@ class RewardManagementScreen extends StatefulWidget {
   final VoidCallback? onNavigateCalendar;
   final VoidCallback? onNavigateTasks;
   final VoidCallback? onNavigateFamily;
+
+  /// Profile shown in the header avatar dropdown (Sarah, the parent).
+  final ProfileOption activeProfile;
+
+  /// Other household profiles offered in the dropdown switcher.
+  final List<ProfileOption> profiles;
+
+  /// Demo Parent PIN guarding switches to parent profiles.
+  final String parentPin;
+
+  final ValueChanged<ProfileOption>? onSwitchProfile;
+  final VoidCallback? onAccountSettings;
+  final VoidCallback? onManageFamily;
 
   @override
   State<RewardManagementScreen> createState() =>
@@ -255,7 +285,9 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
     );
   }
 
-  // 1) HEADER ROW (height 42): title + 42px avatar ONLY.
+  // 1) HEADER ROW (height 42): title + 42px avatar ONLY. The avatar is
+  // the shared profile dropdown trigger: tapping it opens the account
+  // menu (switch profile, manage family, account settings).
   Widget _buildHeader() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -272,26 +304,34 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
           ),
         ),
         const SizedBox(width: 10),
-        Container(
-          width: 42,
-          height: 42,
-          alignment: Alignment.center,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            // Peach fill is Figma; the white border is sibling pattern.
-            color: RewardManagementScreen._peach,
-            border: Border.all(
-              color: RewardManagementScreen._white,
+        ProfileAvatarDropdown(
+          active: widget.activeProfile,
+          profiles: widget.profiles,
+          parentPin: widget.parentPin,
+          onSwitchProfile: widget.onSwitchProfile,
+          onAccountSettings: widget.onAccountSettings,
+          onManageFamily: widget.onManageFamily,
+          avatar: Container(
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              // Peach fill is Figma; the white border is sibling pattern.
+              color: RewardManagementScreen._peach,
+              border: Border.all(
+                color: RewardManagementScreen._white,
+              ),
+              borderRadius: BorderRadius.circular(21),
             ),
-            borderRadius: BorderRadius.circular(21),
-          ),
-          child: Text(
-            widget.data.avatarLabel,
-            style: const TextStyle(
-              fontFamily: RewardManagementScreen._font,
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
-              color: RewardManagementScreen._sageDark,
+            child: Text(
+              widget.data.avatarLabel,
+              style: const TextStyle(
+                fontFamily: RewardManagementScreen._font,
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+                color: RewardManagementScreen._sageDark,
+              ),
             ),
           ),
         ),
@@ -501,31 +541,18 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
     );
   }
 
-  // 5a) CREATION HEADING ROW: heading + circle-plus 20 (EXACT icon).
-  // The icon is decorative/non-interactive: the project has no pattern
-  // of wiring heading icons to the primary action.
+  // 5a) CREATION HEADING: heading text only. The standalone plus
+  // affordance was removed: the inline fields below already handle
+  // adding consecutive perks.
   Widget _buildCreationHeading() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Text(
-            widget.data.creationHeading,
-            style: const TextStyle(
-              fontFamily: RewardManagementScreen._font,
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
-              color: RewardManagementScreen._ink,
-            ),
-          ),
-        ),
-        // [STYLE NOT RETRIEVED] — icon color is a pattern guess.
-        const Icon(
-          Icons.add_circle_outline_rounded,
-          size: 20,
-          color: RewardManagementScreen._sage,
-        ),
-      ],
+    return Text(
+      widget.data.creationHeading,
+      style: const TextStyle(
+        fontFamily: RewardManagementScreen._font,
+        fontWeight: FontWeight.w800,
+        fontSize: 16,
+        color: RewardManagementScreen._ink,
+      ),
     );
   }
 

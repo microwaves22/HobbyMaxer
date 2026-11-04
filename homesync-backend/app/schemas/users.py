@@ -30,4 +30,5 @@ class UserRead(_FromORM):
     role: str
     mode: str | None
     points_balance: int
+    avatar_url: str | None = None
     created_at: datetime

@@ -1,12 +1,22 @@
+import 'dart:typed_data';
+
 import '../../core/network/api_client.dart';
+import '../../core/widgets/member_avatar.dart';
 import 'models/chore_task.dart';
 
 /// One synced snapshot: backend tasks plus the points ledger balances.
 class TasksSnapshot {
-  const TasksSnapshot({required this.tasks, required this.balances});
+  const TasksSnapshot({
+    required this.tasks,
+    required this.balances,
+    this.avatars = const {},
+  });
 
   final List<ChoreTask> tasks;
   final Map<String, int> balances;
+
+  /// Display-ready avatar URLs by member name (`{}` when unknown).
+  final Map<String, String> avatars;
 }
 
 /// Backend task endpoints (`GET /tasks/`, submissions, review).
@@ -22,6 +32,7 @@ class TasksApi {
     final raw = await client.get('/tasks/') as List;
     final names = <int, String>{};
     final balances = <String, int>{};
+    final avatars = <String, String>{};
     try {
       final family = await client.get('/families/me') as Map<String, dynamic>;
       for (final member in family['members'] as List) {
@@ -29,6 +40,9 @@ class TasksApi {
         final name = user['display_name'] as String;
         names[user['id'] as int] = name;
         balances[name] = user['points_balance'] as int? ?? 0;
+        final avatar =
+            resolveAvatarUrl(user['avatar_url'] as String?, client.baseUrl);
+        if (avatar != null) avatars[name] = avatar;
       }
     } on ApiException catch (e) {
       if (e.statusCode != 403 && e.statusCode != 404) rethrow;
@@ -47,7 +61,18 @@ class TasksApi {
       }
       tasks.add(_mapTask(task, names, latest));
     }
-    return TasksSnapshot(tasks: tasks, balances: balances);
+    return TasksSnapshot(tasks: tasks, balances: balances, avatars: avatars);
+  }
+
+  /// Parent revision note for a returned chore. The backend stores it
+  /// on the reviewed submission; other states carry no feedback.
+  static String? _feedbackFor(
+    TaskState state,
+    Map<String, dynamic>? latest,
+  ) {
+    if (state != TaskState.changesRequested) return null;
+    if (latest == null) return null;
+    return latest['note'] as String?;
   }
 
   static ChoreTask _mapTask(
@@ -77,6 +102,7 @@ class TasksApi {
       requiresPhoto: task['requires_photo'] as bool? ?? false,
       state: state,
       remotePhoto: latest?['photo_path'] as String?,
+      feedback: _feedbackFor(state, latest),
     );
   }
 
@@ -85,13 +111,16 @@ class TasksApi {
   Future<Map<String, dynamic>> submitTask(
     int serverId, {
     String? photoPath,
+    Uint8List? photoBytes,
     String? note,
   }) async {
     final body = await client.postMultipart(
       '/tasks/$serverId/submit',
       fields: {if (note != null) 'note': note},
-      fileField: photoPath == null ? null : 'photo',
+      fileField: (photoPath == null && photoBytes == null) ? null : 'photo',
       filePath: photoPath,
+      fileBytes: photoBytes,
+      filename: 'evidence.jpg',
     );
     return body as Map<String, dynamic>;
   }

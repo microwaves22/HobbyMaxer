@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:homesync/views/onboarding/family_setup_screen.dart';
@@ -244,7 +245,14 @@ void main() {
     await tester.tap(find.text('Add Member'));
     await tester.pumpAndSettle();
     expect(find.text('Sarah'), findsOneWidget);
-    expect(find.text('Parent'), findsOneWidget);
+    final sarahCard = find.ancestor(
+      of: find.text('Sarah'),
+      matching: find.byType(InkWell),
+    );
+    expect(
+      find.descendant(of: sarahCard, matching: find.text('Parent')),
+      findsOneWidget,
+    );
     expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
   });
 
@@ -388,10 +396,28 @@ void main() {
       (tester) async {
     await _pumpFamilySetup(tester);
 
+    // Simulate a broken picker: the platform channel throws instead of
+    // returning a photo (raw channel behavior varies by host platform,
+    // so the failure is mocked for determinism).
+    const channel = MethodChannel('plugins.flutter.io/image_picker');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+      channel,
+      (_) async => throw PlatformException(code: 'unavailable'),
+    );
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
     await tester.ensureVisible(find.byKey(const Key('add-member-photo')));
     await tester.tap(find.byKey(const Key('add-member-photo')));
     await tester.pumpAndSettle();
-    expect(find.text('Profile picture'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(SimpleDialog),
+        matching: find.text('Profile picture'),
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('Choose from gallery'));
     await tester.pumpAndSettle();

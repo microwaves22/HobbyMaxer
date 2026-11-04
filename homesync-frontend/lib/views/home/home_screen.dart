@@ -7,6 +7,7 @@ import '../../core/network/auth_session.dart';
 import '../../core/state/focus_areas.dart';
 import '../../core/widgets/home_title.dart';
 import '../../core/widgets/liquid_glass_card.dart';
+import '../../core/widgets/member_avatar.dart';
 import '../../core/widgets/profile_avatar_dropdown.dart';
 import '../calendar/calendar_screen.dart';
 import '../onboarding/link_kids_screen.dart';
@@ -16,12 +17,14 @@ import '../rewards/rewards_controller.dart';
 import '../rewards/rewards_routes.dart';
 import '../rewards/rewards_screen.dart';
 import '../rewards/widgets/perk_requests_section.dart';
+import '../settings/account_settings_screen.dart';
 import '../tasks/tasks_api.dart';
 import '../tasks/tasks_controller.dart';
 import '../tasks/widgets/parent_todo_section.dart';
 import '../tasks/tasks_screen.dart';
 import '../tasks/teen_todo_list_screen.dart';
 import '../tasks/widgets/review_queue_section.dart';
+import 'household_routes.dart';
 
 /// Dashboard landing after onboarding or login.
 ///
@@ -81,6 +84,17 @@ class _HomeScreenState extends State<HomeScreen> {
     if (session == null || !session.isAuthenticated) return;
     _backendAttached = true;
     final user = session.user!;
+    final headerAvatar =
+        resolveAvatarUrl(user.avatarUrl, session.client.baseUrl);
+    if (headerAvatar != null) {
+      _active = ProfileOption(
+        name: _active.name,
+        roleLabel: _active.roleLabel,
+        avatarColor: _active.avatarColor,
+        isParent: _active.isParent,
+        avatarUrl: headerAvatar,
+      );
+    }
     _tasks.attachBackend(TasksApi(session.client));
     _tasks.setBalance(user.displayName, user.pointsBalance);
     unawaited(_syncBackend());
@@ -127,6 +141,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ? TeenTodoListScreen(
                 controller: _tasks,
                 profile: widget.profile,
+                onNavigateHome: () => Navigator.of(context).pop(),
+                onNavigateRewards: () =>
+                    RewardsRoutes.openTeenStore(context),
+                onNavigateCalendar: () =>
+                    HouseholdRoutes.openTab(context, 'calendar'),
               )
             : TasksScreen(
                 controller: _tasks,
@@ -159,6 +178,8 @@ class _HomeScreenState extends State<HomeScreen> {
             onRequestCustomReward: () =>
                 RewardsRoutes.openRequestCustomReward(context),
             onNavigateHome: () => Navigator.of(context).pop(),
+            onNavigateCalendar: () =>
+                HouseholdRoutes.openTab(context, 'calendar'),
           ),
         ),
       );
@@ -201,9 +222,10 @@ class _HomeScreenState extends State<HomeScreen> {
             parentPin: widget.parentPin,
             onSwitchProfile: (profile) => setState(() => _active = profile),
             onAccountSettings: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Account settings coming soon.'),
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      AccountSettingsScreen(profile: widget.profile),
                 ),
               );
             },
@@ -230,6 +252,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 20),
                 ParentTodoSection(controller: _tasks),
                 const SizedBox(height: 20),
+                // Parents manage rewards; the child-facing storefront
+                // preview stays out of the parent view entirely.
                 LiquidGlassCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -251,15 +275,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             RewardsRoutes.openManagement(context),
                         icon: const Icon(Icons.storefront_rounded),
                         label: const Text('Manage store perks'),
-                      ),
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: () =>
-                            RewardsRoutes.openStoreShell(context),
-                        icon: const Icon(Icons.preview_rounded),
-                        label: const Text(
-                          'Rewards store shell (placeholder preview)',
-                        ),
                       ),
                     ],
                   ),
