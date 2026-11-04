@@ -4,6 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:homesync/core/state/focus_areas.dart';
 import 'package:homesync/views/home/home_screen.dart';
 import 'package:homesync/views/onboarding/models/user_profile.dart';
+import 'package:homesync/views/tasks/models/chore_task.dart';
+import 'package:homesync/views/tasks/tasks_controller.dart';
+import 'package:homesync/views/tasks/widgets/review_queue_section.dart';
 
 UserProfile _parent() => UserProfile(
       name: 'Mom',
@@ -30,6 +33,23 @@ Future<void> _pumpHome(WidgetTester tester, UserProfile profile) async {
   );
   await tester.pumpAndSettle();
 }
+
+Future<void> _pumpQueue(
+  WidgetTester tester,
+  TasksController controller,
+) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Scaffold(body: ReviewQueueSection(controller: controller)),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+ElevatedButton _batchButton(WidgetTester tester) =>
+    tester.widget<ElevatedButton>(
+      find.widgetWithText(ElevatedButton, 'Approve All Simple Tasks'),
+    );
 
 void main() {
   group('Parent review queue', () {
@@ -78,6 +98,45 @@ void main() {
 
       expect(find.textContaining('Review queue'), findsNothing);
       expect(find.text('Approve All Simple Tasks'), findsNothing);
+    });
+  });
+
+  group('Batch approve button state', () {
+    testWidgets('is disabled when no tasks await review', (tester) async {
+      await _pumpQueue(tester, TasksController.test(tasks: []));
+
+      expect(find.text('Review queue (0)'), findsOneWidget);
+      expect(find.text('Approve All Simple Tasks'), findsOneWidget);
+      expect(_batchButton(tester).onPressed, isNull);
+    });
+
+    testWidgets('disabled button does nothing when tapped', (tester) async {
+      await _pumpQueue(tester, TasksController.test(tasks: []));
+
+      await tester.tap(find.text('Approve All Simple Tasks'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Review queue (0)'), findsOneWidget);
+      expect(find.textContaining('Approved'), findsNothing);
+    });
+
+    testWidgets('enables once a simple task awaits review', (tester) async {
+      await _pumpQueue(
+        tester,
+        TasksController.test(tasks: [
+          ChoreTask(
+            id: 's1',
+            title: 'Water the plants',
+            details: 'Living room and balcony.',
+            childName: 'Maya',
+            points: 5,
+            state: TaskState.pendingReview,
+          ),
+        ]),
+      );
+
+      expect(find.text('Review queue (1)'), findsOneWidget);
+      expect(_batchButton(tester).onPressed, isNotNull);
     });
   });
 }

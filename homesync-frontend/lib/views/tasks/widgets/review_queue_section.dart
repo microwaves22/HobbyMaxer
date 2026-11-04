@@ -42,6 +42,7 @@ class ReviewQueueSection extends StatelessWidget {
         final text = Theme.of(context).textTheme;
         final queue = controller.pendingReview;
         final simpleCount = queue.where((t) => t.isSimple).length;
+        final batchEnabled = queue.isNotEmpty && simpleCount > 0;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -56,6 +57,26 @@ class ReviewQueueSection extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: !batchEnabled
+                  ? null
+                  : () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      try {
+                        final approved =
+                            await controller.approveAllSimple();
+                        _snack(
+                          messenger,
+                          'Approved $approved simple '
+                          'task${approved == 1 ? '' : 's'}.',
+                        );
+                      } on ApiException catch (e) {
+                        _snack(messenger, e.message);
+                      }
+                    },
+              child: const Text('Approve All Simple Tasks'),
+            ),
+            const SizedBox(height: 12),
             if (queue.isEmpty)
               LiquidGlassCard(
                 child: Text(
@@ -64,26 +85,6 @@ class ReviewQueueSection extends StatelessWidget {
                 ),
               )
             else ...[
-              ElevatedButton(
-                onPressed: simpleCount == 0
-                    ? null
-                    : () async {
-                        final messenger = ScaffoldMessenger.of(context);
-                        try {
-                          final approved =
-                              await controller.approveAllSimple();
-                          _snack(
-                            messenger,
-                            'Approved $approved simple '
-                            'task${approved == 1 ? '' : 's'}.',
-                          );
-                        } on ApiException catch (e) {
-                          _snack(messenger, e.message);
-                        }
-                      },
-                child: const Text('Approve All Simple Tasks'),
-              ),
-              const SizedBox(height: 12),
               for (final task in queue) ...[
                 _ReviewCard(
                   task: task,
