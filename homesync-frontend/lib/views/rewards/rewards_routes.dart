@@ -50,9 +50,7 @@ abstract final class RewardsRoutes {
     );
   }
 
-  /// 09 Rewards Store shell (node 5:139) — placeholder preview only.
-  /// Its persona is unknown until Figma is re-pulled, so it has no
-  /// permanent entry point yet.
+  /// 09 Rewards Store (node 5:139) — Teen Rewards, Digital view.
   static void openStoreShell(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -66,8 +64,8 @@ abstract final class RewardsRoutes {
     );
   }
 
-  /// Teen real-world reward store shell (node 62:6146). Reached from
-  /// the teen dashboard's Rewards card.
+  /// Teen real-world reward store (node 62:6146). Reached from the
+  /// teen dashboard's Rewards card.
   static void openTeenStore(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -81,8 +79,7 @@ abstract final class RewardsRoutes {
     );
   }
 
-  /// Sarah reward management (node 62:6235) — structure-exact shell
-  /// with TODO placeholder text.
+  /// Sarah reward management (node 62:6235).
   static void openManagement(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(

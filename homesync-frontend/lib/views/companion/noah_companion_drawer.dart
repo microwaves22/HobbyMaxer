@@ -44,8 +44,8 @@ class NoahCompanionDrawer extends StatelessWidget {
   /// Armor "Equip" button. Placeholder.
   final VoidCallback? onEquipArmor;
 
-  /// Called with the collection item id (unlocked items only).
-  /// Placeholder.
+  /// Called with the collection item id, locked or not (the parent
+  /// decides the feedback — e.g. a "locked" hint). Placeholder.
   final ValueChanged<String>? onCollectionItemPress;
 
   @override
@@ -347,10 +347,9 @@ class _CareStats extends StatelessWidget {
 }
 
 /// Horizontal care actions: two 50px buttons side by side (NOT
-/// Ava's stacked tiles) and NO Play action. Feed shows its "3
-/// emberberries" detail with no emoji; Interact's full label is "Bond
-/// with Ember" (the spec gives no separate title for it — if the frame
-/// shows an "Interact" title above that line, add it).
+/// Ava's stacked tiles) and NO Play action. Both show a title plus a
+/// detail line: Feed with "3 emberberries" (no emoji), Interact with
+/// "Bond with Ember".
 ///
 /// Button radius, gaps, icon sizes, and all button type are INFERRED.
 class _CareActions extends StatelessWidget {
@@ -432,14 +431,31 @@ class _CareActions extends StatelessWidget {
                     color: Color(0xFF4A6A41),
                   ),
                   SizedBox(width: 8),
-                  Text(
-                    'Bond with Ember',
-                    style: TextStyle(
-                      fontFamily: _kFont,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                      color: Color(0xFF4A6A41),
-                    ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Interact',
+                        style: TextStyle(
+                          fontFamily: _kFont,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                          height: 1.2,
+                          color: Color(0xFF4A6A41),
+                        ),
+                      ),
+                      Text(
+                        'Bond with Ember',
+                        style: TextStyle(
+                          fontFamily: _kFont,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 11,
+                          height: 1.2,
+                          color: Color(0xFF4A6A41),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -558,7 +574,7 @@ class _ArmorCard extends StatelessWidget {
 /// state text (its name stays ink — spec-literal). Names are
 /// ExtraBold 11, states Medium 9, all tiles have 1px line borders.
 /// Grid spacing, tile radius/padding/layout, and icon size/colors are
-/// INFERRED. Locked tiles are not tappable.
+/// INFERRED. Locked tiles still report taps (with their id).
 class _CollectionGrid extends StatelessWidget {
   const _CollectionGrid({required this.onItemPress});
 
@@ -591,9 +607,7 @@ class _CollectionGrid extends StatelessWidget {
             for (final item in kNoahCollection)
               GestureDetector(
                 key: Key('noah-collection-${item.id}'),
-                onTap: item.locked
-                    ? null
-                    : () => onItemPress?.call(item.id),
+                onTap: () => onItemPress?.call(item.id),
                 behavior: HitTestBehavior.opaque,
                 child: Container(
                   padding: const EdgeInsets.all(10),

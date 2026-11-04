@@ -4,13 +4,13 @@ import 'models/calendar_event.dart';
 
 /// Sample data + date helpers for the "06 Calendar" screen.
 ///
-/// Provenance per value:
-/// - Titles, day columns, and relative block positions are transcribed from
-///   the node 4:121 design screenshot. Start/end times are read from the
-///   grid positions (2-hour grid lines) and are estimates.
-/// - Event colors reuse verified sibling-screen tokens where the design
-///   system already defines the shade (profile hub, node 62:5787);
-///   Work blue and Dr. purple have no precedent and are estimates.
+/// Provenance per value (Figma 4:121 update):
+/// - Titles, day columns, and fills are the real design: Mon/Work/#CFE0EE,
+///   Tue/Dr./#DDD5EE, Wed/School/#FDF0C8, Thu/School/#FDF0C8,
+///   Thu/Soccer/#F6D9C4, Fri/Piano/#F4C9C9, Fri/Dinner/sage (white text),
+///   Sat/Dinner/sage (white text), Sat/Chores/#E4EBDC.
+/// - Start/end times are read from the grid positions (2-hour grid lines)
+///   and are estimates.
 abstract final class CalendarData {
   /// Monday of the designed week. Oct 26, 2026 is a Monday.
   static final DateTime designedWeekStart = DateTime(2026, 10, 26);
@@ -56,25 +56,24 @@ abstract final class CalendarData {
   ];
 
   /// Timetable blocks in design order. Times are estimated from the
-  /// block positions on the 2-hour grid.
+  /// block positions on the 2-hour grid; days and fills are exact.
   static final List<CalendarEvent> events = [
     CalendarEvent(
       id: 'work',
       title: 'Work',
-      date: DateTime(2026, 10, 27),
+      date: DateTime(2026, 10, 26),
       startMinutes: 10 * 60,
       endMinutes: 12 * 60,
-      color: const Color(0xFFD4E2F1), // Estimated: no precedent.
+      color: const Color(0xFFCFE0EE),
       textColor: const Color(0xFF2B3A2B),
     ),
     CalendarEvent(
       id: 'dr',
       title: 'Dr.',
-      // Estimated column: the block sits on the Tue/Wed boundary.
-      date: DateTime(2026, 10, 28),
+      date: DateTime(2026, 10, 27),
       startMinutes: 12 * 60,
       endMinutes: 14 * 60,
-      color: const Color(0xFFDCD5F1), // Estimated: no precedent.
+      color: const Color(0xFFDDD5EE),
       textColor: const Color(0xFF2B3A2B),
     ),
     CalendarEvent(
@@ -83,7 +82,7 @@ abstract final class CalendarData {
       date: DateTime(2026, 10, 28),
       startMinutes: 9 * 60,
       endMinutes: 11 * 60,
-      color: const Color(0xFFFDF0C8), // Sibling token (profile hub).
+      color: const Color(0xFFFDF0C8),
       textColor: const Color(0xFF2B3A2B),
     ),
     CalendarEvent(
@@ -92,7 +91,7 @@ abstract final class CalendarData {
       date: DateTime(2026, 10, 29),
       startMinutes: 9 * 60,
       endMinutes: 11 * 60,
-      color: const Color(0xFFFDF0C8), // Sibling token (profile hub).
+      color: const Color(0xFFFDF0C8),
       textColor: const Color(0xFF2B3A2B),
     ),
     CalendarEvent(
@@ -101,7 +100,7 @@ abstract final class CalendarData {
       date: DateTime(2026, 10, 30),
       startMinutes: 10 * 60,
       endMinutes: 12 * 60,
-      color: const Color(0xFFF4C9C9), // Sibling token (profile hub).
+      color: const Color(0xFFF4C9C9),
       textColor: const Color(0xFF2B3A2B),
     ),
     CalendarEvent(
@@ -110,7 +109,7 @@ abstract final class CalendarData {
       date: DateTime(2026, 10, 29),
       startMinutes: 16 * 60,
       endMinutes: 18 * 60,
-      color: const Color(0xFFF6D9C4), // Sibling token (profile hub).
+      color: const Color(0xFFF6D9C4),
       textColor: const Color(0xFF2B3A2B),
     ),
     CalendarEvent(
@@ -119,7 +118,7 @@ abstract final class CalendarData {
       date: DateTime(2026, 10, 31),
       startMinutes: 14 * 60,
       endMinutes: 16 * 60,
-      color: const Color(0xFFE4EBDC), // Sibling token (profile hub).
+      color: const Color(0xFFE4EBDC),
       textColor: const Color(0xFF2B3A2B),
     ),
     CalendarEvent(
@@ -128,7 +127,7 @@ abstract final class CalendarData {
       date: DateTime(2026, 10, 30),
       startMinutes: 18 * 60,
       endMinutes: 20 * 60,
-      color: const Color(0xFF4A6A41), // Sibling token (profile hub).
+      color: const Color(0xFF5F7F55),
       textColor: const Color(0xFFFFFFFF),
     ),
     CalendarEvent(
@@ -137,7 +136,7 @@ abstract final class CalendarData {
       date: DateTime(2026, 10, 31),
       startMinutes: 18 * 60,
       endMinutes: 20 * 60,
-      color: const Color(0xFF4A6A41), // Sibling token (profile hub).
+      color: const Color(0xFF5F7F55),
       textColor: const Color(0xFFFFFFFF),
     ),
   ];

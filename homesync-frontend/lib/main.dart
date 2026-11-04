@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'views/calendar/calendar_screen.dart';
 import 'core/theme/app_theme.dart';
 import 'views/onboarding/splash_screen.dart';
 

@@ -13,73 +13,112 @@ Future<void> _pumpTeenHome(
   await tester.pumpAndSettle();
 }
 
+TextStyle _styleOf(WidgetTester tester, String text) {
+  final widget = tester.widget<Text>(find.text(text));
+  final style = widget.style;
+  expect(style, isNotNull, reason: '$text has an explicit style');
+  return style!;
+}
+
+/// Finds a [Text.rich] by its plain-text content.
+Finder _richText(String plain) {
+  return find.byWidgetPredicate(
+    (w) => w is RichText && w.text.toPlainText() == plain,
+  );
+}
+
 void main() {
-  group('Teen Home TODO shell (Figma 7:320, specs not retrieved)', () {
-    testWidgets('scaffold uses the verified cream background', (tester) async {
+  group('Teen Home (Figma 7:320)', () {
+    testWidgets('uses the teen background, greeting, and two-run points pill',
+        (tester) async {
       await _pumpTeenHome(tester);
 
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-      expect(scaffold.backgroundColor, const Color(0xFFFBF7EF));
+      expect(scaffold.backgroundColor, const Color(0xFFF4F3EF));
+
+      expect(find.text('Hey, Noah'), findsOneWidget);
+      expect(find.text('Saturday, Oct 31'), findsOneWidget);
+
+      // Points pill: white with a line border, NO star, two text runs.
+      expect(_richText('120 pts'), findsOneWidget);
+      expect(find.byIcon(Icons.star_rounded), findsNothing);
+      expect(_richText('Teen Mode · simplified view'), findsOneWidget);
     });
 
-    testWidgets('renders TODO placeholders, no invented content',
+    testWidgets('renders the Ember companion widget', (tester) async {
+      await _pumpTeenHome(tester);
+
+      expect(find.text('COMPANION'), findsOneWidget);
+      expect(find.text('Ember'), findsOneWidget);
+      expect(find.text('Thriving'), findsOneWidget);
+      expect(find.text('Rested · 94% care'), findsOneWidget);
+      expect(find.text('Armor'), findsOneWidget);
+      expect(find.text('Skin'), findsOneWidget);
+      expect(find.text('Den'), findsOneWidget);
+      expect(find.text('Companion details'), findsOneWidget);
+      expect(find.text('Skins, armor, den themes'), findsOneWidget);
+    });
+
+    testWidgets('renders due-today tasks and upcoming events',
         (tester) async {
       await _pumpTeenHome(tester);
 
-      expect(find.textContaining('TODO(Figma 7:320)'), findsWidgets);
-      expect(find.text('TODO(Figma 7:320): header greeting + name'),
-          findsOneWidget);
-      expect(
-          find.text(
-              'TODO(Figma 7:320): task/chore list — names, points, due times'),
-          findsOneWidget);
-      expect(find.text('TODO(Figma 7:320): progress / streak / rewards widgets'),
-          findsOneWidget);
-      expect(find.text('TODO(Figma 7:320): bottom navigation tabs'),
-          findsOneWidget);
-    });
+      expect(teenTasks.map((t) => t.title), [
+        'Math homework',
+        'Vacuum living room',
+        'Take out recycling',
+      ]);
+      expect(find.text('6:00 PM'), findsOneWidget);
+      expect(find.text('7:00 PM'), findsOneWidget);
+      expect(find.text('Photo/video'), findsNWidgets(2));
+      expect(find.text('Approved'), findsOneWidget);
 
-    testWidgets('placeholder text uses Nunito + verified tokens',
-        (tester) async {
-      await _pumpTeenHome(tester);
+      expect(find.text('Soccer practice'), findsOneWidget);
+      expect(find.text('Thu · 4:30 PM'), findsOneWidget);
+      expect(find.text('Family dinner'), findsOneWidget);
+      expect(find.text('Fri · 6:00 PM'), findsOneWidget);
 
-      final header = tester.widget<Text>(
-          find.text('TODO(Figma 7:320): header greeting + name'));
-      expect(header.style?.fontFamily, 'Nunito');
-      expect(header.style?.color, const Color(0xFF7C877A));
-
-      final tasks = tester.widget<Text>(find.text(
-          'TODO(Figma 7:320): task/chore list — names, points, due times'));
-      expect(tasks.style?.fontFamily, 'Nunito');
-      expect(tasks.style?.color, const Color(0xFF5F7F55));
-    });
-
-    testWidgets('task list renders from the (empty) data array',
-        (tester) async {
-      expect(teenTasks, isEmpty);
-      await _pumpTeenHome(tester);
-
-      // Empty array -> only the empty-state placeholder, no progress widgets.
-      expect(find.byType(LinearProgressIndicator), findsNothing);
+      // No progress ring or mini bars on this screen.
       expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byType(LinearProgressIndicator), findsNothing);
     });
 
-    testWidgets('placeholder handlers fire', (tester) async {
+    testWidgets('bottom nav has Home active', (tester) async {
+      await _pumpTeenHome(tester);
+
+      expect(find.text('Home'), findsOneWidget);
+      expect(find.text('Rewards'), findsOneWidget);
+      expect(find.text('Calendar'), findsOneWidget);
+      expect(
+        _styleOf(tester, 'Home').color,
+        const Color(0xFF5F7F55),
+      );
+    });
+
+    testWidgets('handlers fire with task and tab ids', (tester) async {
       final calls = <String>[];
       await _pumpTeenHome(
         tester,
         build: () => TeenHomeScreen(
-          onAvatarPress: () => calls.add('avatar'),
-          onRewardsPress: () => calls.add('rewards'),
+          onTaskPress: (id) => calls.add('task:$id'),
+          onProofPress: (id) => calls.add('proof:$id'),
+          onCompanionPress: () => calls.add('companion'),
+          onTabPress: (id) => calls.add('tab:$id'),
         ),
       );
 
-      await tester.tap(find.byIcon(Icons.person_rounded));
-      await tester.tap(
-          find.text('TODO(Figma 7:320): progress / streak / rewards widgets'));
+      await tester.tap(find.text('Photo/video').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Companion details'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Take out recycling'));
+      await tester.tap(find.text('Take out recycling'));
       await tester.pumpAndSettle();
 
-      expect(calls, ['avatar', 'rewards']);
+      // Proof taps don't bubble to the row handler (nested detector).
+      expect(calls, contains('proof:math-homework'));
+      expect(calls, contains('companion'));
+      expect(calls, contains('task:recycling'));
     });
   });
 }

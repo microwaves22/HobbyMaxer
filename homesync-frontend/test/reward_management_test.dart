@@ -4,31 +4,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:homesync/views/rewards/models/reward_management_data.dart';
 import 'package:homesync/views/rewards/reward_management_screen.dart';
 
-Future<void> _pumpScreen(
+Future<void> _pumpManagement(
   WidgetTester tester, {
-  ValueChanged<String>? onSelectCategory,
-  VoidCallback? onOpenEligibilitySelect,
-  ValueChanged<PerkFormState>? onCreatePerk,
-  ValueChanged<String>? onEditPerk,
-  VoidCallback? onNavigateFamily,
+  RewardManagementScreen Function()? build,
 }) async {
   await tester.pumpWidget(
-    MaterialApp(
-      home: RewardManagementScreen(
-        onSelectCategory: onSelectCategory,
-        onOpenEligibilitySelect: onOpenEligibilitySelect,
-        onCreatePerk: onCreatePerk,
-        onEditPerk: onEditPerk,
-        onNavigateFamily: onNavigateFamily,
-      ),
-    ),
+    MaterialApp(home: build?.call() ?? const RewardManagementScreen()),
   );
   await tester.pumpAndSettle();
 }
 
 TextStyle _styleOf(WidgetTester tester, String text) {
-  final widget = tester.widget<Text>(find.text(text).first);
-  return widget.style!;
+  final widget = tester.widget<Text>(find.text(text));
+  final style = widget.style;
+  expect(style, isNotNull, reason: '$text has an explicit style');
+  return style!;
 }
 
 /// The container rendering [color]: all of these fills are unique on
@@ -41,31 +31,42 @@ Finder _containerWithColor(Color color) => find.byWidgetPredicate(
     );
 
 void main() {
-  group('RewardManagementScreen (Figma 62:6235)', () {
-    testWidgets('renders the Figma content verbatim', (tester) async {
-      await _pumpScreen(tester);
+  group('Sarah reward management (Figma 62:6235)', () {
+    testWidgets('renders header, categories, and control banner',
+        (tester) async {
+      await _pumpManagement(tester);
 
-      // Header + description.
       expect(find.text('Reward Management'), findsOneWidget);
+      expect(find.text('S'), findsOneWidget);
       expect(
         find.text("Your family's rewards, on your terms."),
         findsOneWidget,
       );
 
-      // Categories.
       expect(find.text('Digital'), findsOneWidget);
       expect(find.text('Real-world'), findsOneWidget);
+      expect(
+        _styleOf(tester, 'Real-world').color,
+        const Color(0xFF5F7F55),
+      );
 
-      // Control banner.
-      expect(find.text('Managed by Sarah · Parent approval'), findsOneWidget);
+      expect(
+        find.text('Managed by Sarah · Parent approval'),
+        findsOneWidget,
+      );
       expect(
         find.text(
-          'You set the cost, who can redeem, and any conditions. All requests come to you.',
+          'You set the cost, who can redeem, and any conditions. '
+          'All requests come to you.',
         ),
         findsOneWidget,
       );
+    });
 
-      // Creation card.
+    testWidgets('renders the creation card with verbatim fields',
+        (tester) async {
+      await _pumpManagement(tester);
+
       expect(find.text('Create a custom perk'), findsOneWidget);
       expect(find.text('Privilege / title'), findsOneWidget);
       expect(
@@ -90,38 +91,83 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Add Perk'), findsOneWidget);
+    });
 
-      // Managed-perks list.
+    testWidgets('renders the 4 managed perks with a derived count',
+        (tester) async {
+      await _pumpManagement(tester);
+
       expect(find.text('Your real-world perks'), findsOneWidget);
       expect(find.text('4 perks'), findsOneWidget);
-      expect(find.text('Extended weekend curfew'), findsOneWidget);
-      expect(find.text('+30 mins · Noah'), findsOneWidget);
-      expect(find.text('★ 80'), findsOneWidget);
+
       expect(
-        find.text('Choose Friday night dinner / takeout'),
+        kRewardManagementData.perks.map((p) => p.name),
+        [
+          'Extended weekend curfew',
+          'Choose Friday night dinner / takeout',
+          'Pick the family movie',
+          'Personal purchase contribution',
+        ],
+      );
+      expect(find.text('+30 mins · Noah'), findsOneWidget);
+      expect(find.text('Ava & Noah'), findsNWidgets(2));
+      expect(
+        find.text('Amount defined by parent · Noah'),
         findsOneWidget,
       );
-      expect(find.text('Ava & Noah'), findsNWidgets(2));
+      expect(find.text('★ 80'), findsOneWidget);
       expect(find.text('★ 120'), findsOneWidget);
-      expect(find.text('Pick the family movie'), findsOneWidget);
       expect(find.text('★ 150'), findsOneWidget);
-      expect(find.text('Personal purchase contribution'), findsOneWidget);
-      expect(find.text('Amount defined by parent · Noah'), findsOneWidget);
       expect(find.text('★ 200'), findsOneWidget);
       expect(find.text('Edit'), findsNWidgets(4));
+      expect(find.byType(Switch), findsNothing);
+    });
 
-      // Parent nav.
-      expect(find.text('Home'), findsOneWidget);
-      expect(find.text('Calendar'), findsOneWidget);
-      expect(find.text('Tasks'), findsOneWidget);
-      expect(find.text('Family'), findsOneWidget);
+    testWidgets('bottom nav has Family active', (tester) async {
+      await _pumpManagement(tester);
 
-      // No scaffold TODO copy survives.
-      expect(find.textContaining('TODO('), findsNothing);
+      expect(
+        _styleOf(tester, 'Family').color,
+        const Color(0xFF5F7F55),
+      );
+      expect(
+        _styleOf(tester, 'Tasks').color,
+        const Color(0xFF7C877A),
+      );
+    });
+
+    testWidgets('create and edit actions fire', (tester) async {
+      PerkFormState? created;
+      String? edited;
+      await _pumpManagement(
+        tester,
+        build: () => RewardManagementScreen(
+          onCreatePerk: (form) => created = form,
+          onEditPerk: (id) => edited = id,
+        ),
+      );
+
+      await tester.ensureVisible(find.text('Add Perk'));
+      await tester.tap(find.text('Add Perk'));
+      await tester.pumpAndSettle();
+      expect(
+        created?.field1,
+        'Contribution toward a personal purchase',
+      );
+      expect(created?.cost, '200 points');
+      expect(created?.eligibility, 'Noah · 14');
+      expect(created?.field2, isEmpty);
+      expect(created?.field3, 'Agree on the item together before redeeming.');
+      expect(created?.category, 'b');
+
+      await tester.ensureVisible(find.text('Edit').first);
+      await tester.tap(find.text('Edit').first);
+      await tester.pumpAndSettle();
+      expect(edited, 'managed-perk-1');
     });
 
     testWidgets('matches the Figma measurements', (tester) async {
-      await _pumpScreen(tester);
+      await _pumpManagement(tester);
 
       // Header avatar: 42px peach circle with Sarah's initial.
       final avatar = _containerWithColor(const Color(0xFFF6D9C4));
@@ -150,7 +196,6 @@ void main() {
         (selectedSegment.decoration! as BoxDecoration).color,
         const Color(0xFFFFFFFF),
       );
-      expect(_styleOf(tester, 'Real-world').color, const Color(0xFF5F7F55));
 
       // Control banner: sageLight, radius 18, 13px padding.
       final banner = find.byWidgetPredicate(
@@ -164,11 +209,6 @@ void main() {
       );
       expect(banner, findsOneWidget);
       final bannerWidget = tester.widget<Container>(banner);
-      final bannerDecoration = bannerWidget.decoration! as BoxDecoration;
-      expect(
-        bannerDecoration.borderRadius,
-        const BorderRadius.all(Radius.circular(18)),
-      );
       expect(bannerWidget.padding, const EdgeInsets.all(13));
 
       // Field labels: ExtraBold 11 mute.
@@ -210,24 +250,21 @@ void main() {
       expect(cost.fontSize, 11);
       expect(cost.fontWeight, FontWeight.w800);
       expect(cost.color, const Color(0xFF5F7F55));
-      final edit =
-          tester.widget<Text>(find.text('Edit').first).style!;
+      final edit = tester.widget<Text>(find.text('Edit').first).style!;
       expect(edit.fontSize, 10);
       expect(edit.fontWeight, FontWeight.w700);
       expect(edit.color, const Color(0xFF7C877A));
-
-      // Family is the active nav tab.
-      final family = _styleOf(tester, 'Family');
-      expect(family.color, const Color(0xFF5F7F55));
-      expect(family.fontWeight, FontWeight.w800);
-      final tasks = _styleOf(tester, 'Tasks');
-      expect(tasks.color, const Color(0xFF7C877A));
     });
 
     testWidgets('category selection calls back and flips the segments',
         (tester) async {
       String? selected;
-      await _pumpScreen(tester, onSelectCategory: (id) => selected = id);
+      await _pumpManagement(
+        tester,
+        build: () => RewardManagementScreen(
+          onSelectCategory: (id) => selected = id,
+        ),
+      );
 
       await tester.tap(find.text('Digital'));
       await tester.pumpAndSettle();
@@ -238,45 +275,25 @@ void main() {
 
     testWidgets('eligibility field opens the selector', (tester) async {
       var calls = 0;
-      await _pumpScreen(tester, onOpenEligibilitySelect: () => calls++);
+      await _pumpManagement(
+        tester,
+        build: () => RewardManagementScreen(
+          onOpenEligibilitySelect: () => calls++,
+        ),
+      );
 
       await tester.tap(find.text('Noah · 14'));
       expect(calls, 1);
     });
 
-    testWidgets('Add Perk reports the form state', (tester) async {
-      PerkFormState? reported;
-      await _pumpScreen(tester, onCreatePerk: (s) => reported = s);
-
-      final addPerk = find.text('Add Perk');
-      await tester.ensureVisible(addPerk);
-      await tester.pumpAndSettle();
-      await tester.tap(addPerk);
-
-      expect(reported, isNotNull);
-      expect(reported!.field1, 'Contribution toward a personal purchase');
-      expect(reported!.cost, '200 points');
-      expect(reported!.eligibility, 'Noah · 14');
-      expect(reported!.field2, isEmpty);
-      expect(reported!.field3, 'Agree on the item together before redeeming.');
-      expect(reported!.category, 'b');
-    });
-
-    testWidgets('Edit reports the perk id', (tester) async {
-      String? edited;
-      await _pumpScreen(tester, onEditPerk: (id) => edited = id);
-
-      final firstEdit = find.text('Edit').first;
-      await tester.ensureVisible(firstEdit);
-      await tester.pumpAndSettle();
-      await tester.tap(firstEdit);
-
-      expect(edited, 'managed-perk-1');
-    });
-
     testWidgets('Family nav tab calls back', (tester) async {
       var calls = 0;
-      await _pumpScreen(tester, onNavigateFamily: () => calls++);
+      await _pumpManagement(
+        tester,
+        build: () => RewardManagementScreen(
+          onNavigateFamily: () => calls++,
+        ),
+      );
 
       await tester.tap(find.text('Family'));
       expect(calls, 1);

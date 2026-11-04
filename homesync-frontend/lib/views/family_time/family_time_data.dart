@@ -19,7 +19,7 @@ abstract final class FamilyTimeData {
   static const String subtitle = 'Find a time for the whole family!';
 
   /// Suggested card copy, verbatim.
-  static const String suggestedLabel = 'Suggested Time';
+  static const String suggestedLabel = '✨ Suggested Time';
   static const String bestMatchLabel = 'Best match';
   static const String suggestedDay = 'Friday, Nov 6';
   static const String suggestedTime = '6:00 – 7:00 PM';
@@ -30,16 +30,22 @@ abstract final class FamilyTimeData {
   static const String otherOptionsLabel = 'Other Options';
   static const String seeAllLabel = 'See All';
 
-  /// The four availability avatars, in design order (peach, pink, yellow,
-  /// blue). Sarah/Ava/Noah reuse their sibling-screen identities; the
-  /// yellow circle's owner is not named in any design or code, so it is
-  /// a placeholder awaiting the Figma value.
+  /// The four availability avatars, in design order (peach, blue, pink,
+  /// yellowLight). Sarah/Ava/Noah reuse their sibling-screen identities;
+  /// the yellow circle's owner is not named in any design or code, so it
+  /// is a placeholder awaiting the Figma value.
   static const List<FamilyMember> members = [
     FamilyMember(
       id: 'sarah',
       name: 'Sarah',
       initials: 'S',
       color: Color(0xFFF6D9C4),
+    ),
+    FamilyMember(
+      id: 'noah',
+      name: 'Noah',
+      initials: 'N',
+      color: Color(0xFFCFE0EE),
     ),
     FamilyMember(
       id: 'ava',
@@ -52,12 +58,6 @@ abstract final class FamilyTimeData {
       name: 'Member 4',
       initials: 'M4',
       color: Color(0xFFFDF0C8),
-    ),
-    FamilyMember(
-      id: 'noah',
-      name: 'Noah',
-      initials: 'N',
-      color: Color(0xFFCFE0EE),
     ),
   ];
 

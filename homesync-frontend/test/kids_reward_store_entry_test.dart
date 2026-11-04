@@ -6,6 +6,7 @@ import 'package:homesync/views/home/home_screen.dart';
 import 'package:homesync/views/onboarding/models/user_profile.dart';
 import 'package:homesync/views/rewards/kids_reward_store_screen.dart';
 import 'package:homesync/views/rewards/rewards_screen.dart';
+import 'package:homesync/views/rewards/teen_reward_store_screen.dart';
 
 UserProfile _kids() => UserProfile(
       name: 'Ava',
@@ -74,12 +75,11 @@ void main() {
       expect(find.byType(KidsRewardStoreScreen), findsNothing);
     });
 
-    testWidgets('teen profiles keep the existing Rewards screen',
-        (tester) async {
+    testWidgets('teen profiles open the Teen Reward Store', (tester) async {
       await _pumpHome(tester, _teen());
       await _openRewards(tester);
 
-      expect(find.byType(RewardsScreen), findsOneWidget);
+      expect(find.byType(TeenRewardStoreScreen), findsOneWidget);
       expect(find.byType(KidsRewardStoreScreen), findsNothing);
     });
   });

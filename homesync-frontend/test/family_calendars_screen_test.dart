@@ -54,7 +54,7 @@ void main() {
     expect(find.text('Family calendars'), findsNWidgets(2));
     final title = _titleStyleOf(tester);
     expect(title.fontFamily, 'Nunito');
-    expect(title.fontSize, 28);
+    expect(title.fontSize, 26);
     expect(title.fontWeight, FontWeight.w800);
     expect(title.color, const Color(0xFF2B3A2B));
     expect(
@@ -84,7 +84,7 @@ void main() {
     expect(find.text('Sarah · Parent'), findsOneWidget);
     expect(find.text('Ava · Child'), findsOneWidget);
     expect(find.text('Noah · Child'), findsOneWidget);
-    expect(find.text('ics'), findsNWidgets(3));
+    expect(find.text('.ics'), findsNWidgets(3));
     expect(
       find.text('Example calendars below. Nothing imported yet.'),
       findsOneWidget,
@@ -121,7 +121,7 @@ void main() {
       await tester.ensureVisible(find.text(label));
       expect(find.text(label), findsOneWidget, reason: label);
     }
-    expect(find.text('Available · 2 hours'), findsNWidgets(2));
+    expect(find.text('Available'), findsNWidgets(2));
     expect(find.text('Everyone is free'), findsNWidgets(2));
     expect(find.byIcon(Icons.wb_sunny_outlined), findsNWidgets(2));
 
@@ -136,18 +136,18 @@ void main() {
     String? selected;
     await _pumpCalendars(tester, onSelectOwner: (id) => selected = id);
 
-    // Sarah starts selected (white label on the dark chip).
-    expect(_styleOf(tester, 'Sarah (you)').color, const Color(0xFFFFFFFF));
+    // Sarah starts selected (white chip, sage border, check icon).
+    expect(
+      _styleOf(tester, 'Sarah (you)').color,
+      const Color(0xFF2B3A2B),
+    );
+    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
 
     await tester.tap(find.text('Ava'));
     await tester.pumpAndSettle();
 
     expect(selected, 'ava');
-    expect(_styleOf(tester, 'Ava').color, const Color(0xFFFFFFFF));
-    expect(
-      _styleOf(tester, 'Sarah (you)').color,
-      const Color(0xFF2B3A2B),
-    );
+    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
   });
 
   testWidgets('Back link, file button, and day chevrons fire', (tester) async {
@@ -172,8 +172,11 @@ void main() {
     // the sample-day header row next to the day title.
     final chevrons = find.byIcon(Icons.chevron_left);
     expect(chevrons, findsNWidgets(2));
+    await tester.ensureVisible(chevrons.last);
     await tester.tap(chevrons.last);
-    await tester.tap(find.byIcon(Icons.chevron_right));
+    final chevronRight = find.byIcon(Icons.chevron_right);
+    await tester.ensureVisible(chevronRight);
+    await tester.tap(chevronRight);
     expect(prev, 1);
     expect(next, 1);
   });

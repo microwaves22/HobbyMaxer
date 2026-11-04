@@ -2,13 +2,10 @@ import 'package:flutter/material.dart';
 
 /// Teen real-world reward store (Figma node 62:6146) data layer.
 ///
-/// WARNING: the Figma specs for node 62:6146 were never retrieved
-/// (Figma rate limit), so EVERY value below is a TODO placeholder shaped
-/// by the sibling teen screen (Request Custom Reward, node 100:4945) and
-/// the sibling real-world cards ("Family treats", node 100:4854) — NOT
-/// design content. Re-pull node 62:6146 from Figma and replace each TODO
-/// before calling this final. This screen makes no API calls, deducts no
-/// points, and books/purchases nothing.
+/// All values below are the real design: Noah's store, balance 120,
+/// Real-world category selected, the 4 real perks matching Sarah's
+/// managed set. This screen makes no API calls, deducts no points, and
+/// books/purchases nothing.
 class TeenStoreReward {
   const TeenStoreReward({
     required this.id,
@@ -21,17 +18,19 @@ class TeenStoreReward {
 
   final String id;
   final String name;
+
+  /// Detail line ('+30 mins', 'Dinner / takeout', or '' when none).
   final String subtitle;
 
   /// Cost in points.
   final int points;
 
-  /// Preview-block background.
+  /// Icon-tile background.
   final Color previewBackground;
 
-  /// Project icon-library stand-in for the Figma preview artwork.
-  /// No Figma image assets exist in this repo, so Material icons are
-  /// used instead of emoji.
+  /// Project icon-library stand-in for the Figma tile artwork.
+  /// moon-star → bedtime · utensils → restaurant ·
+  /// clapperboard → movie · shopping-bag → shopping_bag.
   final IconData previewIcon;
 
   /// A reward is affordable when its cost does not exceed the balance.
@@ -46,69 +45,69 @@ class TeenStoreReward {
   }
 }
 
-// TODO(figma 62:6146): replace with the retrieved teen name. Whether this
-// store is Noah's was NOT retrieved.
-const String kTeenStoreName = 'TODO(62:6146)';
+/// Real teen name (Figma 62:6146).
+const String kTeenStoreName = 'Noah';
 
-// TODO(figma 62:6146): replace with the retrieved screen title.
-const String kTeenStoreTitle = 'TODO(62:6146): store title';
+/// Real screen title (Figma 62:6146).
+const String kTeenStoreTitle = 'Teen Rewards';
 
-// TODO(figma 62:6146): replace with the retrieved subtitle. Shape only:
-// "<Name> · 14 · Teen Mode".
-String get kTeenStoreSubtitle => '$kTeenStoreName \u00B7 14 \u00B7 Teen Mode';
+/// Identity subtitle shape: "Noah · 14 · Teen Mode".
+String get kTeenStoreSubtitle => '$kTeenStoreName · 14 · Teen Mode';
 
-// TODO(figma 62:6146): replace with the retrieved balance. 120 is a
-// placeholder borrowed only to verify layout — it is NOT this screen's
-// balance.
+/// Real balance (Figma 62:6146): one shared availablePoints = 120.
 const int kTeenStoreAvailablePoints = 120;
 
-// TODO(figma 62:6146): replace with the retrieved label (whose points).
-const String kTeenStoreBalanceLabel =
-    'TODO(62:6146): available points';
+/// Real balance-card eyebrow (Figma 62:6146, all caps, curly apostrophe).
+const String kTeenStoreBalanceLabel = 'NOAH\u2019S AVAILABLE BALANCE';
 
-// TODO(figma 62:6146): replace with the retrieved section heading.
-const String kTeenStoreSectionTitle =
-    'TODO(62:6146): real-world rewards';
+/// Real section heading (Figma 62:6146).
+const String kTeenStoreSectionTitle = 'Real-World Perks';
 
-// TODO(figma 62:6146): replace with the retrieved section subtitle. Shape
-// only (sibling pattern): "Approved by <parent> · She confirms when to
-// enjoy them."
+/// Real section subline (Figma 62:6146).
 const String kTeenStoreSectionSubtitle =
-    'Approved by TODO(62:6146) \u00B7 She confirms when to enjoy them.';
+    'Managed by Sarah · Redeem to request approval.';
 
-// TODO(figma 62:6146): replace with the retrieved rewards — every name,
-// subtitle, points value, preview background, and artwork. These two
-// placeholder rewards exist only to verify layout (one affordable, one
-// not). The kid-screen items were deliberately NOT copied here.
+/// Real footer (Figma 62:6146).
+const String kTeenStoreFooter =
+    'Sarah confirms timing and conditions before a perk is used. '
+    'Your balance stays unchanged until approved.';
+
+/// Category segments in order; 'Real-world' is selected in this view.
+const List<String> kTeenStoreCategories = ['Digital', 'Real-world'];
+
+/// The 4 real perks (Figma 62:6146), in design order. Locked state is
+/// computed from cost vs the 120 balance (movie + purchase are locked).
 const List<TeenStoreReward> kTeenStoreRewards = [
   TeenStoreReward(
-    // TODO(figma 62:6146): reward id.
-    id: 'placeholder-teen-reward-a',
-    // TODO(figma 62:6146): reward name.
-    name: 'Placeholder perk A',
-    // TODO(figma 62:6146): reward subtitle (sibling wording reused as a
-    // marked placeholder only).
-    subtitle: 'Parent-approved perk',
-    // TODO(figma 62:6146): point cost.
-    points: 100,
-    // TODO(figma 62:6146): preview background.
-    previewBackground: Color(0xFFF6D9C4),
-    // TODO(figma 62:6146): preview artwork.
-    previewIcon: Icons.headphones_rounded,
+    id: 'extended-curfew',
+    name: 'Extended weekend curfew',
+    subtitle: '+30 mins',
+    points: 80,
+    previewBackground: Color(0xFFE4EBDC),
+    previewIcon: Icons.bedtime_rounded,
   ),
   TeenStoreReward(
-    // TODO(figma 62:6146): reward id.
-    id: 'placeholder-teen-reward-b',
-    // TODO(figma 62:6146): reward name.
-    name: 'Placeholder perk B',
-    // TODO(figma 62:6146): reward subtitle (sibling wording reused as a
-    // marked placeholder only).
-    subtitle: 'Parent-approved perk',
-    // TODO(figma 62:6146): point cost.
-    points: 180,
-    // TODO(figma 62:6146): preview background.
+    id: 'friday-dinner',
+    name: 'Choose Friday night dinner',
+    subtitle: 'Dinner / takeout',
+    points: 120,
+    previewBackground: Color(0xFFF6D9C4),
+    previewIcon: Icons.restaurant_rounded,
+  ),
+  TeenStoreReward(
+    id: 'family-movie',
+    name: 'Pick the family movie',
+    subtitle: '',
+    points: 150,
+    previewBackground: Color(0xFFDDD5EE),
+    previewIcon: Icons.movie_rounded,
+  ),
+  TeenStoreReward(
+    id: 'purchase-contribution',
+    name: 'Personal purchase contribution',
+    subtitle: '',
+    points: 200,
     previewBackground: Color(0xFFCFE0EE),
-    // TODO(figma 62:6146): preview artwork.
-    previewIcon: Icons.sports_soccer_rounded,
+    previewIcon: Icons.shopping_bag_rounded,
   ),
 ];

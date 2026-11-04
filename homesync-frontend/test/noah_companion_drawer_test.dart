@@ -67,6 +67,7 @@ void main() {
       // Care actions: Feed + Interact, and NO Play.
       expect(find.text('Feed'), findsOneWidget);
       expect(find.text('3 emberberries'), findsOneWidget);
+      expect(find.text('Interact'), findsOneWidget);
       expect(find.text('Bond with Ember'), findsOneWidget);
       expect(find.text('Play'), findsNothing);
 
@@ -353,7 +354,7 @@ void main() {
       expect(calls, 1);
     });
 
-    testWidgets('unlocked collection items report, locked ones ignore taps',
+    testWidgets('all collection items report taps, locked included',
         (tester) async {
       final reported = <String>[];
       await _pumpDrawer(tester, onCollectionItemPress: reported.add);
@@ -368,7 +369,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(locked);
 
-      expect(reported, ['forest-skin']);
+      expect(reported, ['forest-skin', 'moonstone-den']);
     });
   });
 }

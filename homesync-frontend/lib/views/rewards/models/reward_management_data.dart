@@ -84,6 +84,7 @@ class RewardManagementData {
     required this.field3Value,
     required this.primaryActionLabel,
     required this.existingHeading,
+    required this.statusPillLabel,
     required this.perks,
     required this.editLabel,
     required this.navLabels,
@@ -124,8 +125,11 @@ class RewardManagementData {
   final String primaryActionLabel;
   final String existingHeading;
 
-  /// The status pill ("4 perks") is computed from this array's length,
-  /// not stored.
+  /// Expected pill text ('4 perks'). The screen derives the live count
+  /// from [perks] so they stay in sync.
+  final String statusPillLabel;
+
+  /// The status pill ("4 perks") is computed from this array's length.
   final List<ManagedPerk> perks;
 
   /// Same on all rows. Text action, not a toggle.
@@ -163,6 +167,7 @@ const RewardManagementData kRewardManagementData = RewardManagementData(
   field3Value: 'Agree on the item together before redeeming.',
   primaryActionLabel: 'Add Perk',
   existingHeading: 'Your real-world perks',
+  statusPillLabel: '4 perks',
   perks: [
     ManagedPerk(
       id: 'managed-perk-1',

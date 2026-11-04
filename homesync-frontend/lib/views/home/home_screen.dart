@@ -113,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ];
 
   void _openTasks() {
-    // Teen profiles get the Figma 03 Teen My To-Do List screen; parents
+    // Teen profiles get the Figma 03 Teen My To-Do List; parents
     // and kids keep the generic task list.
     final isTeen =
         !widget.profile.isParent && widget.profile.mode == FamilyMode.teen;

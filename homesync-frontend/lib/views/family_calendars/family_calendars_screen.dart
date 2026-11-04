@@ -9,8 +9,13 @@ const _cream = Color(0xFFFBF7EF);
 const _ink = Color(0xFF2B3A2B);
 const _mute = Color(0xFF7C877A);
 const _sage = Color(0xFF5F7F55);
+const _sageDark = Color(0xFF4A6A41);
 const _line = Color(0xFFE8E4D8);
 const _white = Color(0xFFFFFFFF);
+const _importFill = Color.fromRGBO(228, 235, 220, 0.66);
+const _availableFill = Color.fromRGBO(228, 235, 220, 0.66);
+const _scheduledFill = Color.fromRGBO(255, 255, 255, 0.44);
+const _icsMute = Color(0xFF667361);
 
 // Borrowed from the sibling screens (06 Calendar / profile hub): the same
 // design system already defines this sage tint, reused here for the import
@@ -108,12 +113,12 @@ class _FamilyCalendarsScreenState extends State<FamilyCalendarsScreen> {
               const SizedBox(height: 8),
               Text(
                 'Family calendars',
-                style: _style(28, FontWeight.w800, _ink, height: 1.15),
+                style: _style(26, FontWeight.w800, _ink, height: 1.15),
               ),
               const SizedBox(height: 4),
               Text(
                 "Everyone's plans, and a little room to breathe.",
-                style: _style(14, FontWeight.w500, _mute),
+                style: _style(14, FontWeight.w400, _mute),
               ),
               const SizedBox(height: 20),
               _AddCalendarCard(
@@ -157,7 +162,7 @@ class _BackLink extends StatelessWidget {
               const SizedBox(width: 2),
               Text(
                 'Parent settings',
-                style: _style(14, FontWeight.w700, _ink),
+                style: _style(14, FontWeight.w700, _sageDark),
               ),
             ],
           ),
@@ -183,8 +188,8 @@ class _AddCalendarCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _sageLight,
-        borderRadius: BorderRadius.circular(16),
+        color: _importFill,
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -203,7 +208,7 @@ class _AddCalendarCard extends StatelessWidget {
                     ),
                     Text(
                       'Import a calendar file (.ics)',
-                      style: _style(13, FontWeight.w500, _mute),
+                      style: _style(13, FontWeight.w500, _icsMute),
                     ),
                   ],
                 ),
@@ -235,11 +240,11 @@ class _AddCalendarCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 50,
+            height: 48,
             child: ElevatedButton(
               onPressed: onChooseFile ?? () {},
               style: ElevatedButton.styleFrom(
-                backgroundColor: _ink,
+                backgroundColor: _sage,
                 foregroundColor: _white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -278,15 +283,31 @@ class _OwnerChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
         decoration: BoxDecoration(
-          color: selected ? _ink : _white,
+          color: _white,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? _sage : _line,
+            width: selected ? 1.5 : 1,
+          ),
         ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: _style(13, FontWeight.w700, selected ? _white : _ink),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (selected) ...[
+              const Icon(Icons.check_rounded, size: 16, color: _sage),
+              const SizedBox(width: 4),
+            ],
+            Flexible(
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: _style(13, FontWeight.w700, _ink),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -372,7 +393,7 @@ class _CalendarRow extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   owner.initials,
-                  style: _style(15, FontWeight.w800, _white),
+                  style: _style(15, FontWeight.w800, _sageDark),
                 ),
               ),
               const SizedBox(width: 12),
@@ -517,7 +538,11 @@ class _TimelineRow extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 2),
                   child: Text(
                     entry.timeLabel,
-                    style: _style(12, FontWeight.w700, _mute),
+                    style: _style(
+                      12,
+                      FontWeight.w700,
+                      entry.isFreeWindow ? _sage : _mute,
+                    ),
                   ),
                 ),
               ),
@@ -543,7 +568,7 @@ class _TimelineBody extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: _sageLight,
+          color: _availableFill,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -568,8 +593,12 @@ class _TimelineBody extends StatelessWidget {
         ),
       );
     }
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: _scheduledFill,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[

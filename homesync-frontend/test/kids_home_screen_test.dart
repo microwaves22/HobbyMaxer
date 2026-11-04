@@ -13,72 +13,118 @@ Future<void> _pumpKidsHome(
   await tester.pumpAndSettle();
 }
 
+TextStyle _styleOf(WidgetTester tester, String text) {
+  final widget = tester.widget<Text>(find.text(text));
+  final style = widget.style;
+  expect(style, isNotNull, reason: '$text has an explicit style');
+  return style!;
+}
+
 void main() {
-  group('Kids Home TODO shell (Figma 5:50, specs not retrieved)', () {
-    testWidgets('scaffold uses the verified cream background', (tester) async {
+  group('Kids Home (Figma 5:50)', () {
+    testWidgets('renders the real greeting, hero, and points pill',
+        (tester) async {
       await _pumpKidsHome(tester);
 
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
       expect(scaffold.backgroundColor, const Color(0xFFFBF7EF));
-    });
 
-    testWidgets('renders TODO placeholders, no invented content',
-        (tester) async {
-      await _pumpKidsHome(tester);
+      final greeting = _styleOf(tester, 'Hi Ava! 👋');
+      expect(greeting.fontFamily, 'Nunito');
+      expect(greeting.fontSize, 26);
+      expect(greeting.fontWeight, FontWeight.w800);
+      expect(greeting.color, const Color(0xFF2B3A2B));
 
-      expect(find.textContaining('TODO(Figma 5:50)'), findsWidgets);
-      expect(find.text('TODO(Figma 5:50): header greeting + child name'),
-          findsOneWidget);
+      final subline = _styleOf(tester, 'Keep up the great work!');
+      expect(subline.fontSize, 14);
+      expect(subline.fontWeight, FontWeight.w500);
+      expect(subline.color, const Color(0xFF7C877A));
+
+      expect(find.text('2 tasks to go!'), findsOneWidget);
       expect(
-          find.text(
-              'TODO(Figma 5:50): task list — names, points, times, icons'),
-          findsOneWidget);
-      expect(find.text('TODO(Figma 5:50): rewards / progress widgets'),
-          findsOneWidget);
-      expect(find.text('TODO(Figma 5:50): bottom navigation tabs'),
-          findsOneWidget);
+        find.text("Finish today's chores to earn 25 more points."),
+        findsOneWidget,
+      );
+      expect(find.text('120 pts'), findsOneWidget);
     });
 
-    testWidgets('placeholder text uses Nunito + verified tokens',
+    testWidgets('renders the 3 real tasks with states and notes',
         (tester) async {
       await _pumpKidsHome(tester);
 
-      final header = tester.widget<Text>(
-          find.text('TODO(Figma 5:50): header greeting + child name'));
-      expect(header.style?.fontFamily, 'Nunito');
-      expect(header.style?.color, const Color(0xFF7C877A));
+      expect(kidsTasks.map((t) => t.title), [
+        'Make bed',
+        'Homework: Math',
+        'Clean your desk',
+      ]);
+      expect(find.text('+5 pts · Approved'), findsOneWidget);
+      expect(find.text('Due by 6 PM'), findsOneWidget);
+      expect(find.text('+10 pts'), findsOneWidget);
 
-      final tasks = tester.widget<Text>(find.text(
-          'TODO(Figma 5:50): task list — names, points, times, icons'));
-      expect(tasks.style?.fontFamily, 'Nunito');
-      expect(tasks.style?.color, const Color(0xFF5F7F55));
-    });
+      // Approved row: check tile + muted title, no strikethrough.
+      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      final approved = _styleOf(tester, 'Make bed');
+      expect(approved.color, const Color(0xFF7C877A));
+      expect(approved.decoration, isNot(TextDecoration.lineThrough));
 
-    testWidgets('task list renders from the (empty) data array',
-        (tester) async {
-      expect(kidsTasks, isEmpty);
-      await _pumpKidsHome(tester);
-
-      // No task rows exist; only the empty-state placeholder.
+      // Open rows: chevron tiles, not checkboxes.
+      expect(find.text('›'), findsNWidgets(2));
       expect(find.byIcon(Icons.radio_button_unchecked_rounded), findsNothing);
-      expect(find.byIcon(Icons.check_circle_rounded), findsNothing);
+      expect(
+        _styleOf(tester, 'Homework: Math').decoration,
+        isNot(TextDecoration.lineThrough),
+      );
     });
 
-    testWidgets('placeholder handlers fire', (tester) async {
+    testWidgets('renders companion and progress widgets from data',
+        (tester) async {
+      await _pumpKidsHome(tester);
+
+      expect(find.text('Care for your companion'), findsOneWidget);
+      expect(find.text('Care 80%'), findsOneWidget);
+      expect(find.text('Happy'), findsOneWidget);
+
+      expect(find.text('75%'), findsOneWidget);
+      final ring = tester.widget<CircularProgressIndicator>(
+        find.byType(CircularProgressIndicator),
+      );
+      expect(ring.value, 0.75);
+      expect(kidsMiniBars, [18, 26, 22, 34, 40, 30, 44]);
+    });
+
+    testWidgets('bottom nav has Home active', (tester) async {
+      await _pumpKidsHome(tester);
+
+      expect(find.text('Home'), findsOneWidget);
+      expect(find.text('Rewards'), findsOneWidget);
+      expect(find.text('Calendar'), findsOneWidget);
+      expect(
+        _styleOf(tester, 'Home').color,
+        const Color(0xFF5F7F55),
+      );
+      expect(
+        _styleOf(tester, 'Rewards').color,
+        const Color(0xFF7C877A),
+      );
+    });
+
+    testWidgets('handlers fire with task and tab ids', (tester) async {
       final calls = <String>[];
       await _pumpKidsHome(
         tester,
         build: () => KidsHomeScreen(
           onAvatarPress: () => calls.add('avatar'),
-          onRewardsPress: () => calls.add('rewards'),
+          onTaskPress: (id) => calls.add('task:$id'),
+          onTabPress: (id) => calls.add('tab:$id'),
         ),
       );
 
-      await tester.tap(find.byIcon(Icons.person_rounded));
-      await tester.tap(find.text('TODO(Figma 5:50): rewards / progress widgets'));
+      await tester.tap(find.text('🐱').first);
+      await tester.tap(find.text('Clean your desk'));
+      await tester.tap(find.text('Rewards'));
       await tester.pumpAndSettle();
 
-      expect(calls, ['avatar', 'rewards']);
+      expect(calls, ['avatar', 'task:clean-desk', 'tab:rewards']);
     });
   });
 }

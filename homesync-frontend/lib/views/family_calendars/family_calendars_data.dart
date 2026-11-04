@@ -73,14 +73,15 @@ class FamilyCalendar {
 }
 
 /// Calendars in reference order. The design shows no per-row control, so
-/// every row is [CalendarControl.none] and listed as on.
+/// every row is [CalendarControl.none] and listed as on. Tiles are the
+/// exact Figma fills (sageLight / pink / blue) with a ".ics" label.
 const List<FamilyCalendar> familyCalendars = <FamilyCalendar>[
   FamilyCalendar(
     id: 'personal-work',
     name: 'Personal & work',
     ownerMemberId: 'sarah',
-    providerLabel: 'ics',
-    color: _sage,
+    providerLabel: '.ics',
+    color: Color(0xFFE4EBDC),
     control: CalendarControl.none,
     isOn: true,
   ),
@@ -88,8 +89,8 @@ const List<FamilyCalendar> familyCalendars = <FamilyCalendar>[
     id: 'piano-lessons',
     name: 'Piano lessons',
     ownerMemberId: 'ava',
-    providerLabel: 'ics',
-    color: _avaPeach,
+    providerLabel: '.ics',
+    color: Color(0xFFF4C9C9),
     control: CalendarControl.none,
     isOn: true,
   ),
@@ -97,8 +98,8 @@ const List<FamilyCalendar> familyCalendars = <FamilyCalendar>[
     id: 'soccer-club',
     name: 'Soccer club',
     ownerMemberId: 'noah',
-    providerLabel: 'ics',
-    color: _ink,
+    providerLabel: '.ics',
+    color: Color(0xFFCFE0EE),
     control: CalendarControl.none,
     isOn: true,
   ),
@@ -140,7 +141,7 @@ const List<SampleTimelineEntry> sampleTimeline = <SampleTimelineEntry>[
   SampleTimelineEntry(
     id: 'free-midday',
     timeLabel: '12–2 PM',
-    title: 'Available · 2 hours',
+    title: 'Available',
     subtitle: 'Everyone is free',
     isFreeWindow: true,
   ),
@@ -163,7 +164,7 @@ const List<SampleTimelineEntry> sampleTimeline = <SampleTimelineEntry>[
   SampleTimelineEntry(
     id: 'free-afternoon',
     timeLabel: '4–6 PM',
-    title: 'Available · 2 hours',
+    title: 'Available',
     subtitle: 'Everyone is free',
     isFreeWindow: true,
   ),

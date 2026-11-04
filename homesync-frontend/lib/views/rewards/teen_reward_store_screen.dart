@@ -2,59 +2,47 @@ import 'package:flutter/material.dart';
 
 import 'models/teen_store_reward.dart';
 
-/// Figma "Teen real-world reward store" (node 62:6146): SHELL — DO NOT
-/// USE AS FINAL.
+/// Figma "Teen real-world reward store" (node 62:6146).
 ///
-/// The Figma specs for node 62:6146 were never retrieved (Figma rate
-/// limit), so this file renders only the verified HomeSync design system,
-/// the verified teen patterns from Request Custom Reward (node 100:4945),
-/// and the verified real-world card patterns from Kids Reward Store
-/// (node 100:4854), plus explicit TODO placeholders from
-/// [kTeenStoreRewards], [kTeenStoreAvailablePoints], and the other mock
-/// values in `models/teen_store_reward.dart`. Re-pull node 62:6146 and
-/// replace every TODO before calling this final.
+/// All values are the real design: #F4F3EF background, sageLight balance
+/// card, Digital/Real-world segmented control (Real-world selected),
+/// the 4 real perks, the custom-request bar, the verbatim footer, and
+/// the 3-item nav with Rewards active.
 ///
-/// [NOT RETRIEVED] items rendered as placeholders here: screen title,
-/// subtitle, avatar identity (teen initial), background (cream #FBF7EF
-/// is the store-pattern placeholder — the sibling teen form uses
-/// #F4F3EF), balance label + value, section heading/subtitle, every
-/// reward's name/subtitle/points/preview/artwork, nav confirmation
-/// (3-item teen nav with Rewards active is the patterned default), and
-/// the custom-reward entry (deliberately NOT built; no
-/// [onRequestCustomReward]-style handler is wired because this project's
-/// navigation does not expect one).
-///
-/// This is the REAL-WORLD store: no digital/unicorn-style rewards or
-/// sections. Redeeming moves no points and books/purchases nothing.
+/// This is the REAL-WORLD store: no digital rewards or sections.
+/// Redeeming moves no points and books/purchases nothing.
 class TeenRewardStoreScreen extends StatelessWidget {
   const TeenRewardStoreScreen({
     super.key,
     this.teenName = kTeenStoreName,
     this.title = kTeenStoreTitle,
-    this.subtitle,
     this.availablePoints = kTeenStoreAvailablePoints,
     this.balanceLabel = kTeenStoreBalanceLabel,
     this.sectionTitle = kTeenStoreSectionTitle,
     this.sectionSubtitle = kTeenStoreSectionSubtitle,
     this.rewards = kTeenStoreRewards,
+    this.selectedCategory = 'Real-world',
+    this.onSelectCategory,
     this.onBack,
     this.onRedeemReward,
     this.onSaveUpForReward,
+    this.onRequestCustomReward,
     this.onNavigateHome,
     this.onNavigateRewards,
     this.onNavigateCalendar,
   });
 
   // Figma tokens (screen-only, sibling precedent).
-  static const Color _cream = Color(0xFFFBF7EF);
+  static const Color _bg = Color(0xFFF4F3EF);
   static const Color _ink = Color(0xFF2B3A2B);
   static const Color _mute = Color(0xFF7C877A);
   static const Color _sage = Color(0xFF5F7F55);
   static const Color _sageDark = Color(0xFF4A6A41);
   static const Color _sageLight = Color(0xFFE4EBDC);
+  static const Color _segmentTrack = Color(0xFFE9EAE3);
+  static const Color _lockedFill = Color(0xFFE4E8DF);
+  static const Color _cardFill = Color.fromRGBO(255, 255, 255, 0.72);
   static const Color _white = Color(0xFFFFFFFF);
-  static const Color _yellowLight = Color(0xFFFDF0C8);
-  static const Color _gold = Color(0xFFF0B429);
 
   static const String _font = 'Nunito';
 
@@ -68,29 +56,34 @@ class TeenRewardStoreScreen extends StatelessWidget {
     ),
   ];
 
-  /// Teen name driving the avatar initial + subtitle. TODO (see class doc).
+  /// Teen name driving the avatar initial.
   final String teenName;
 
-  /// Screen title. TODO placeholder (see class doc).
+  /// Screen title.
   final String title;
-
-  /// Screen subtitle. Defaults to the `"Name" · 14 · Teen Mode` shape.
-  final String? subtitle;
 
   /// Single shared balance: drives the balance card and every
   /// reward-card action state.
   final int availablePoints;
 
-  /// Balance-card label. TODO placeholder (see class doc).
+  /// Balance-card eyebrow.
   final String balanceLabel;
 
-  /// Section heading + subtitle. TODO placeholders (see class doc).
+  /// Section heading + subline.
   final String sectionTitle;
   final String sectionSubtitle;
 
-  /// Placeholder rewards. Renders ALL rewards from this one array.
+  /// The 4 real perks. Renders ALL rewards from this one array.
   final List<TeenStoreReward> rewards;
 
+  /// Selected category segment ('Digital' or 'Real-world').
+  final String selectedCategory;
+
+  /// Called with the tapped category name. The parent navigates to the
+  /// Digital view for 'Digital'.
+  final ValueChanged<String>? onSelectCategory;
+
+  /// Kept for API compatibility; the design has no back button.
   final VoidCallback? onBack;
 
   /// Called with the reward id. Placeholders — no backend, no points.
@@ -100,9 +93,12 @@ class TeenRewardStoreScreen extends StatelessWidget {
   /// Must NOT deduct points; a no-op/info handler.
   final ValueChanged<String>? onSaveUpForReward;
 
+  /// Called from the "+ Request Custom Reward" bar.
+  final VoidCallback? onRequestCustomReward;
+
   final VoidCallback? onNavigateHome;
 
-  /// Patterned default — unconfirmed (see class doc).
+  /// Rewards is the active tab in this view.
   final VoidCallback? onNavigateRewards;
   final VoidCallback? onNavigateCalendar;
 
@@ -116,11 +112,8 @@ class TeenRewardStoreScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO(figma 62:6146): background unconfirmed — cream is the
-    // store-screen-pattern placeholder (the sibling teen form uses
-    // #F4F3EF).
     return Scaffold(
-      backgroundColor: _cream,
+      backgroundColor: _bg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.only(
@@ -136,9 +129,26 @@ class TeenRewardStoreScreen extends StatelessWidget {
               const SizedBox(height: 16),
               _buildBalanceCard(),
               const SizedBox(height: 16),
-              _buildSectionHeading(),
-              const SizedBox(height: 16),
-              _buildRewardRows(),
+              _buildCategories(),
+              if (selectedCategory == 'Real-world') ...[
+                const SizedBox(height: 16),
+                _buildSectionHeading(),
+                const SizedBox(height: 12),
+                _buildCustomRequestBar(),
+                const SizedBox(height: 12),
+                _buildPerkList(),
+                const SizedBox(height: 12),
+                const Text(
+                  kTeenStoreFooter,
+                  style: TextStyle(
+                    fontFamily: _font,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 11,
+                    height: 1.35,
+                    color: _mute,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -147,105 +157,58 @@ class TeenRewardStoreScreen extends StatelessWidget {
     );
   }
 
-  // Teen header pattern (sibling-verified layout; texts TODO).
   Widget _buildHeading() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            GestureDetector(
-              onTap: onBack,
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: _white.withValues(alpha: 0.91),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: const Icon(
-                  Icons.chevron_left_rounded,
-                  size: 20,
-                  color: _ink,
-                ),
-              ),
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontFamily: _font,
+              fontWeight: FontWeight.w800,
+              fontSize: 26,
+              color: _ink,
             ),
-            const Expanded(
-              child: Text(
-                'HomeSync',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: _font,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                  color: _sage,
-                ),
-              ),
-            ),
-            // Teen avatar pattern: sageLight circle + initial.
-            // TODO(figma 62:6146): the initial/identity is unconfirmed.
-            Container(
-              width: 44,
-              height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: _sageLight,
-                border: Border.all(color: _white),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: Text(
-                teenName.characters.first,
-                style: const TextStyle(
-                  fontFamily: _font,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
-                  color: _sageDark,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        Text(
-          title,
-          style: const TextStyle(
-            fontFamily: _font,
-            fontWeight: FontWeight.w800,
-            fontSize: 26,
-            color: _ink,
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle ?? '$teenName \u00B7 14 \u00B7 Teen Mode',
-          style: const TextStyle(
-            fontFamily: _font,
-            fontWeight: FontWeight.w500,
-            fontSize: 12,
-            color: _mute,
+        Container(
+          width: 42,
+          height: 42,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: _sageLight,
+            border: Border.all(color: _white),
+            borderRadius: BorderRadius.circular(21),
+          ),
+          child: Text(
+            teenName.characters.first,
+            style: const TextStyle(
+              fontFamily: _font,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              color: _sageDark,
+            ),
           ),
         ),
       ],
     );
   }
 
-  // Balance-card pattern (sibling-verified layout; label + value TODO).
   Widget _buildBalanceCard() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _yellowLight,
-        borderRadius: BorderRadius.circular(24),
+        color: _sageLight,
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Icon(
-            Icons.star_rounded,
-            size: 34,
-            color: _gold,
+            Icons.auto_awesome,
+            size: 28,
+            color: _sage,
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -257,9 +220,9 @@ class TeenRewardStoreScreen extends StatelessWidget {
                   balanceLabel,
                   style: const TextStyle(
                     fontFamily: _font,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                    color: _ink,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 11,
+                    color: _sage,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -268,7 +231,7 @@ class TeenRewardStoreScreen extends StatelessWidget {
                   style: const TextStyle(
                     fontFamily: _font,
                     fontWeight: FontWeight.w800,
-                    fontSize: 28,
+                    fontSize: 25,
                     color: _ink,
                   ),
                 ),
@@ -276,25 +239,22 @@ class TeenRewardStoreScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 14),
-          // TODO(figma 62:6146): avatar-mark styling unknown — mirrors
-          // the header avatar as a placeholder.
           Container(
-            width: 28,
-            height: 28,
-            alignment: Alignment.center,
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: _sageLight,
-              border: Border.all(color: _white),
-              borderRadius: BorderRadius.circular(14),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 6,
             ),
-            child: Text(
-              teenName.characters.first,
-              style: const TextStyle(
+            decoration: BoxDecoration(
+              color: _white,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: const Text(
+              'Earned, not bought',
+              style: TextStyle(
                 fontFamily: _font,
                 fontWeight: FontWeight.w800,
-                fontSize: 12,
-                color: _sageDark,
+                fontSize: 11,
+                color: _sage,
               ),
             ),
           ),
@@ -303,7 +263,52 @@ class TeenRewardStoreScreen extends StatelessWidget {
     );
   }
 
-  // Real-world section heading pattern (texts TODO).
+  Widget _buildCategories() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: _segmentTrack,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          for (final category in kTeenStoreCategories)
+            Expanded(
+              child: _buildSegment(
+                label: category,
+                selected: category == selectedCategory,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSegment({required String label, required bool selected}) {
+    return GestureDetector(
+      onTap: onSelectCategory == null
+          ? null
+          : () => onSelectCategory!(label),
+      child: Container(
+        height: 36,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? _white : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: _font,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
+            fontSize: 13,
+            color: selected ? _sage : _mute,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSectionHeading() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -323,7 +328,7 @@ class TeenRewardStoreScreen extends StatelessWidget {
           style: const TextStyle(
             fontFamily: _font,
             fontWeight: FontWeight.w500,
-            fontSize: 11,
+            fontSize: 12,
             height: 1.35,
             color: _mute,
           ),
@@ -332,112 +337,118 @@ class TeenRewardStoreScreen extends StatelessWidget {
     );
   }
 
-  // Rows of 2 equal real-world cards (sibling-verified card pattern).
-  Widget _buildRewardRows() {
+  Widget _buildCustomRequestBar() {
+    return GestureDetector(
+      onTap: onRequestCustomReward,
+      child: Container(
+        height: 48,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: _sage,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Text(
+          '+ Request Custom Reward',
+          style: TextStyle(
+            fontFamily: _font,
+            fontWeight: FontWeight.w800,
+            fontSize: 14,
+            color: _white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPerkList() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (var i = 0; i < rewards.length; i += 2) ...[
+        for (var i = 0; i < rewards.length; i++) ...[
           if (i > 0) const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: _buildRewardCard(rewards[i])),
-              const SizedBox(width: 12),
-              Expanded(
-                child: i + 1 < rewards.length
-                    ? _buildRewardCard(rewards[i + 1])
-                    : const SizedBox.shrink(),
-              ),
-            ],
-          ),
+          _buildPerkCard(rewards[i]),
         ],
       ],
     );
   }
 
-  Widget _buildRewardCard(TeenStoreReward reward) {
+  Widget _buildPerkCard(TeenStoreReward reward) {
     final affordable = reward.affordable(availablePoints);
+    final titleColor = affordable ? _ink : _mute;
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _white.withValues(alpha: 0.79),
-        border: Border.all(color: _white),
+        color: affordable ? _cardFill : _lockedFill,
         borderRadius: BorderRadius.circular(22),
         boxShadow: _cardShadow,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            height: 72,
+            width: 48,
+            height: 48,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: reward.previewBackground,
-              borderRadius: BorderRadius.circular(16),
+              color: affordable
+                  ? reward.previewBackground
+                  : _white,
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
-              reward.previewIcon,
-              size: 38,
-              color: _ink,
+              affordable ? reward.previewIcon : Icons.lock_outline_rounded,
+              size: 24,
+              color: affordable ? _ink : _mute,
             ),
           ),
-          const SizedBox(height: 7),
-          ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 55),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   reward.name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: _font,
                     fontWeight: FontWeight.w800,
                     fontSize: 14,
-                    color: _ink,
+                    color: titleColor,
                   ),
                 ),
-                const SizedBox(height: 3),
+                if (reward.subtitle.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    reward.subtitle,
+                    style: const TextStyle(
+                      fontFamily: _font,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 12,
+                      color: _mute,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 4),
                 Text(
-                  reward.subtitle,
-                  style: const TextStyle(
+                  '★ ${reward.points} pts',
+                  style: TextStyle(
                     fontFamily: _font,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 10,
-                    color: _mute,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: affordable ? _sage : _mute,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 7),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.star_rounded,
-                size: 16,
-                color: _sage,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '${reward.points} pts',
-                style: const TextStyle(
-                  fontFamily: _font,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14,
-                  color: _sage,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 7),
+          const SizedBox(width: 8),
           GestureDetector(
             onTap: () => _onAction(reward),
             child: Container(
-              height: 44,
-              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 10,
+              ),
               decoration: BoxDecoration(
                 color: affordable ? _sage : _sageLight,
                 borderRadius: BorderRadius.circular(13),
@@ -448,7 +459,7 @@ class TeenRewardStoreScreen extends StatelessWidget {
                   fontFamily: _font,
                   fontWeight: FontWeight.w800,
                   fontSize: 12,
-                  color: affordable ? _white : _sageDark,
+                  color: affordable ? _white : _ink,
                 ),
               ),
             ),
@@ -458,9 +469,6 @@ class TeenRewardStoreScreen extends StatelessWidget {
     );
   }
 
-  // 3-item teen nav, Rewards active: strongly-patterned default from
-  // both teen/kid siblings, but UNCONFIRMED for this screen (see class
-  // doc). No custom-reward entry is built here.
   Widget _buildBottomNav() {
     return Container(
       padding: const EdgeInsets.only(
