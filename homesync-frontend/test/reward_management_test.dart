@@ -298,5 +298,194 @@ void main() {
       await tester.tap(find.text('Family'));
       expect(calls, 1);
     });
+
+    testWidgets('eligibility dropdown lists the active children',
+        (tester) async {
+      await _pumpManagement(tester);
+
+      final dropdown = find.byType(DropdownButtonFormField<String>);
+      expect(dropdown, findsOneWidget);
+      await tester.ensureVisible(dropdown);
+      await tester.tap(dropdown);
+      await tester.pumpAndSettle();
+
+      // Both active profiles are offered; the current value stays put.
+      expect(find.text('Ava · 8'), findsOneWidget);
+      expect(find.text('Noah · 14'), findsNWidgets(2));
+    });
+
+    testWidgets('eligibility selection reaches the creation form',
+        (tester) async {
+      PerkFormState? created;
+      await _pumpManagement(
+        tester,
+        build: () => RewardManagementScreen(
+          onCreatePerk: (form) => created = form,
+        ),
+      );
+
+      final dropdown = find.byType(DropdownButtonFormField<String>);
+      await tester.ensureVisible(dropdown);
+      await tester.tap(dropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ava · 8'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Add Perk'));
+      await tester.tap(find.text('Add Perk'));
+      await tester.pumpAndSettle();
+      expect(created?.eligibility, 'Ava · 8');
+    });
+
+    testWidgets('eligibility dropdown hides inactive children',
+        (tester) async {
+      const base = kRewardManagementData;
+      final data = RewardManagementData(
+        title: base.title,
+        avatarLabel: base.avatarLabel,
+        description: base.description,
+        categoryA: base.categoryA,
+        categoryB: base.categoryB,
+        selectedCategoryId: base.selectedCategoryId,
+        bannerTitle: base.bannerTitle,
+        bannerBody: base.bannerBody,
+        creationHeading: base.creationHeading,
+        field1Label: base.field1Label,
+        field1Value: base.field1Value,
+        costLabel: base.costLabel,
+        costValue: base.costValue,
+        eligibilityLabel: base.eligibilityLabel,
+        eligibilityValue: base.eligibilityValue,
+        field2Label: base.field2Label,
+        field2Value: base.field2Value,
+        field2Placeholder: base.field2Placeholder,
+        helperText: base.helperText,
+        field3Label: base.field3Label,
+        field3Value: base.field3Value,
+        primaryActionLabel: base.primaryActionLabel,
+        existingHeading: base.existingHeading,
+        statusPillLabel: base.statusPillLabel,
+        perks: base.perks,
+        editLabel: base.editLabel,
+        eligibleChildren: const [
+          EligibleChild(id: 'ava', name: 'Ava', label: 'Ava · 8'),
+          EligibleChild(id: 'noah', name: 'Noah', label: 'Noah · 14'),
+          EligibleChild(
+            id: 'mia',
+            name: 'Mia',
+            label: 'Mia · 10',
+            active: false,
+          ),
+        ],
+        navLabels: base.navLabels,
+        activeNavId: base.activeNavId,
+      );
+      await _pumpManagement(
+        tester,
+        build: () => RewardManagementScreen(data: data),
+      );
+
+      final dropdown = find.byType(DropdownButtonFormField<String>);
+      await tester.ensureVisible(dropdown);
+      await tester.tap(dropdown);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ava · 8'), findsOneWidget);
+      expect(find.text('Noah · 14'), findsNWidgets(2));
+      expect(find.text('Mia · 10'), findsNothing);
+    });
+
+    testWidgets('edit opens a modal that updates the perk', (tester) async {
+      ManagedPerk? saved;
+      await _pumpManagement(
+        tester,
+        build: () => RewardManagementScreen(
+          onSavePerk: (perk) => saved = perk,
+        ),
+      );
+
+      await tester.ensureVisible(find.text('Edit').first);
+      await tester.tap(find.text('Edit').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit perk'), findsOneWidget);
+      expect(find.text('Perk type'), findsOneWidget);
+      expect(find.text('Extra time'), findsOneWidget);
+      expect(find.text('Assigned child'), findsOneWidget);
+      expect(find.text('Point cost'), findsNWidgets(2));
+
+      final modalFields = find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      );
+      expect(modalFields, findsNWidgets(3));
+      await tester.enterText(modalFields.at(0), 'Late bedtime Friday');
+      await tester.enterText(modalFields.at(1), '+45 mins');
+      await tester.enterText(modalFields.at(2), '95');
+
+      final modalDropdown = find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(DropdownButtonFormField<String>),
+      );
+      await tester.tap(modalDropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ava · 8'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit perk'), findsNothing);
+      expect(find.text('Late bedtime Friday'), findsOneWidget);
+      expect(find.text('+45 mins · Ava'), findsOneWidget);
+      expect(find.text('★ 95'), findsOneWidget);
+      expect(saved?.name, 'Late bedtime Friday');
+      expect(saved?.detail, '+45 mins · Ava');
+      expect(saved?.costLabel, '★ 95');
+    });
+
+    testWidgets('edit modal cancel changes nothing', (tester) async {
+      var saves = 0;
+      await _pumpManagement(
+        tester,
+        build: () => RewardManagementScreen(
+          onSavePerk: (_) => saves++,
+        ),
+      );
+
+      await tester.ensureVisible(find.text('Edit').first);
+      await tester.tap(find.text('Edit').first);
+      await tester.pumpAndSettle();
+
+      final modalFields = find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(modalFields.at(0), 'Discarded');
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit perk'), findsNothing);
+      expect(find.text('Discarded'), findsNothing);
+      expect(find.text('Extended weekend curfew'), findsOneWidget);
+      expect(saves, 0);
+    });
+
+    testWidgets('edit modal save without changes is a no-op',
+        (tester) async {
+      await _pumpManagement(tester);
+
+      // The 'Ava & Noah' row exercises the child-only detail path.
+      await tester.ensureVisible(find.text('Edit').at(1));
+      await tester.tap(find.text('Edit').at(1));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Choose Friday night dinner / takeout'),
+          findsOneWidget);
+      expect(find.text('Ava & Noah'), findsNWidgets(2));
+      expect(find.text('★ 120'), findsOneWidget);
+    });
   });
 }

@@ -36,7 +36,46 @@ class ManagedPerk {
   /// INFERRED from the spec's "existing rows" note; confirm against the
   /// frame if the rows render differently.
   final String costLabel;
+
+  ManagedPerk copyWith({
+    String? name,
+    String? detail,
+    String? costLabel,
+  }) {
+    return ManagedPerk(
+      id: id,
+      icon: icon,
+      name: name ?? this.name,
+      detail: detail ?? this.detail,
+      costLabel: costLabel ?? this.costLabel,
+    );
+  }
 }
+
+/// One child profile that a perk can be designated for.
+///
+/// Labels follow the sibling-screen identity format (`'Noah · 14'`,
+/// `'Ava · 8'` — see the link-kids and task-review screens). Only
+/// entries with [active] set appear in the eligibility dropdowns.
+class EligibleChild {
+  const EligibleChild({
+    required this.id,
+    required this.name,
+    required this.label,
+    this.active = true,
+  });
+
+  final String id;
+  final String name;
+  final String label;
+  final bool active;
+}
+
+/// Active child profiles for the Sarah household (Ava · 8, Noah · 14).
+const List<EligibleChild> kEligibleChildren = [
+  EligibleChild(id: 'ava', name: 'Ava', label: 'Ava · 8'),
+  EligibleChild(id: 'noah', name: 'Noah', label: 'Noah · 14'),
+];
 
 /// Form state for the creation card.
 class PerkFormState {
@@ -87,6 +126,7 @@ class RewardManagementData {
     required this.statusPillLabel,
     required this.perks,
     required this.editLabel,
+    this.eligibleChildren = kEligibleChildren,
     required this.navLabels,
     required this.activeNavId,
   });
@@ -134,6 +174,10 @@ class RewardManagementData {
 
   /// Same on all rows. Text action, not a toggle.
   final String editLabel;
+
+  /// Child profiles the eligibility dropdowns draw from. Only entries
+  /// with [EligibleChild.active] set are offered.
+  final List<EligibleChild> eligibleChildren;
   final List<String> navLabels;
 
   /// Active bottom-nav item id. FAMILY is active in the design.

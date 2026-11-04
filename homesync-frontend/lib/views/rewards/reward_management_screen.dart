@@ -19,7 +19,8 @@ import 'models/reward_management_data.dart';
 /// card's inner gaps resolve to 10px. Nothing is compressed.
 ///
 /// No back button and no centered brand text — the structure has neither.
-/// Creating a perk calls no API and persists nothing.
+/// Creating or editing a perk calls no API and persists nothing: edits
+/// update the on-screen list only.
 class RewardManagementScreen extends StatefulWidget {
   const RewardManagementScreen({
     super.key,
@@ -28,6 +29,7 @@ class RewardManagementScreen extends StatefulWidget {
     this.onOpenEligibilitySelect,
     this.onCreatePerk,
     this.onEditPerk,
+    this.onSavePerk,
     this.onNavigateHome,
     this.onNavigateCalendar,
     this.onNavigateTasks,
@@ -77,16 +79,22 @@ class RewardManagementScreen extends StatefulWidget {
   /// Called with the category id ('a' or 'b'). Placeholder.
   final ValueChanged<String>? onSelectCategory;
 
-  /// Placeholder — the eligibility field renders as a pressable input
-  /// showing the current value.
+  /// Called when the eligibility dropdown is opened. The dropdown
+  /// itself lists the active child profiles from
+  /// [RewardManagementData.eligibleChildren].
   final VoidCallback? onOpenEligibilitySelect;
 
   /// Called with the current form state. Placeholder only — no API,
   /// no persistence (real behavior would add the perk to the list).
   final ValueChanged<PerkFormState>? onCreatePerk;
 
-  /// Called with the perk id. Placeholder.
+  /// Called with the perk id when its Edit action is tapped. The
+  /// screen also opens the perk edit modal itself.
   final ValueChanged<String>? onEditPerk;
+
+  /// Called with the updated perk when the edit modal is saved.
+  /// Local state only — no API, no persistence.
+  final ValueChanged<ManagedPerk>? onSavePerk;
 
   final VoidCallback? onNavigateHome;
   final VoidCallback? onNavigateCalendar;
@@ -107,6 +115,14 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
 
   late String _selectedCategoryId;
 
+  /// Currently selected eligibility dropdown value. Mirrored into
+  /// [_eligibilityController] so [_handleCreate] keeps working unchanged.
+  late String _eligibility;
+
+  /// Locally editable copy of [RewardManagementData.perks]: the edit
+  /// modal writes back here.
+  late List<ManagedPerk> _perks;
+
   @override
   void initState() {
     super.initState();
@@ -118,6 +134,18 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
     _field2Controller = TextEditingController(text: data.field2Value);
     _field3Controller = TextEditingController(text: data.field3Value);
     _selectedCategoryId = data.selectedCategoryId;
+    _eligibility = data.eligibilityValue;
+    _perks = List.of(data.perks);
+  }
+
+  @override
+  void didUpdateWidget(RewardManagementScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.data != widget.data) {
+      _perks = List.of(widget.data.perks);
+      _eligibility = widget.data.eligibilityValue;
+      _eligibilityController.text = _eligibility;
+    }
   }
 
   @override
@@ -146,6 +174,49 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
         category: _selectedCategoryId,
       ),
     );
+  }
+
+  /// Labels of the active child profiles for the eligibility dropdown.
+  /// The current value is always kept so the dropdown never strands it
+  /// outside its item list (which Flutter forbids).
+  List<String> _activeChildLabels() {
+    final labels = <String>[
+      for (final child in widget.data.eligibleChildren)
+        if (child.active) child.label,
+    ];
+    if (!labels.contains(_eligibility)) {
+      labels.insert(0, _eligibility);
+    }
+    return labels;
+  }
+
+  void _handleSelectEligibility(String? selected) {
+    if (selected == null) return;
+    setState(() {
+      _eligibility = selected;
+      _eligibilityController.text = selected;
+    });
+  }
+
+  void _handleEditPerk(ManagedPerk perk) {
+    widget.onEditPerk?.call(perk.id);
+    _showEditPerkDialog(perk);
+  }
+
+  Future<void> _showEditPerkDialog(ManagedPerk perk) async {
+    final updated = await showDialog<ManagedPerk>(
+      context: context,
+      builder: (_) => _EditPerkDialog(
+        perk: perk,
+        children: widget.data.eligibleChildren,
+      ),
+    );
+    if (updated == null || !mounted) return;
+    setState(() {
+      final index = _perks.indexWhere((p) => p.id == updated.id);
+      if (index != -1) _perks[index] = updated;
+    });
+    widget.onSavePerk?.call(updated);
   }
 
   @override
@@ -526,8 +597,10 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
     );
   }
 
-  // 5c-right) ELIGIBILITY: pressable 44px input + chevron-down 15
-  // (EXACT icon = select/dropdown affordance).
+  // 5c-right) ELIGIBILITY: 44px dropdown of the active child
+  // profiles + chevron-down 15 (EXACT icon = select/dropdown
+  // affordance). Opening it still notifies
+  // [onOpenEligibilitySelect].
   Widget _buildEligibilityField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -542,39 +615,67 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
           ),
         ),
         const SizedBox(height: 6),
-        GestureDetector(
-          onTap: widget.onOpenEligibilitySelect,
-          child: Container(
-            height: 44,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color.fromRGBO(255, 255, 255, 0.91),
-              border:
-                  Border.all(color: RewardManagementScreen._line),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _eligibilityController.text,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: RewardManagementScreen._font,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      color: RewardManagementScreen._ink,
+        SizedBox(
+          height: 44,
+          child: Listener(
+            onPointerDown: (_) =>
+                widget.onOpenEligibilitySelect?.call(),
+            child: DropdownButtonFormField<String>(
+              initialValue: _eligibility,
+              isExpanded: true,
+              items: [
+                for (final label in _activeChildLabels())
+                  DropdownMenuItem<String>(
+                    value: label,
+                    child: Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: RewardManagementScreen._font,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: RewardManagementScreen._ink,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                // [STYLE NOT RETRIEVED] — icon color is a pattern guess.
-                const Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  size: 15,
-                  color: RewardManagementScreen._mute,
-                ),
               ],
+              onChanged: _handleSelectEligibility,
+              // [STYLE NOT RETRIEVED] — icon color is a pattern guess.
+              icon: const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 15,
+                color: RewardManagementScreen._mute,
+              ),
+              style: const TextStyle(
+                fontFamily: RewardManagementScreen._font,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: RewardManagementScreen._ink,
+              ),
+              decoration: const InputDecoration(
+                filled: true,
+                fillColor: Color.fromRGBO(255, 255, 255, 0.91),
+                contentPadding: EdgeInsets.all(12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(14)),
+                  borderSide: BorderSide(
+                    color: RewardManagementScreen._line,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(14)),
+                  borderSide: BorderSide(
+                    color: RewardManagementScreen._line,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(14)),
+                  borderSide: BorderSide(
+                    color: RewardManagementScreen._sage,
+                    width: 2,
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -635,7 +736,7 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
-            '${widget.data.perks.length} perks',
+            '${_perks.length} perks',
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontFamily: RewardManagementScreen._font,
@@ -649,10 +750,11 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
     );
   }
 
-  // 7) MANAGED PERKS LIST: rendered from the data array (NOT hard-coded
-  // rows), 9px gaps, content-driven height (min 62).
+  // 7) MANAGED PERKS LIST: rendered from the editable [_perks]
+  // copy (NOT hard-coded rows), 9px gaps, content-driven height
+  // (min 62).
   Widget _buildPerksList() {
-    final perks = widget.data.perks;
+    final perks = _perks;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -666,7 +768,8 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
 
   // Row layout (EXACT): symbol block 34×38 at x12, info at x56 (two
   // lines, gap 3), cost + edit controls right-aligned. Only the edit
-  // action is interactive.
+  // action is interactive: it notifies [onEditPerk] and opens the
+  // perk edit modal.
   Widget _buildPerkRow(ManagedPerk perk) {
     return Container(
       constraints: const BoxConstraints(minHeight: 62),
@@ -741,7 +844,7 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
               ),
               const SizedBox(height: 2),
               GestureDetector(
-                onTap: () => widget.onEditPerk?.call(perk.id),
+                onTap: () => _handleEditPerk(perk),
                 child: Text(
                   widget.data.editLabel,
                   style: const TextStyle(
@@ -867,3 +970,270 @@ class _RewardManagementScreenState extends State<RewardManagementScreen> {
 }
 
 enum _NavHandler { home, calendar, tasks, family }
+
+/// Edit modal for one real-world perk.
+///
+/// Parents can modify the perk type (name), the extra-time/detail line,
+/// the assigned child (dropdown of the active child profiles), and the
+/// point cost. Saving pops the updated [ManagedPerk]; cancelling pops
+/// null and changes nothing.
+class _EditPerkDialog extends StatefulWidget {
+  const _EditPerkDialog({required this.perk, required this.children});
+
+  final ManagedPerk perk;
+  final List<EligibleChild> children;
+
+  @override
+  State<_EditPerkDialog> createState() => _EditPerkDialogState();
+}
+
+class _EditPerkDialogState extends State<_EditPerkDialog> {
+  /// Separates the extra-time/detail head from the assigned-child tail
+  /// in row detail lines (`'+30 mins · Noah'`).
+  static const String _separator = ' · ';
+
+  late final TextEditingController _typeController;
+  late final TextEditingController _extraController;
+  late final TextEditingController _costController;
+  late String _assignedChild;
+
+  @override
+  void initState() {
+    super.initState();
+    final parts = _splitDetail(widget.perk.detail);
+    _typeController = TextEditingController(text: widget.perk.name);
+    _extraController = TextEditingController(text: parts.extra);
+    _costController = TextEditingController(
+      text: _costDigits(widget.perk.costLabel),
+    );
+    _assignedChild = parts.child;
+  }
+
+  @override
+  void dispose() {
+    _typeController.dispose();
+    _extraController.dispose();
+    _costController.dispose();
+    super.dispose();
+  }
+
+  /// Splits a row detail line into its extra-time head and assigned-child
+  /// tail. Lines without the separator (e.g. `'Ava & Noah'`) are treated
+  /// as a child-only line.
+  static ({String extra, String child}) _splitDetail(String detail) {
+    final at = detail.lastIndexOf(_separator);
+    if (at == -1) return (extra: '', child: detail);
+    return (
+      extra: detail.substring(0, at),
+      child: detail.substring(at + _separator.length),
+    );
+  }
+
+  /// Digits of a cost label (`'★ 80'` → `'80'`).
+  static String _costDigits(String costLabel) {
+    return RegExp(r'\d+')
+        .allMatches(costLabel)
+        .map((m) => m.group(0))
+        .join();
+  }
+
+  /// Assigned-child menu: one entry per active profile (shown by label,
+  /// valued by name) plus the perk's current token when it matches no
+  /// profile (e.g. `'Ava & Noah'`), so saving without changes is a
+  /// no-op and the dropdown value is always one of its items.
+  List<DropdownMenuItem<String>> _childItems() {
+    final items = <DropdownMenuItem<String>>[];
+    final seen = <String>{};
+    for (final child in widget.children) {
+      if (!child.active || !seen.add(child.name)) continue;
+      items.add(
+        DropdownMenuItem<String>(
+          value: child.name,
+          child: Text(child.label),
+        ),
+      );
+    }
+    if (!seen.contains(_assignedChild)) {
+      items.add(
+        DropdownMenuItem<String>(
+          value: _assignedChild,
+          child: Text(
+            _assignedChild.isEmpty ? 'Select a child' : _assignedChild,
+          ),
+        ),
+      );
+    }
+    return items;
+  }
+
+  void _handleSave() {
+    final type = _typeController.text.trim();
+    final extra = _extraController.text.trim();
+    final cost = int.tryParse(_costController.text.trim());
+    Navigator.of(context).pop(
+      widget.perk.copyWith(
+        name: type.isEmpty ? widget.perk.name : type,
+        detail: extra.isEmpty
+            ? _assignedChild
+            : '$extra$_separator$_assignedChild',
+        costLabel: cost == null || cost < 1
+            ? widget.perk.costLabel
+            : '★ $cost',
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text(
+        'Edit perk',
+        style: TextStyle(
+          fontFamily: RewardManagementScreen._font,
+          fontWeight: FontWeight.w800,
+          fontSize: 16,
+          color: RewardManagementScreen._ink,
+        ),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _modalField(
+              label: 'Perk type',
+              controller: _typeController,
+            ),
+            const SizedBox(height: 10),
+            _modalField(
+              label: 'Extra time',
+              controller: _extraController,
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Assigned child',
+              style: TextStyle(
+                fontFamily: RewardManagementScreen._font,
+                fontWeight: FontWeight.w800,
+                fontSize: 11,
+                color: RewardManagementScreen._mute,
+              ),
+            ),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(
+              initialValue: _assignedChild,
+              isExpanded: true,
+              items: _childItems(),
+              onChanged: (selected) {
+                if (selected == null) return;
+                setState(() => _assignedChild = selected);
+              },
+              style: const TextStyle(
+                fontFamily: RewardManagementScreen._font,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: RewardManagementScreen._ink,
+              ),
+              decoration: const InputDecoration(
+                filled: true,
+                fillColor: Color.fromRGBO(255, 255, 255, 0.91),
+                contentPadding: EdgeInsets.all(12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(14)),
+                  borderSide: BorderSide(
+                    color: RewardManagementScreen._line,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(14)),
+                  borderSide: BorderSide(
+                    color: RewardManagementScreen._line,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(14)),
+                  borderSide: BorderSide(
+                    color: RewardManagementScreen._sage,
+                    width: 2,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            _modalField(
+              label: 'Point cost',
+              controller: _costController,
+              keyboardType: TextInputType.number,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: _handleSave,
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Widget _modalField({
+    required String label,
+    required TextEditingController controller,
+    TextInputType? keyboardType,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: RewardManagementScreen._font,
+            fontWeight: FontWeight.w800,
+            fontSize: 11,
+            color: RewardManagementScreen._mute,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          style: const TextStyle(
+            fontFamily: RewardManagementScreen._font,
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            color: RewardManagementScreen._ink,
+          ),
+          decoration: const InputDecoration(
+            filled: true,
+            fillColor: Color.fromRGBO(255, 255, 255, 0.91),
+            contentPadding: EdgeInsets.all(12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(14)),
+              borderSide: BorderSide(
+                color: RewardManagementScreen._line,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(14)),
+              borderSide: BorderSide(
+                color: RewardManagementScreen._line,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(14)),
+              borderSide: BorderSide(
+                color: RewardManagementScreen._sage,
+                width: 2,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
