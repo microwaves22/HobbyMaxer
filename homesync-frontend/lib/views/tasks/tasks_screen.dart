@@ -5,10 +5,13 @@ import '../../../core/widgets/liquid_glass_card.dart';
 import '../onboarding/models/user_profile.dart';
 import 'models/chore_task.dart';
 import 'tasks_controller.dart';
+import 'widgets/chore_edit_dialog.dart';
 import 'widgets/submission_sheet.dart';
 
 /// Task list. Children see their own tasks and tap one to open the
 /// submission modal; parents see every task in the household.
+/// Chores sent back for revision show the parent's feedback with a
+/// Retry action; parents can edit any chore inline.
 class TasksScreen extends StatelessWidget {
   const TasksScreen({
     super.key,
@@ -26,6 +29,23 @@ class TasksScreen extends StatelessWidget {
         const SnackBar(content: Text('Submitted — pending review.')),
       );
     }
+  }
+
+  Future<void> _editChore(BuildContext context, ChoreTask task) async {
+    final result = await showChoreEditDialog(context, task);
+    if (result == null || !context.mounted) return;
+    final updated = controller.updateChore(
+      task.id,
+      points: result.points,
+      details: result.details,
+      requiresPhoto: result.requiresPhoto,
+    );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(updated ? 'Chore updated.' : 'No changes to save.'),
+      ),
+    );
   }
 
   @override
@@ -52,6 +72,7 @@ class TasksScreen extends StatelessWidget {
                     final task = tasks[index];
                     final submittable = task.state == TaskState.pending ||
                         task.state == TaskState.changesRequested;
+                    final feedback = task.feedback;
                     return LiquidGlassCard(
                       onTap: submittable
                           ? () => _openSubmission(context, task)
@@ -90,11 +111,41 @@ class TasksScreen extends StatelessWidget {
                                     ],
                                   ],
                                 ),
+                                if (feedback != null &&
+                                    feedback.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .secondaryContainer,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      'Feedback: $feedback',
+                                      style: text.bodySmall,
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
+                          if (profile.isParent)
+                            IconButton(
+                              tooltip: 'Edit chore',
+                              icon: const Icon(Icons.edit_outlined),
+                              onPressed: () => _editChore(context, task),
+                            ),
                           if (submittable)
-                            const Icon(Icons.chevron_right_rounded),
+                            task.state == TaskState.changesRequested
+                                ? TextButton(
+                                    onPressed: () =>
+                                        _openSubmission(context, task),
+                                    child: const Text('Retry'),
+                                  )
+                                : const Icon(Icons.chevron_right_rounded),
                         ],
                       ),
                     );

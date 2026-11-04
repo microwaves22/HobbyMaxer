@@ -146,6 +146,21 @@ class _SubmissionSheetState extends State<SubmissionSheet> {
             Text(task.title, style: text.headlineMedium),
             const SizedBox(height: 4),
             Text(task.details, style: text.bodyMedium),
+            if (task.feedback != null && task.feedback!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Parent feedback: ${task.feedback!}',
+                  style: text.bodyMedium,
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             Text(
               '${task.points} points'
@@ -200,7 +215,11 @@ class _SubmissionSheetState extends State<SubmissionSheet> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: canSubmit ? _submit : null,
-              child: const Text('Submit for review'),
+              child: Text(
+                task.state == TaskState.changesRequested
+                    ? 'Resubmit for review'
+                    : 'Submit for review',
+              ),
             ),
           ],
         ),
