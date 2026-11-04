@@ -51,10 +51,11 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
     color: _ink,
   );
 
+  final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _ageController;
-  late String _gender;
-  late String _role;
+  String? _gender;
+  String? _role;
   Uint8List? _photoBytes;
   String? _avatarUrl;
   final _picker = ImagePicker();
@@ -64,8 +65,12 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
     super.initState();
     _nameController = TextEditingController(text: widget.member.name);
     _ageController = TextEditingController(text: widget.member.age);
-    _gender = widget.member.gender;
-    _role = widget.member.role;
+    _gender = FamilySetupOptions.genders.contains(widget.member.gender)
+        ? widget.member.gender
+        : null;
+    _role = FamilySetupOptions.roles.contains(widget.member.role)
+        ? widget.member.role
+        : null;
     _photoBytes = widget.member.photoBytes;
     _avatarUrl = widget.member.avatarUrl;
   }
@@ -78,14 +83,14 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
   }
 
   void _onSave() {
-    final name = _nameController.text.trim();
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     Navigator.of(context).pop<MemberEditResult>(
       MemberUpdated(
         widget.member.copyWith(
-          name: name.isEmpty ? widget.member.name : name,
+          name: _nameController.text.trim(),
           age: _ageController.text.trim(),
-          gender: _gender,
-          role: _role,
+          gender: _gender!,
+          role: _role!,
           photoBytes: _photoBytes,
           avatarUrl: _avatarUrl,
           clearPhoto: _photoBytes == null && _avatarUrl == null,
@@ -217,6 +222,10 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
       borderRadius: BorderRadius.all(Radius.circular(18)),
       borderSide: BorderSide(color: Color(0xF2FFFFFF)),
     );
+    const errorBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(18)),
+      borderSide: BorderSide(color: _danger),
+    );
     return InputDecoration(
       hintText: hintText,
       hintStyle: _inputTextStyle,
@@ -230,6 +239,14 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
       enabledBorder: border,
       focusedBorder: border,
       disabledBorder: border,
+      errorBorder: errorBorder,
+      focusedErrorBorder: errorBorder,
+      errorStyle: const TextStyle(
+        fontFamily: 'Nunito',
+        fontWeight: FontWeight.w600,
+        fontSize: 12,
+        color: _danger,
+      ),
     );
   }
 
@@ -254,9 +271,11 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
   }
 
   Widget _dropdownField({
-    required String value,
+    required String? value,
     required List<String> options,
-    required ValueChanged<String> onChanged,
+    required ValueChanged<String?> onChanged,
+    required String hintText,
+    required FormFieldValidator<String> validator,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -277,9 +296,8 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
           for (final option in options)
             DropdownMenuItem(value: option, child: Text(option)),
         ],
-        onChanged: (selected) {
-          if (selected != null) onChanged(selected);
-        },
+        onChanged: onChanged,
+        validator: validator,
         icon: const Icon(
           Icons.keyboard_arrow_down_rounded,
           size: 20,
@@ -287,7 +305,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
         ),
         style: _inputTextStyle,
         dropdownColor: _white,
-        decoration: _inputDecoration(),
+        decoration: _inputDecoration(hintText: hintText),
       ),
     );
   }
@@ -350,55 +368,76 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                     ),
                   ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(child: _buildAvatar()),
-                    const SizedBox(height: 16),
-                    _labeledField(
-                      label: 'Name',
-                      input: TextField(
-                        controller: _nameController,
-                        textCapitalization: TextCapitalization.words,
-                        style: _inputTextStyle,
-                        decoration:
-                            _inputDecoration(hintText: 'Enter name'),
+                child: Form(
+                  key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(child: _buildAvatar()),
+                      const SizedBox(height: 16),
+                      _labeledField(
+                        label: 'Name',
+                        input: TextFormField(
+                          controller: _nameController,
+                          textCapitalization: TextCapitalization.words,
+                          style: _inputTextStyle,
+                          decoration:
+                              _inputDecoration(hintText: 'Enter name'),
+                          validator: (value) =>
+                              value == null || value.trim().isEmpty
+                                  ? 'Name is required'
+                                  : null,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    _labeledField(
-                      label: 'Age',
-                      input: TextField(
-                        controller: _ageController,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        style: _inputTextStyle,
-                        decoration: _inputDecoration(),
+                      const SizedBox(height: 12),
+                      _labeledField(
+                        label: 'Age',
+                        input: TextFormField(
+                          controller: _ageController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          style: _inputTextStyle,
+                          decoration: _inputDecoration(),
+                          validator: (value) =>
+                              value == null || value.trim().isEmpty
+                                  ? 'Enter an age'
+                                  : null,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    _labeledField(
-                      label: 'Gender',
-                      input: _dropdownField(
-                        value: _gender,
-                        options: FamilySetupOptions.genders,
-                        onChanged: (value) =>
-                            setState(() => _gender = value),
+                      const SizedBox(height: 12),
+                      _labeledField(
+                        label: 'Gender',
+                        input: _dropdownField(
+                          value: _gender,
+                          options: FamilySetupOptions.genders,
+                          onChanged: (value) =>
+                              setState(() => _gender = value),
+                          hintText: 'Select gender',
+                          validator: (value) =>
+                              value == null || value.isEmpty
+                                  ? 'Select a gender'
+                                  : null,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    _labeledField(
-                      label: 'Account Role',
-                      input: _dropdownField(
-                        value: _role,
-                        options: FamilySetupOptions.roles,
-                        onChanged: (value) =>
-                            setState(() => _role = value),
+                      const SizedBox(height: 12),
+                      _labeledField(
+                        label: 'Account Role',
+                        input: _dropdownField(
+                          value: _role,
+                          options: FamilySetupOptions.roles,
+                          onChanged: (value) =>
+                              setState(() => _role = value),
+                          hintText: 'Select role',
+                          validator: (value) => value == null || value.isEmpty
+                              ? 'Choose a role'
+                              : null,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),

@@ -39,10 +39,24 @@ Finder _nameField() => find.byWidgetPredicate(
       (w) => w is TextField && w.decoration?.hintText == 'Enter name',
     );
 
-/// Adds one member through the form with the given [name] (defaults kept).
-Future<void> _addMember(WidgetTester tester, String name) async {
+Finder _ageField() => find.byWidgetPredicate(
+      (w) => w is TextField && w.decoration?.hintText == null,
+    );
+
+/// Adds one member through the form with all required fields filled.
+Future<void> _addMember(
+  WidgetTester tester,
+  String name, {
+  String age = '12',
+  String gender = 'Female',
+  String role = 'Kids',
+}) async {
   await tester.enterText(_nameField(), name);
   await tester.pump();
+  await tester.enterText(_ageField(), age);
+  await tester.pump();
+  await _pickDropdownOption(tester, 0, gender);
+  await _pickDropdownOption(tester, 1, role);
   await tester.ensureVisible(find.text('Add Member'));
   await tester.tap(find.text('Add Member'));
   await tester.pumpAndSettle();
@@ -116,7 +130,8 @@ void main() {
       expect(style.color, const Color(0xFF7C877A));
     }
 
-    // Name is a real input with the placeholder; Age starts at "12".
+    // Name and Age start empty; Gender and Role start unselected.
+    // All four are required.
     final fields = tester
         .widgetList<TextField>(find.byType(TextField))
         .toList();
@@ -133,16 +148,18 @@ void main() {
     expect(nameField.style?.color, const Color(0xFF2B3A2B));
 
     final ageField =
-        fields.firstWhere((f) => (f.controller?.text ?? '') == '12');
-    expect(ageField.controller?.text, '12');
+        fields.firstWhere((f) => f.decoration?.hintText == null);
+    expect(ageField.controller?.text ?? '', isEmpty);
     expect(ageField.keyboardType, TextInputType.number);
     final ageDecoration = ageField.decoration!;
     expect(ageDecoration.errorText, isNull);
     expect(ageDecoration.helperText, isNull);
 
-    // Gender and Role are real selects with defaults.
-    expect(find.text('Female'), findsOneWidget);
-    expect(find.text('Kids'), findsOneWidget);
+    // Gender and Role are required selects, unselected initially.
+    expect(find.text('Female'), findsNothing);
+    expect(find.text('Kids'), findsNothing);
+    expect(find.text('Select gender'), findsOneWidget);
+    expect(find.text('Select role'), findsOneWidget);
     final dropdowns = tester
         .widgetList<DropdownButtonFormField<String>>(
           find.byType(DropdownButtonFormField<String>),
@@ -150,6 +167,7 @@ void main() {
         .toList();
     expect(dropdowns, hasLength(2));
     for (final dropdown in dropdowns) {
+      expect(dropdown.initialValue, isNull);
       expect(dropdown.decoration.errorText, isNull);
       expect(dropdown.decoration.helperText, isNull);
     }
@@ -224,12 +242,7 @@ void main() {
     await _pumpFamilySetup(tester);
 
     // Teen member shows the Teen Mode pill.
-    await tester.enterText(_nameField(), 'Noah');
-    await tester.pump();
-    await _pickDropdownOption(tester, 1, 'Teen');
-    await tester.ensureVisible(find.text('Add Member'));
-    await tester.tap(find.text('Add Member'));
-    await tester.pumpAndSettle();
+    await _addMember(tester, 'Noah', role: 'Teen');
     expect(find.text('Teen · Age 12'), findsOneWidget);
     expect(find.text('Teen Mode'), findsOneWidget);
     expect(
@@ -238,12 +251,7 @@ void main() {
     );
 
     // Parent member shows a chevron and a bare "Parent" detail.
-    await tester.enterText(_nameField(), 'Sarah');
-    await tester.pump();
-    await _pickDropdownOption(tester, 1, 'Parent');
-    await tester.ensureVisible(find.text('Add Member'));
-    await tester.tap(find.text('Add Member'));
-    await tester.pumpAndSettle();
+    await _addMember(tester, 'Sarah', role: 'Parent');
     expect(find.text('Sarah'), findsOneWidget);
     final sarahCard = find.ancestor(
       of: find.text('Sarah'),
@@ -390,6 +398,81 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Liam'), findsOneWidget);
     expect(find.text('Member deleted'), findsNothing);
+  });
+
+  testWidgets('Add Member blocks when required fields are missing',
+      (tester) async {
+    await _pumpFamilySetup(tester);
+
+    await tester.ensureVisible(find.text('Add Member'));
+    await tester.tap(find.text('Add Member'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Name is required'), findsOneWidget);
+    expect(find.text('Enter an age'), findsOneWidget);
+    expect(find.text('Select a gender'), findsOneWidget);
+    expect(find.text('Choose a role'), findsOneWidget);
+    expect(
+      find.text('No members yet. Add your first member below.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Add Member errors clear as fields are filled', (tester) async {
+    await _pumpFamilySetup(tester);
+
+    await tester.ensureVisible(find.text('Add Member'));
+    await tester.tap(find.text('Add Member'));
+    await tester.pumpAndSettle();
+    expect(find.text('Name is required'), findsOneWidget);
+
+    await tester.enterText(_nameField(), 'Liam');
+    await tester.pumpAndSettle();
+    expect(find.text('Name is required'), findsNothing);
+    expect(find.text('Enter an age'), findsOneWidget);
+
+    await tester.enterText(_ageField(), '8');
+    await tester.pumpAndSettle();
+    expect(find.text('Enter an age'), findsNothing);
+
+    await _pickDropdownOption(tester, 0, 'Male');
+    expect(find.text('Select a gender'), findsNothing);
+
+    await _pickDropdownOption(tester, 1, 'Kids');
+    expect(find.text('Choose a role'), findsNothing);
+  });
+
+  testWidgets('Save Changes blocks when required fields are cleared',
+      (tester) async {
+    await _pumpFamilySetup(tester);
+    await _addMember(tester, 'Liam');
+
+    await tester.ensureVisible(find.text('Liam'));
+    await tester.tap(find.text('Liam'));
+    await tester.pumpAndSettle();
+    expect(find.byType(MemberDetailScreen), findsOneWidget);
+
+    await tester.enterText(_nameField(), '');
+    await tester.enterText(_ageField(), '');
+    await tester.pump();
+    await tester.ensureVisible(find.text('Save Changes'));
+    await tester.tap(find.text('Save Changes'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Name is required'), findsOneWidget);
+    expect(find.text('Enter an age'), findsOneWidget);
+    expect(find.byType(MemberDetailScreen), findsOneWidget);
+
+    await tester.enterText(_nameField(), 'Liam Jr');
+    await tester.enterText(_ageField(), '9');
+    await tester.pump();
+    await tester.ensureVisible(find.text('Save Changes'));
+    await tester.tap(find.text('Save Changes'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MemberDetailScreen), findsNothing);
+    expect(find.text('Liam Jr'), findsOneWidget);
+    expect(find.text('Member updated'), findsOneWidget);
   });
 
   testWidgets('photo picker degrades gracefully without the plugin',

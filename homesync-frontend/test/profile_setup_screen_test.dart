@@ -153,7 +153,7 @@ void main() {
         (w) =>
             w is TextField &&
             w.decoration?.hintText == null &&
-            (w.controller?.text ?? '') == '12',
+            (w.controller?.text ?? '') == '',
       );
       expect(ageField, findsOneWidget);
       expect(
