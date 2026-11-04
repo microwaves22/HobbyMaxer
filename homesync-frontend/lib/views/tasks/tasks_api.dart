@@ -50,6 +50,17 @@ class TasksApi {
     return TasksSnapshot(tasks: tasks, balances: balances);
   }
 
+  /// Parent revision note for a returned chore. The backend stores it
+  /// on the reviewed submission; other states carry no feedback.
+  static String? _feedbackFor(
+    TaskState state,
+    Map<String, dynamic>? latest,
+  ) {
+    if (state != TaskState.changesRequested) return null;
+    if (latest == null) return null;
+    return latest['note'] as String?;
+  }
+
   static ChoreTask _mapTask(
     Map<String, dynamic> task,
     Map<int, String> names,
@@ -77,6 +88,7 @@ class TasksApi {
       requiresPhoto: task['requires_photo'] as bool? ?? false,
       state: state,
       remotePhoto: latest?['photo_path'] as String?,
+      feedback: _feedbackFor(state, latest),
     );
   }
 

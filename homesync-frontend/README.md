@@ -54,9 +54,9 @@ wire to `POST /auth/switch-profile` later).
 
 Children open the Chores card → tap a task → attach a photo (camera or
 gallery via `image_picker`) → preview → Submit for review. Parents see a
-review queue on the dashboard with zoomable photo previews,
-[Approve & Award Points] / [Request Changes] per task, and an
-[Approve All Simple Tasks] batch action for no-photo tasks.
+review queue on the dashboard with zoomable photo previews, per-task
+[Approve & Award Points] / [Request Changes] per task (Request Changes opens
+a feedback popup for points/detail/photo edits plus a note the child sees on retry), and an [Approve All Simple Tasks] batch action for no-photo tasks. Points chips and parent task rows open the same chore editor.
 
 Tasks live in an in-memory `TasksController` seeded per profile; wire to
 the backend (`POST /tasks/{id}/submit`, `PUT /tasks/{id}/approve`) later.
@@ -96,6 +96,10 @@ cards show an "Evidence stored on server" placeholder.
 - Tapping any AppBar title (`HomeTitle`) pops back to the dashboard root.
 - The profile switcher PIN-gates moves from a child/teen profile to a
   parent one (demo PIN `1234`, storable via `AuthSession.setParentPin`).
+- The profile menu's Account settings page (all roles) shows account
+  info plus Customization, Link your kids (share the invite code),
+  Join a family circle (link with a code), and Sign out. Circle
+  joining is local-only until the backend adds invite codes.
 - Parents get a "Parent To-Do" dashboard section (add, edit, complete,
   delete, reorder) backed by `ChoreTask.isParentTodo`. To-dos are
   local-only for now; syncing them to the backend is a future step

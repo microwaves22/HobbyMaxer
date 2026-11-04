@@ -6,10 +6,11 @@ import '../../../core/network/api_client.dart';
 import '../../../core/widgets/liquid_glass_card.dart';
 import '../models/chore_task.dart';
 import '../tasks_controller.dart';
+import 'chore_edit_dialog.dart';
 
 /// Parent dashboard section listing tasks awaiting review, with
-/// per-task approve/request-changes actions plus a batch approve for
-/// simple (no-photo) tasks.
+/// per-task approve/request-changes actions, a batch approve for
+/// simple (no-photo) tasks, and the chores sent back for revision.
 class ReviewQueueSection extends StatelessWidget {
   const ReviewQueueSection({super.key, required this.controller});
 
@@ -34,6 +35,47 @@ class ReviewQueueSection extends StatelessWidget {
     messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Opens the edit-chore dialog and applies the parent's edits.
+  Future<void> _editChore(BuildContext context, ChoreTask task) async {
+    final result = await showChoreEditDialog(context, task);
+    if (result == null || !context.mounted) return;
+    final updated = controller.updateChore(
+      task.id,
+      points: result.points,
+      details: result.details,
+      requiresPhoto: result.requiresPhoto,
+    );
+    if (!context.mounted) return;
+    _snack(
+      ScaffoldMessenger.of(context),
+      updated ? 'Chore updated.' : 'No changes to save.',
+    );
+  }
+
+  /// Opens the request-changes dialog (chore edits plus the feedback
+  /// note the child sees on retry) and sends it on confirm.
+  Future<void> _requestChangesFlow(
+    BuildContext context,
+    ChoreTask task,
+  ) async {
+    final result = await showRequestChangesDialog(context, task);
+    if (result == null || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    controller.updateChore(
+      task.id,
+      points: result.edit.points,
+      details: result.edit.details,
+      requiresPhoto: result.edit.requiresPhoto,
+    );
+    try {
+      await controller.requestChanges(task.id, note: result.feedback);
+    } on ApiException catch (e) {
+      _snack(messenger, e.message);
+      return;
+    }
+    _snack(messenger, 'Feedback sent to ${task.childName}.');
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -41,6 +83,7 @@ class ReviewQueueSection extends StatelessWidget {
       builder: (context, _) {
         final text = Theme.of(context).textTheme;
         final queue = controller.pendingReview;
+        final revision = controller.needsRevision;
         final simpleCount = queue.where((t) => t.isSimple).length;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -89,6 +132,7 @@ class ReviewQueueSection extends StatelessWidget {
                   task: task,
                   balance: controller.balanceFor(task.childName),
                   onZoomPhoto: () => _zoomPhoto(context, task.photoPath!),
+                  onEditPoints: () => _editChore(context, task),
                   onApprove: () async {
                     final messenger = ScaffoldMessenger.of(context);
                     try {
@@ -102,19 +146,22 @@ class ReviewQueueSection extends StatelessWidget {
                       'Approved — +${task.points} pts to ${task.childName}.',
                     );
                   },
-                  onRequestChanges: () async {
-                    final messenger = ScaffoldMessenger.of(context);
-                    try {
-                      await controller.requestChanges(task.id);
-                    } on ApiException catch (e) {
-                      _snack(messenger, e.message);
-                      return;
-                    }
-                    _snack(
-                      messenger,
-                      'Changes requested for ${task.childName}.',
-                    );
-                  },
+                  onRequestChanges: () => _requestChangesFlow(context, task),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ],
+            if (revision.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Needs revision (${revision.length})',
+                style: text.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              for (final task in revision) ...[
+                _RevisionCard(
+                  task: task,
+                  onEdit: () => _editChore(context, task),
                 ),
                 const SizedBox(height: 12),
               ],
@@ -159,6 +206,7 @@ class _ReviewCard extends StatelessWidget {
     required this.task,
     required this.balance,
     required this.onZoomPhoto,
+    required this.onEditPoints,
     required this.onApprove,
     required this.onRequestChanges,
   });
@@ -166,6 +214,7 @@ class _ReviewCard extends StatelessWidget {
   final ChoreTask task;
   final int balance;
   final VoidCallback onZoomPhoto;
+  final VoidCallback onEditPoints;
   final VoidCallback onApprove;
   final VoidCallback onRequestChanges;
 
@@ -192,7 +241,17 @@ class _ReviewCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Chip(label: Text('${task.points} pts')),
+              Tooltip(
+                message: 'Edit points',
+                child: InkWell(
+                  onTap: onEditPoints,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Chip(
+                    avatar: const Icon(Icons.tune_rounded, size: 16),
+                    label: Text('${task.points} pts'),
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -249,6 +308,59 @@ class _ReviewCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A chore the parent sent back: shows the feedback the child sees,
+/// with an edit action for further point/detail tweaks.
+class _RevisionCard extends StatelessWidget {
+  const _RevisionCard({required this.task, required this.onEdit});
+
+  final ChoreTask task;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final feedback = task.feedback;
+    return LiquidGlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(child: Text(task.childName.characters.first)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${task.childName} · waiting on retry',
+                      style: text.titleLarge,
+                    ),
+                    Text(task.title, style: text.bodyMedium),
+                  ],
+                ),
+              ),
+              Chip(label: Text('${task.points} pts')),
+            ],
+          ),
+          if (feedback != null && feedback.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Feedback: $feedback',
+              style: text.bodyMedium?.copyWith(fontStyle: FontStyle.italic),
+            ),
+          ],
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: onEdit,
+            child: const Text('Edit chore'),
           ),
         ],
       ),

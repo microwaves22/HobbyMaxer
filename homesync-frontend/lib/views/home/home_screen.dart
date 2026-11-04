@@ -16,6 +16,7 @@ import '../rewards/rewards_controller.dart';
 import '../rewards/rewards_routes.dart';
 import '../rewards/rewards_screen.dart';
 import '../rewards/widgets/perk_requests_section.dart';
+import '../settings/account_settings_screen.dart';
 import '../tasks/tasks_api.dart';
 import '../tasks/tasks_controller.dart';
 import '../tasks/widgets/parent_todo_section.dart';
@@ -201,9 +202,10 @@ class _HomeScreenState extends State<HomeScreen> {
             parentPin: widget.parentPin,
             onSwitchProfile: (profile) => setState(() => _active = profile),
             onAccountSettings: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Account settings coming soon.'),
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      AccountSettingsScreen(profile: widget.profile),
                 ),
               );
             },
