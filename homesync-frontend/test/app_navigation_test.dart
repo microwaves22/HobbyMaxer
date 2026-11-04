@@ -34,9 +34,20 @@ void main() {
       await tester.ensureVisible(chores);
       await tester.tap(chores);
       await tester.pumpAndSettle();
-      expect(find.text('Tasks'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text('Tasks'),
+        ),
+        findsOneWidget,
+      );
 
-      await tester.tap(find.text('Tasks'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text('Tasks'),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.text('Hello, Mom!'), findsOneWidget);
     });

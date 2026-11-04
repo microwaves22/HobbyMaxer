@@ -28,8 +28,9 @@ void main() {
       await _pumpStore(tester);
 
       expect(find.text('Teen Rewards'), findsOneWidget);
-      // Points pill + the Creature Palette price row.
-      expect(find.text('120 pts'), findsNWidgets(2));
+      // Starting pill + Neon price row (both 0 pts) + Creature price.
+      expect(find.text('0 pts'), findsNWidgets(2));
+      expect(find.text('120 pts'), findsOneWidget);
 
       expect(find.text('Digital'), findsOneWidget);
       expect(find.text('Real-world'), findsOneWidget);
@@ -68,10 +69,13 @@ void main() {
         expect(find.text(name), findsOneWidget, reason: name);
       }
 
-      // Computed actions against the 120 balance.
+      // Computed actions against the 0 starting balance.
       expect(find.text('Equipped'), findsOneWidget);
-      expect(find.text('Save 30 more'), findsOneWidget);
-      expect(find.text('Redeem'), findsNWidgets(4));
+      expect(find.text('Save 150 more'), findsOneWidget);
+      expect(find.text('Save 50 more'), findsOneWidget);
+      expect(find.text('Save 100 more'), findsOneWidget);
+      expect(find.text('Save 80 more'), findsOneWidget);
+      expect(find.text('Save 120 more'), findsOneWidget);
 
       // No subtitles on cards.
       expect(find.text('Placeholder subtitle'), findsNothing);
@@ -108,6 +112,7 @@ void main() {
       await _pumpStore(
         tester,
         build: () => RewardsStoreScreen(
+          availablePoints: 120,
           onUnlockReward: (id) => unlocked = id,
           onSaveUpForReward: (id) => saved = id,
           onRequestCustomReward: () => custom++,

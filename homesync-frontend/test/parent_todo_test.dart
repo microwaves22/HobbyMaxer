@@ -84,5 +84,26 @@ void main() {
       await tester.pump();
       expect(find.text('Pay water bill'), findsNothing);
     });
+
+    testWidgets('delete button does not overlap the reorder handle',
+        (tester) async {
+      await _pumpHome(tester);
+
+      final deletes = find.byIcon(Icons.delete_outlined);
+      final handles = find.byIcon(Icons.drag_handle_rounded);
+      expect(deletes, findsWidgets);
+      expect(handles, findsWidgets);
+      expect(deletes.evaluate().length, handles.evaluate().length);
+
+      for (var i = 0; i < deletes.evaluate().length; i++) {
+        final deleteRect = tester.getRect(deletes.at(i));
+        final handleRect = tester.getRect(handles.at(i));
+        expect(
+          deleteRect.overlaps(handleRect),
+          isFalse,
+          reason: 'delete button overlaps the reorder handle on row $i',
+        );
+      }
+    });
   });
 }

@@ -10,6 +10,7 @@ class ChoreTask {
     required this.points,
     this.requiresPhoto = false,
     this.state = TaskState.pending,
+    this.feedback,
     this.photoPath,
     this.photoBytes,
     this.serverId,
@@ -24,6 +25,10 @@ class ChoreTask {
   final int points;
   final bool requiresPhoto;
   final TaskState state;
+
+  /// Parent's revision note from the latest "Request Changes" review.
+  /// Shown to the child on retry; null when no feedback was sent.
+  final String? feedback;
 
   /// Local path of the submitted evidence photo, if any.
   ///
@@ -56,20 +61,24 @@ class ChoreTask {
     String? photoPath,
     Uint8List? photoBytes,
     String? remotePhoto,
+    int? points,
+    bool? requiresPhoto,
+    String? feedback,
   }) {
     return ChoreTask(
       id: id,
       title: title ?? this.title,
       details: details ?? this.details,
       childName: childName,
-      points: points,
-      requiresPhoto: requiresPhoto,
+      points: points ?? this.points,
+      requiresPhoto: requiresPhoto ?? this.requiresPhoto,
       state: state ?? this.state,
       photoPath: photoPath ?? this.photoPath,
       photoBytes: photoBytes ?? this.photoBytes,
       serverId: serverId,
       remotePhoto: remotePhoto ?? this.remotePhoto,
       isParentTodo: isParentTodo,
+      feedback: feedback ?? this.feedback,
     );
   }
 }
