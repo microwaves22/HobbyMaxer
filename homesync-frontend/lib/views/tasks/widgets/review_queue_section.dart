@@ -1,9 +1,10 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/widgets/liquid_glass_card.dart';
+import '../../../core/widgets/member_avatar.dart';
 import '../models/chore_task.dart';
 import '../tasks_controller.dart';
 
@@ -15,7 +16,7 @@ class ReviewQueueSection extends StatelessWidget {
 
   final TasksController controller;
 
-  void _zoomPhoto(BuildContext context, String path) {
+  void _zoomPhoto(BuildContext context, Uint8List bytes) {
     showDialog<void>(
       context: context,
       builder: (_) => Dialog(
@@ -24,7 +25,7 @@ class ReviewQueueSection extends StatelessWidget {
           panEnabled: true,
           minScale: 0.5,
           maxScale: 4,
-          child: Image.file(File(path), fit: BoxFit.contain),
+          child: Image.memory(bytes, fit: BoxFit.contain),
         ),
       ),
     );
@@ -89,7 +90,10 @@ class ReviewQueueSection extends StatelessWidget {
                 _ReviewCard(
                   task: task,
                   balance: controller.balanceFor(task.childName),
-                  onZoomPhoto: () => _zoomPhoto(context, task.photoPath!),
+                  avatarUrl: controller.avatarFor(task.childName),
+                  onZoomPhoto: task.photoBytes == null
+                      ? null
+                      : () => _zoomPhoto(context, task.photoBytes!),
                   onApprove: () async {
                     final messenger = ScaffoldMessenger.of(context);
                     try {
@@ -159,6 +163,7 @@ class _ReviewCard extends StatelessWidget {
   const _ReviewCard({
     required this.task,
     required this.balance,
+    required this.avatarUrl,
     required this.onZoomPhoto,
     required this.onApprove,
     required this.onRequestChanges,
@@ -166,7 +171,8 @@ class _ReviewCard extends StatelessWidget {
 
   final ChoreTask task;
   final int balance;
-  final VoidCallback onZoomPhoto;
+  final String? avatarUrl;
+  final VoidCallback? onZoomPhoto;
   final VoidCallback onApprove;
   final VoidCallback onRequestChanges;
 
@@ -179,7 +185,11 @@ class _ReviewCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(child: Text(task.childName.characters.first)),
+              MemberAvatar(
+                imageUrl: avatarUrl,
+                name: task.childName,
+                size: 40,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -199,25 +209,15 @@ class _ReviewCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(task.details, style: text.bodyMedium),
           const SizedBox(height: 12),
-          if (task.photoPath == null)
-            if (task.remotePhoto == null)
-              _PhotoPlaceholder(
-                icon: Icons.image_outlined,
-                label: 'No photo attached',
-              )
-            else
-              _PhotoPlaceholder(
-                icon: Icons.cloud_outlined,
-                label: 'Evidence stored on server',
-              )
-          else
+          if (task.photoBytes != null)
             GestureDetector(
               onTap: onZoomPhoto,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.file(
-                  File(task.photoPath!),
+                child: Image.memory(
+                  task.photoBytes!,
                   height: 180,
+                  width: double.infinity,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
                     height: 120,
@@ -228,6 +228,21 @@ class _ReviewCard extends StatelessWidget {
                   ),
                 ),
               ),
+            )
+          else if (task.photoPath != null)
+            _PhotoPlaceholder(
+              icon: Icons.photo_outlined,
+              label: 'Photo unavailable on this device',
+            )
+          else if (task.remotePhoto == null)
+            _PhotoPlaceholder(
+              icon: Icons.image_outlined,
+              label: 'No photo attached',
+            )
+          else
+            _PhotoPlaceholder(
+              icon: Icons.cloud_outlined,
+              label: 'Evidence stored on server',
             ),
           const SizedBox(height: 12),
           Row(

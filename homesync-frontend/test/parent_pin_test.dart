@@ -38,7 +38,8 @@ Future<void> _pumpDropdown(
 }
 
 Future<void> _openMenu(WidgetTester tester) async {
-  await tester.tap(find.byType(CircleAvatar).first);
+  // The header avatar (MemberAvatar) opens the profile menu.
+  await tester.tap(find.byTooltip('Profile'));
   await tester.pumpAndSettle();
 }
 

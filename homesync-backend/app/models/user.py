@@ -27,6 +27,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(16), default="parent", index=True)
     mode: Mapped[str | None] = mapped_column(String(16), nullable=True)
     points_balance: Mapped[int] = mapped_column(Integer, default=0)
+    avatar_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     family: Mapped["Family | None"] = relationship(back_populates="users")

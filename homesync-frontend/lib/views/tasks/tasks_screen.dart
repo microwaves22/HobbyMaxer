@@ -81,6 +81,7 @@ class TasksScreen extends StatelessWidget {
                                       style: text.labelSmall,
                                     ),
                                     if (task.photoPath != null ||
+                                        task.photoBytes != null ||
                                         task.remotePhoto != null) ...[
                                       const SizedBox(width: 8),
                                       const Icon(

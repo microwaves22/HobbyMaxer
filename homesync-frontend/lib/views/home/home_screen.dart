@@ -7,6 +7,7 @@ import '../../core/network/auth_session.dart';
 import '../../core/state/focus_areas.dart';
 import '../../core/widgets/home_title.dart';
 import '../../core/widgets/liquid_glass_card.dart';
+import '../../core/widgets/member_avatar.dart';
 import '../../core/widgets/profile_avatar_dropdown.dart';
 import '../calendar/calendar_screen.dart';
 import '../onboarding/link_kids_screen.dart';
@@ -81,6 +82,17 @@ class _HomeScreenState extends State<HomeScreen> {
     if (session == null || !session.isAuthenticated) return;
     _backendAttached = true;
     final user = session.user!;
+    final headerAvatar =
+        resolveAvatarUrl(user.avatarUrl, session.client.baseUrl);
+    if (headerAvatar != null) {
+      _active = ProfileOption(
+        name: _active.name,
+        roleLabel: _active.roleLabel,
+        avatarColor: _active.avatarColor,
+        isParent: _active.isParent,
+        avatarUrl: headerAvatar,
+      );
+    }
     _tasks.attachBackend(TasksApi(session.client));
     _tasks.setBalance(user.displayName, user.pointsBalance);
     unawaited(_syncBackend());
