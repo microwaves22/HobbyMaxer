@@ -26,21 +26,26 @@ class ProfileSetupScreen extends StatefulWidget {
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _nameController = TextEditingController();
   final _birthdayController = TextEditingController();
   FamilyRole _role = FamilyRole.parent;
   FamilyMode _mode = FamilyMode.kids;
   String? _emailError;
   String? _passwordError;
+  String? _confirmPasswordError;
   String? _nameError;
   String? _birthdayError;
   String? _formError;
   bool _busy = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _nameController.dispose();
     _birthdayController.dispose();
     super.dispose();
@@ -66,22 +71,28 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   Future<void> _continue() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
     final name = _nameController.text.trim();
     final emailError =
         email.isEmpty || !email.contains('@') ? 'Enter a valid email.' : null;
     final passwordError = password.length < 6
         ? 'Enter a password (6+ characters).'
         : null;
+    final confirmPasswordError = confirmPassword != password
+        ? 'Passwords do not match.'
+        : null;
     final birthdayError = validateBirthday(_birthdayController.text);
     setState(() {
       _emailError = emailError;
       _passwordError = passwordError;
+      _confirmPasswordError = confirmPasswordError;
       _nameError = name.isEmpty ? 'Enter your name.' : null;
       _birthdayError = birthdayError;
       _formError = null;
     });
     if (emailError != null ||
         passwordError != null ||
+        confirmPasswordError != null ||
         name.isEmpty ||
         birthdayError != null) {
       return;
@@ -157,12 +168,49 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: _passwordController,
-                      obscureText: true,
+                      obscureText: _obscurePassword,
                       decoration: InputDecoration(
                         hintText: 'Password',
                         errorText: _passwordError,
+                        suffixIcon: IconButton(
+                          tooltip: _obscurePassword
+                              ? 'Show password'
+                              : 'Hide password',
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () => setState(() =>
+                              _obscurePassword = !_obscurePassword),
+                        ),
                       ),
                       onChanged: (_) => setState(() => _passwordError = null),
+                      onSubmitted: (_) => _continue(),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _confirmPasswordController,
+                      obscureText: _obscureConfirmPassword,
+                      decoration: InputDecoration(
+                        hintText: 'Confirm Password',
+                        errorText: _confirmPasswordError,
+                        suffixIcon: IconButton(
+                          tooltip: _obscureConfirmPassword
+                              ? 'Show password'
+                              : 'Hide password',
+                          icon: Icon(
+                            _obscureConfirmPassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () => setState(() =>
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword),
+                        ),
+                      ),
+                      onChanged: (_) =>
+                          setState(() => _confirmPasswordError = null),
                       onSubmitted: (_) => _continue(),
                     ),
                     const SizedBox(height: 12),

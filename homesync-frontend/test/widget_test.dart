@@ -54,6 +54,7 @@ void main() {
 
     await tester.enterText(_fieldWithHint('Email address'), 'mom@x.com');
     await tester.enterText(_fieldWithHint('Password'), 'secret123');
+    await tester.enterText(_fieldWithHint('Confirm Password'), 'secret123');
     await tester.enterText(_fieldWithHint('Enter name'), 'Mom');
     await tester.enterText(_fieldWithHint('Birthday (YYYY-MM-DD)'), '1990-01-01');
     final cont = find.text('Continue');
